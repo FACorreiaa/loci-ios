@@ -1,0 +1,4 @@
+module GoAiPoiIOS {
+    header "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/GoAiPoiIOS-Swift.h"
+    requires objc
+}

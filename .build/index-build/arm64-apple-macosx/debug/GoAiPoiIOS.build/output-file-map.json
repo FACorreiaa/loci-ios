@@ -1,0 +1,59 @@
+{
+  "": {
+    "swift-dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/master.swiftdeps"
+  },
+  "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/Sources/GoAiPoiIOS/Components/CTASection.swift": {
+    "dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/CTASection.d",
+    "object": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/CTASection.swift.o",
+    "swiftmodule": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/CTASection~partial.swiftmodule",
+    "swift-dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/CTASection.swiftdeps"
+  },
+  "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/Sources/GoAiPoiIOS/Components/ContentGrid.swift": {
+    "dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/ContentGrid.d",
+    "object": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/ContentGrid.swift.o",
+    "swiftmodule": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/ContentGrid~partial.swiftmodule",
+    "swift-dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/ContentGrid.swiftdeps"
+  },
+  "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/Sources/GoAiPoiIOS/Components/HeroSection.swift": {
+    "dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/HeroSection.d",
+    "object": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/HeroSection.swift.o",
+    "swiftmodule": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/HeroSection~partial.swiftmodule",
+    "swift-dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/HeroSection.swiftdeps"
+  },
+  "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/Sources/GoAiPoiIOS/Components/MobileAppAnnouncement.swift": {
+    "dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/MobileAppAnnouncement.d",
+    "object": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/MobileAppAnnouncement.swift.o",
+    "swiftmodule": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/MobileAppAnnouncement~partial.swiftmodule",
+    "swift-dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/MobileAppAnnouncement.swiftdeps"
+  },
+  "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/Sources/GoAiPoiIOS/Components/StatsSection.swift": {
+    "dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/StatsSection.d",
+    "object": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/StatsSection.swift.o",
+    "swiftmodule": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/StatsSection~partial.swiftmodule",
+    "swift-dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/StatsSection.swiftdeps"
+  },
+  "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/Sources/GoAiPoiIOS/LocoApp.swift": {
+    "dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/LocoApp.d",
+    "object": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/LocoApp.swift.o",
+    "swiftmodule": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/LocoApp~partial.swiftmodule",
+    "swift-dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/LocoApp.swiftdeps"
+  },
+  "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/Sources/GoAiPoiIOS/Models/LandingData.swift": {
+    "dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/LandingData.d",
+    "object": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/LandingData.swift.o",
+    "swiftmodule": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/LandingData~partial.swiftmodule",
+    "swift-dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/LandingData.swiftdeps"
+  },
+  "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/Sources/GoAiPoiIOS/Utils/DesignSystem.swift": {
+    "dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/DesignSystem.d",
+    "object": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/DesignSystem.swift.o",
+    "swiftmodule": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/DesignSystem~partial.swiftmodule",
+    "swift-dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/DesignSystem.swiftdeps"
+  },
+  "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/Sources/GoAiPoiIOS/Views/LandingView.swift": {
+    "dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/LandingView.d",
+    "object": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/LandingView.swift.o",
+    "swiftmodule": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/LandingView~partial.swiftmodule",
+    "swift-dependencies": "/Users/fernando_idwell/go-ai-poi/go-ai-poi-ios/.build/index-build/arm64-apple-macosx/debug/GoAiPoiIOS.build/LandingView.swiftdeps"
+  }
+}
