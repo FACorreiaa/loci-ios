@@ -1,0 +1,52 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+
+# Build artifacts
+DerivedData/
+build/
+.build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.xcresult/
+
+# Swift Package Manager
+.swiftpm/
+.SourcePackages/
+SourcePackages/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output/
+fastlane/ui_test_output/
+fastlane/build/
+fastlane/README.md
+
+# Secrets and environment
+.env
+.env.*
+*.local
+*.p8
+*.mobileprovision
+*.cer
+*.certSigningRequest

@@ -1,0 +1,44 @@
+# One-time (re-runnable) seeding of the match certificates repo.
+#
+# The Release workflow runs match in readonly mode, so the certs repo must be
+# seeded once with a distribution certificate + provisioning profile. Dispatch
+# this manually whenever signing assets need to be (re)generated — e.g. after
+# adding an entitlement or when the repo is empty.
+#
+# Requires the same secrets as Release, but MATCH_GIT_BASIC_AUTHORIZATION's PAT
+# needs Contents:Read AND Write on loci-certificates for this workflow only.
+name: Seed signing
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-seed-signing
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: match appstore (readwrite)
+    runs-on: macos-15
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: loci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: loci
+
+      - name: Fastlane seed_signing
+        run: bundle exec fastlane seed_signing
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}

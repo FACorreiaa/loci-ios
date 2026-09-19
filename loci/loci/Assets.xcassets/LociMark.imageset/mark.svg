@@ -1,0 +1,23 @@
+<!--
+  The Loci mark: a map pin whose stem and foot read as an "L".
+
+  Two halves, drawn two ways on purpose. The head is a real <circle> at
+  (97,97) r97 — the approved art's head IS a circle, and a primitive stays
+  perfectly round at 1024px where a polygon of it shows facets. The body below
+  y=97 is a Douglas-Peucker simplification of the art's coral mask contour at a
+  1.2px tolerance (24 points), which measures 99.06% IoU against the render.
+
+  Hand-fitting this body plateaued at 91.8% — the taper and the foot's bevel are
+  not the two straight edges they look like — so it is traced, and traced from a
+  binary colour mask rather than the JPEG's pixels, which is what keeps the
+  antialiasing out of the geometry.
+
+  currentColor, so one file serves the coral brand mark, a mono favicon and any
+  future single-colour context without a second copy.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 362 496" fill="none" role="img" aria-label="Loci">
+  <g fill="currentColor">
+    <circle cx="97" cy="97" r="97"/>
+    <path d="M194 97 L193 116 L188 134 L182 147 L160 181 L149 210 L113 390 L360 392 L362 394 L360 400 L297 486 L289 493 L271 495 L78 495 L59 494 L49 487 L46 478 L45 219 L41 200 L34 182 L13 149 L5 132 L0 112 L0 97 Z"/>
+  </g>
+</svg>

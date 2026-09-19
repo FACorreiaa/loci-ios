@@ -1,0 +1,95 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: macos-15
+
+    defaults:
+      run:
+        working-directory: loci
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Checkout loci-connect-proto
+        uses: actions/checkout@v4
+        with:
+          repository: FACorreiaa/loci-connect-proto
+          path: loci-connect-proto
+
+      - name: Setup local proto link
+        run: |
+          mkdir -p ../../
+          ln -sfn "$GITHUB_WORKSPACE/loci-connect-proto" "$GITHUB_WORKSPACE/../../loci-connect-proto" || true
+          ln -sfn "$GITHUB_WORKSPACE/loci-connect-proto" "$GITHUB_WORKSPACE/../loci-connect-proto" || true
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer || true
+
+      - name: Cache derived data
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-derived-data-${{ hashFiles('loci/loci.xcodeproj/project.xcworkspace/contents.xcworkspacedata') }}
+          restore-keys: |
+            ${{ runner.os }}-derived-data-
+
+      - name: Cache SwiftPM repositories
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+          key: ${{ runner.os }}-swiftpm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-swiftpm-
+
+      - name: Resolve Package Dependencies
+        run: |
+          set -euo pipefail
+          for i in 1 2 3; do
+            xcodebuild -project loci.xcodeproj -scheme "loci Beta" -resolvePackageDependencies && break
+            echo "Resolve attempt $i failed; retrying in 15s..."
+            sleep 15
+          done
+
+      - name: Build (no tests) to surface Swift compile errors
+        run: |
+          xcodebuild build \
+            -project loci.xcodeproj \
+            -scheme "loci Beta" \
+            -destination 'generic/platform=iOS Simulator' \
+            -quiet
+
+      - name: Resolve an iOS simulator
+        id: sim
+        run: |
+          set -euo pipefail
+          udid="$(xcrun simctl list devices available \
+            | grep -E '^\s+iPhone' \
+            | head -1 \
+            | grep -oE '[0-9A-Fa-f-]{36}' || true)"
+          if [ -z "$udid" ]; then
+            echo "::error::No iOS simulator available on this runner."
+            exit 1
+          fi
+          name="$(xcrun simctl list devices available | grep "$udid" | sed -E 's/^ *([^(]+) \(.*/\1/')"
+          echo "Using simulator: $name ($udid)"
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+
+      - name: Run Unit Tests
+        run: |
+          xcodebuild test \
+            -project loci.xcodeproj \
+            -scheme "loci Beta" \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -only-testing:lociTests \
+            -quiet

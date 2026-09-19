@@ -1,0 +1,124 @@
+require "fileutils"
+
+default_platform(:ios)
+
+PROJECT = "loci.xcodeproj"
+RELEASE_SCHEME = "loci"                # Release -> com.fernandocorreia.loci (App Store)
+BETA_DEV_SCHEME = "loci Beta"          # Beta -> com.fernandocorreia.loci.beta (TestFlight)
+BUNDLE_ID = "com.fernandocorreia.loci"
+BETA_BUNDLE_ID = "com.fernandocorreia.loci.beta"
+
+platform :ios do
+  desc "Run unit test suite"
+  lane :test do
+    run_tests(
+      project: PROJECT,
+      scheme: BETA_DEV_SCHEME,
+      only_testing: ["lociTests"],
+      result_bundle: true,
+      output_directory: "fastlane/test_output"
+    )
+  end
+
+  desc "Build Beta config (com.fernandocorreia.loci.beta) and upload to TestFlight"
+  lane :beta do
+    api_key = asc_api_key
+    setup_ci if is_ci
+    match(type: "appstore", readonly: false, api_key: api_key)
+    prepare_signing(bundle_id: BETA_BUNDLE_ID, config: "Beta")
+    bump_build_number(api_key: api_key, bundle_id: BETA_BUNDLE_ID)
+
+    build_app(
+      project: PROJECT,
+      scheme: BETA_DEV_SCHEME,
+      configuration: "Beta",
+      export_method: "app-store",
+      output_directory: "fastlane/build"
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      app_identifier: BETA_BUNDLE_ID,
+      skip_waiting_for_build_processing: false,
+      distribute_external: false
+    )
+  end
+
+  desc "One-time: create signing certs/profiles and push them to the match repo"
+  lane :seed_signing do
+    api_key = asc_api_key
+    setup_ci if is_ci
+    match(type: "appstore", readonly: false, api_key: api_key)
+  end
+
+  desc "Release to the App Store (phased rollout)"
+  lane :release do |options|
+    api_key = asc_api_key
+    setup_ci if is_ci
+    match(type: "appstore", readonly: is_ci, api_key: api_key)
+    prepare_signing(bundle_id: BUNDLE_ID, config: "Release")
+
+    if options[:version]
+      increment_version_number(version_number: options[:version], xcodeproj: PROJECT)
+    end
+    bump_build_number(api_key: api_key, bundle_id: BUNDLE_ID)
+
+    build_app(
+      project: PROJECT,
+      scheme: RELEASE_SCHEME,
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "fastlane/build"
+    )
+
+    upload_to_app_store(
+      api_key: api_key,
+      app_identifier: BUNDLE_ID,
+      submit_for_review: true,
+      automatic_release: true,
+      phased_release: true,
+      precheck_include_in_app_purchases: false,
+      force: true,
+      skip_screenshots: true,
+      skip_metadata: false
+    )
+  end
+
+  # ---- helpers ----
+
+  private_lane :asc_api_key do
+    app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV.fetch("ASC_KEY_P8"),
+      is_key_content_base64: true
+    )
+  end
+
+  private_lane :prepare_signing do |options|
+    bundle_id = options[:bundle_id] || BUNDLE_ID
+    config = options[:config] || "Release"
+    update_code_signing_settings(
+      path: PROJECT,
+      use_automatic_signing: false,
+      team_id: "84X9WYBF36",
+      code_sign_identity: "Apple Distribution",
+      profile_name: "match AppStore #{bundle_id}",
+      targets: ["loci"],
+      build_configurations: [config]
+    )
+  end
+
+  private_lane :bump_build_number do |options|
+    api_key = options[:api_key]
+    bundle_id = options[:bundle_id] || BUNDLE_ID
+    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from(hash: api_key)
+    app = Spaceship::ConnectAPI::App.find(bundle_id)
+    UI.user_error!("Could not find #{bundle_id} on App Store Connect") unless app
+
+    build_numbers = app.get_builds.map { |build| Integer(build.version, exception: false) }.compact
+    next_build_number = (build_numbers.max || 0) + 1
+
+    increment_build_number(build_number: next_build_number, xcodeproj: PROJECT)
+  end
+end
