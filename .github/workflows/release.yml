@@ -51,9 +51,9 @@ jobs:
 
       - name: Setup local proto link
         run: |
-          mkdir -p ../../
-          ln -sfn "$GITHUB_WORKSPACE/loci-connect-proto" "$GITHUB_WORKSPACE/../../loci-connect-proto" || true
-          ln -sfn "$GITHUB_WORKSPACE/loci-connect-proto" "$GITHUB_WORKSPACE/../loci-connect-proto" || true
+          mkdir -p "$GITHUB_WORKSPACE/../loci-connect-proto"
+          cp -R "$GITHUB_WORKSPACE/loci-connect-proto/." "$GITHUB_WORKSPACE/../loci-connect-proto/"
+          ls -la "$GITHUB_WORKSPACE/../loci-connect-proto"
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -95,9 +95,9 @@ jobs:
 
       - name: Setup local proto link
         run: |
-          mkdir -p ../../
-          ln -sfn "$GITHUB_WORKSPACE/loci-connect-proto" "$GITHUB_WORKSPACE/../../loci-connect-proto" || true
-          ln -sfn "$GITHUB_WORKSPACE/loci-connect-proto" "$GITHUB_WORKSPACE/../loci-connect-proto" || true
+          mkdir -p "$GITHUB_WORKSPACE/../loci-connect-proto"
+          cp -R "$GITHUB_WORKSPACE/loci-connect-proto/." "$GITHUB_WORKSPACE/../loci-connect-proto/"
+          ls -la "$GITHUB_WORKSPACE/../loci-connect-proto"
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:

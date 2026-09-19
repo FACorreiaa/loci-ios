@@ -27,9 +27,9 @@ jobs:
 
       - name: Setup local proto link
         run: |
-          mkdir -p ../../
-          ln -sfn "$GITHUB_WORKSPACE/loci-connect-proto" "$GITHUB_WORKSPACE/../../loci-connect-proto" || true
-          ln -sfn "$GITHUB_WORKSPACE/loci-connect-proto" "$GITHUB_WORKSPACE/../loci-connect-proto" || true
+          mkdir -p "$GITHUB_WORKSPACE/../loci-connect-proto"
+          cp -R "$GITHUB_WORKSPACE/loci-connect-proto/." "$GITHUB_WORKSPACE/../loci-connect-proto/"
+          ls -la "$GITHUB_WORKSPACE/../loci-connect-proto"
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer || true
