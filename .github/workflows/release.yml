@@ -15,8 +15,8 @@ on:
         description: Release lane
         required: true
         type: choice
-        options: [release]
-        default: release
+        options: [beta, release]
+        default: beta
       version:
         description: Marketing version (e.g. 1.0) - empty keeps current
         required: false
@@ -29,8 +29,8 @@ concurrency:
 jobs:
   beta:
     if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success'
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch' && inputs.lane == 'beta')
     name: TestFlight (beta)
     runs-on: macos-15
     timeout-minutes: 60
@@ -41,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Checkout loci-connect-proto
         uses: actions/checkout@v4
@@ -75,7 +75,7 @@ jobs:
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
 
   release:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.lane == 'release'
     name: App Store (${{ inputs.lane }})
     runs-on: macos-15
     timeout-minutes: 90
