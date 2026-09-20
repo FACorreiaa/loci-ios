@@ -51,6 +51,10 @@
 	<string>$(MAPBOX_API_KEY)</string>
 	<key>ConnectBaseURL</key>
 	<string>$(CONNECT_BASE_URL)</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Loci shows your trips next to events already on this iPhone, and can add a trip to the Calendar app.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Loci shows your trips next to events already on this iPhone, and can add a trip to the Calendar app.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

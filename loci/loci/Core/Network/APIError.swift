@@ -10,6 +10,8 @@ public enum APIError: LocalizedError, Equatable, Sendable {
   case network(String)
   case server(String)
   case custom(String)
+  /// User dismissed ASWebAuthenticationSession. Do not show a banner.
+  case cancelled
 
   public var isUnauthorized: Bool {
     if case .unauthorized = self { return true }
@@ -27,6 +29,7 @@ public enum APIError: LocalizedError, Equatable, Sendable {
     case .network(let details): return "Network connection error: \(details)"
     case .server(let details): return "Server error: \(details)"
     case .custom(let msg): return msg
+    case .cancelled: return nil
     }
   }
 }

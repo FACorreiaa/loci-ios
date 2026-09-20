@@ -117,6 +117,7 @@ import SwiftUI
         self.onAuthenticated()
       } catch {
         self.isLoading = false
+        if (error as? APIError) == .cancelled { return }
         self.errorMessage = error.localizedDescription
       }
     }

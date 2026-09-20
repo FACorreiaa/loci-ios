@@ -22,6 +22,12 @@ public struct ProfileView: View {
 
         Section("Preferences") {
           NavigationLink {
+            CalendarConnectionsView()
+          } label: {
+            Label("Calendars", systemImage: "calendar")
+          }
+
+          NavigationLink {
             NotificationSettingsView()
           } label: {
             Label("Notifications", systemImage: "bell.badge")

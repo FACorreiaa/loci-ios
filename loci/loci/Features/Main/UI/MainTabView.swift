@@ -9,7 +9,7 @@ public struct MainTabView: View {
     TabView {
       DiscoverView().tabItem { Label("Discover", systemImage: "magnifyingglass") }
 
-      TripsView().tabItem { Label("Trips", systemImage: "map.fill") }
+      CalendarView().tabItem { Label("Calendar", systemImage: "calendar") }
 
       ChatView().tabItem { Label("Assistant", systemImage: "bubble.left.and.bubble.right.fill") }
 

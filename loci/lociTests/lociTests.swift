@@ -35,6 +35,7 @@ struct lociTests {
     #expect(notFound.errorDescription == "The requested resource was not found.")
     let customErr = APIError.custom("Custom server error message")
     #expect(customErr.errorDescription == "Custom server error message")
+    #expect(APIError.cancelled.errorDescription == nil)
   }
 
   @Test @MainActor func testAppConfigEnvironmentResolution() async throws {
