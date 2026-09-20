@@ -10,6 +10,7 @@ jobs:
   test:
     name: Build and Test
     runs-on: macos-15
+    timeout-minutes: 20
 
     defaults:
       run:
@@ -35,6 +36,12 @@ jobs:
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: loci
 
       - name: Cache derived data
         uses: actions/cache@v4
@@ -71,21 +78,5 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -quiet
 
-      - name: Resolve an iOS simulator
-        id: sim
-        run: |
-          set -euo pipefail
-          sim_name="$(xcrun simctl list devices available | grep -E 'iPhone 1[5-9]' | head -1 | sed -E 's/^[[:space:]]*([^(]+)[[:space:]]+\(.*/\1/' | xargs)"
-          sim_name="${sim_name:-iPhone 16}"
-          echo "Using simulator: $sim_name"
-          echo "name=$sim_name" >> "$GITHUB_OUTPUT"
-          xcrun simctl boot "$sim_name" || true
-
       - name: Run Unit Tests
-        run: |
-          xcodebuild test \
-            -project loci.xcodeproj \
-            -scheme "loci Beta" \
-            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
-            -only-testing:lociTests \
-            -quiet
+        run: bundle exec fastlane test
