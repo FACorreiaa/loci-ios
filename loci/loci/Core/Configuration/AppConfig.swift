@@ -3,6 +3,13 @@ import Foundation
 public struct AppConfig: Sendable {
     public static let shared = AppConfig()
 
+    public enum Environment: String, Sendable {
+        case local
+        case testflight
+        case production
+    }
+
+    public let environment: Environment
     public let googleClientID: String
     public let googleReversedClientID: String
     public let postHogProjectToken: String
@@ -20,7 +27,19 @@ public struct AppConfig: Sendable {
         self.postHogHost = (bundle.object(forInfoDictionaryKey: "PostHogHost") as? String)
             ?? "https://eu.i.posthog.com"
         self.mapboxAPIKey = (bundle.object(forInfoDictionaryKey: "MapboxAPIKey") as? String) ?? ""
-        self.connectBaseURL = (bundle.object(forInfoDictionaryKey: "ConnectBaseURL") as? String)
-            ?? "http://localhost:8000"
+
+        let bundleURL = (bundle.object(forInfoDictionaryKey: "ConnectBaseURL") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let isResolvedBundleURL = (bundleURL != nil && !bundleURL!.isEmpty && !bundleURL!.hasPrefix("$("))
+
+        #if DEBUG
+        self.environment = .local
+        self.connectBaseURL = isResolvedBundleURL ? bundleURL! : "http://localhost:8000"
+        #else
+        let isBeta = (bundle.bundleIdentifier?.contains(".beta") == true)
+        self.environment = isBeta ? .testflight : .production
+        self.connectBaseURL = isResolvedBundleURL ? bundleURL! : "https://api.lociai.fyi"
+        #endif
     }
 }

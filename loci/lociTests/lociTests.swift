@@ -39,4 +39,11 @@ struct lociTests {
         let customErr = APIError.custom("Custom server error message")
         #expect(customErr.errorDescription == "Custom server error message")
     }
+
+    @Test func testAppConfigEnvironmentResolution() async throws {
+        let config = AppConfig.shared
+        #expect(!config.connectBaseURL.isEmpty)
+        #expect(config.connectBaseURL.hasPrefix("http://") || config.connectBaseURL.hasPrefix("https://"))
+        #expect(config.environment == .local || config.environment == .testflight || config.environment == .production)
+    }
 }

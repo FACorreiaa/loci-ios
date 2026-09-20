@@ -34,13 +34,13 @@ build/
 SourcePackages/
 
 # Fastlane
-fastlane/report.xml
-fastlane/Preview.html
-fastlane/screenshots/**/*.png
-fastlane/test_output/
-fastlane/ui_test_output/
-fastlane/build/
-fastlane/README.md
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots/**/*.png
+**/fastlane/test_output/
+**/fastlane/ui_test_output/
+**/fastlane/build/
+**/fastlane/README.md
 
 # Secrets and environment
 .env
