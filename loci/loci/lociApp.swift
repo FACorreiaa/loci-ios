@@ -10,6 +10,7 @@ import SwiftData
 
 @main
 struct lociApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var isAuthenticated: Bool = false
     @State private var isCheckingAuth: Bool = true
 

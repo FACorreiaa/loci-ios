@@ -35,8 +35,7 @@ public struct ProfileView: View {
 
                 Section("Preferences") {
                     NavigationLink {
-                        Text("Notification preferences will appear here.")
-                            .padding()
+                        NotificationSettingsView()
                     } label: {
                         Label("Notifications", systemImage: "bell.badge")
                     }

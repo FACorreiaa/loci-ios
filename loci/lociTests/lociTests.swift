@@ -40,7 +40,7 @@ struct lociTests {
         #expect(customErr.errorDescription == "Custom server error message")
     }
 
-    @Test func testAppConfigEnvironmentResolution() async throws {
+    @Test @MainActor func testAppConfigEnvironmentResolution() async throws {
         let config = AppConfig.shared
         #expect(!config.connectBaseURL.isEmpty)
         #expect(config.connectBaseURL.hasPrefix("http://") || config.connectBaseURL.hasPrefix("https://"))
