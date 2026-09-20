@@ -8,7 +8,14 @@ BETA_DEV_SCHEME = "loci Beta"          # Beta -> com.fernandocorreia.loci.beta (
 BUNDLE_ID = "com.fernandocorreia.loci"
 BETA_BUNDLE_ID = "com.fernandocorreia.loci.beta"
 
+REPO_ROOT = File.expand_path("../..", __dir__)
+
 platform :ios do
+  desc "Run SwiftLint check"
+  lane :lint do
+    sh("#{REPO_ROOT}/scripts/format.sh --skip-install --lint-only")
+  end
+
   desc "Run unit test suite"
   lane :test do
     run_tests(

@@ -1,107 +1,91 @@
+import Combine
 import Foundation
 import UIKit
 import UserNotifications
-import Combine
 
-@MainActor
-public final class PushNotificationManager: NSObject, ObservableObject, UNUserNotificationCenterDelegate, Sendable {
-    public static let shared = PushNotificationManager()
+@MainActor public final class PushNotificationManager: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
+  public static let shared = PushNotificationManager()
 
-    private let tokenStorageKey = "loci_apns_device_token"
+  private let tokenStorageKey = "loci_apns_device_token"
 
-    @Published public private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
-    @Published public private(set) var deviceToken: String?
-    @Published public private(set) var lastNotificationPayload: [AnyHashable: Any]?
+  @Published public private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
+  @Published public private(set) var deviceToken: String?
+  @Published public private(set) var lastNotificationPayload: [AnyHashable: Any]?
 
-    public override init() {
-        super.init()
-        self.deviceToken = UserDefaults.standard.string(forKey: tokenStorageKey)
+  public override init() {
+    super.init()
+    self.deviceToken = UserDefaults.standard.string(forKey: tokenStorageKey)
+  }
+
+  /// Configure the notification center delegate.
+  public func configure() {
+    UNUserNotificationCenter.current().delegate = self
+    Task { await refreshAuthorizationStatus() }
+  }
+
+  /// Refresh the current authorization status from UNUserNotificationCenter.
+  public func refreshAuthorizationStatus() async {
+    let settings = await UNUserNotificationCenter.current().notificationSettings()
+    self.authorizationStatus = settings.authorizationStatus
+  }
+
+  /// Request push notification authorization from the user.
+  @discardableResult public func requestAuthorization() async -> Bool {
+    do {
+      let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
+      await refreshAuthorizationStatus()
+      if granted { UIApplication.shared.registerForRemoteNotifications() }
+      return granted
+    } catch {
+      print("[APNS] Failed to request authorization: \(error)")
+      await refreshAuthorizationStatus()
+      return false
     }
+  }
 
-    /// Configure the notification center delegate.
-    public func configure() {
-        UNUserNotificationCenter.current().delegate = self
-        Task {
-            await refreshAuthorizationStatus()
-        }
-    }
+  /// Called by AppDelegate when APNS successfully registers a device token.
+  public func didRegisterForRemoteNotifications(withDeviceToken deviceTokenData: Data) {
+    let token = deviceTokenData.map { String(format: "%02.2hhx", $0) }.joined()
+    self.deviceToken = token
+    UserDefaults.standard.set(token, forKey: tokenStorageKey)
+    print("[APNS] Registered device token: \(token)")
+    NotificationCenter.default.post(name: .pushNotificationDeviceTokenDidUpdate, object: token)
+  }
 
-    /// Refresh the current authorization status from UNUserNotificationCenter.
-    public func refreshAuthorizationStatus() async {
-        let settings = await UNUserNotificationCenter.current().notificationSettings()
-        self.authorizationStatus = settings.authorizationStatus
-    }
+  /// Called by AppDelegate when APNS registration fails.
+  public func didFailToRegisterForRemoteNotifications(withError error: Error) {
+    print("[APNS] Failed to register for remote notifications: \(error.localizedDescription)")
+  }
 
-    /// Request push notification authorization from the user.
-    @discardableResult
-    public func requestAuthorization() async -> Bool {
-        do {
-            let granted = try await UNUserNotificationCenter.current().requestAuthorization(
-                options: [.alert, .badge, .sound]
-            )
-            await refreshAuthorizationStatus()
-            if granted {
-                UIApplication.shared.registerForRemoteNotifications()
-            }
-            return granted
-        } catch {
-            print("[APNS] Failed to request authorization: \(error)")
-            await refreshAuthorizationStatus()
-            return false
-        }
-    }
+  /// Called by AppDelegate when a remote notification is received.
+  public func didReceiveRemoteNotification(userInfo: [AnyHashable: Any]) { self.lastNotificationPayload = userInfo }
 
-    /// Called by AppDelegate when APNS successfully registers a device token.
-    public func didRegisterForRemoteNotifications(withDeviceToken deviceTokenData: Data) {
-        let token = deviceTokenData.map { String(format: "%02.2hhx", $0) }.joined()
-        self.deviceToken = token
-        UserDefaults.standard.set(token, forKey: tokenStorageKey)
-        print("[APNS] Registered device token: \(token)")
-        NotificationCenter.default.post(
-            name: .pushNotificationDeviceTokenDidUpdate,
-            object: token
-        )
-    }
+  // MARK: - UNUserNotificationCenterDelegate
 
-    /// Called by AppDelegate when APNS registration fails.
-    public func didFailToRegisterForRemoteNotifications(withError error: Error) {
-        print("[APNS] Failed to register for remote notifications: \(error.localizedDescription)")
-    }
+  /// Handle notification while the app is in the foreground.
+  public func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    self.lastNotificationPayload = notification.request.content.userInfo
+    completionHandler([.banner, .badge, .sound])
+  }
 
-    /// Called by AppDelegate when a remote notification is received.
-    public func didReceiveRemoteNotification(userInfo: [AnyHashable: Any]) {
-        self.lastNotificationPayload = userInfo
-    }
-
-    // MARK: - UNUserNotificationCenterDelegate
-
-    /// Handle notification while the app is in the foreground.
-    public func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-    ) {
-        self.lastNotificationPayload = notification.request.content.userInfo
-        completionHandler([.banner, .badge, .sound])
-    }
-
-    /// Handle user interaction with a notification (e.g. tap on banner).
-    public func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse,
-        withCompletionHandler completionHandler: @escaping () -> Void
-    ) {
-        let userInfo = response.notification.request.content.userInfo
-        self.lastNotificationPayload = userInfo
-        NotificationCenter.default.post(
-            name: .pushNotificationDidReceiveResponse,
-            object: userInfo
-        )
-        completionHandler()
-    }
+  /// Handle user interaction with a notification (e.g. tap on banner).
+  public func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    didReceive response: UNNotificationResponse,
+    withCompletionHandler completionHandler: @escaping () -> Void
+  ) {
+    let userInfo = response.notification.request.content.userInfo
+    self.lastNotificationPayload = userInfo
+    NotificationCenter.default.post(name: .pushNotificationDidReceiveResponse, object: userInfo)
+    completionHandler()
+  }
 }
 
 public extension Notification.Name {
-    static let pushNotificationDeviceTokenDidUpdate = Notification.Name("PushNotificationDeviceTokenDidUpdate")
-    static let pushNotificationDidReceiveResponse = Notification.Name("PushNotificationDidReceiveResponse")
+  static let pushNotificationDeviceTokenDidUpdate = Notification.Name("PushNotificationDeviceTokenDidUpdate")
+  static let pushNotificationDidReceiveResponse = Notification.Name("PushNotificationDidReceiveResponse")
 }
