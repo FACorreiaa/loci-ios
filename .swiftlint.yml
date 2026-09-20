@@ -110,6 +110,9 @@ analyzer_rules:
 trailing_comma:
   mandatory_comma: true
 
+number_separator:
+  minimum_length: 5
+
 indentation_width:
   indentation_width: 2
 

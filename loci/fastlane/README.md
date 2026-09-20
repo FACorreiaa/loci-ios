@@ -55,6 +55,14 @@ One-time: create signing certs/profiles and push them to the match repo
 
 Release to the App Store (phased rollout)
 
+### ios send_push
+
+```sh
+[bundle exec] fastlane ios send_push
+```
+
+Send test push notification via APNs
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.

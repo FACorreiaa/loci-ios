@@ -95,6 +95,27 @@ platform :ios do
     )
   end
 
+  desc "Send test push notification via APNs"
+  lane :send_push do |options|
+    token = options[:token] || ENV["DEVICE_TOKEN"]
+    UI.user_error!("Missing required argument: token (e.g. token:YOUR_DEVICE_TOKEN)") unless token
+
+    title = options[:title] || "Loci Test"
+    message = options[:message] || options[:body] || "Push notifications are working!"
+    env = options[:env] || "production"
+    topic = options[:topic] || (options[:prod] ? BUNDLE_ID : BETA_BUNDLE_ID)
+
+    cmd = [
+      "#{REPO_ROOT}/scripts/send_push.rb",
+      "--token", token,
+      "--title", title,
+      "--body", message,
+      "--env", env,
+      "--topic", topic
+    ]
+    sh(*cmd)
+  end
+
   # ---- helpers ----
 
   private_lane :asc_api_key do
