@@ -65,6 +65,15 @@ nonisolated struct SearchState: Equatable, Sendable {
   }
 
   var hasResult: Bool { !places.isEmpty || itinerary != nil }
+
+  /// Every place from every event, without repeats: what web's /nearme shows
+  /// (general POIs, restaurants, hotels and activities together).
+  var allPlaces: [Loci_Poi_POIDetailedInfo] {
+    var seenKeys = Set<String>()
+    return (itineraryPlaces + hotels + restaurants + activities).filter { poi in
+      seenKeys.insert(poi.stableID).inserted
+    }
+  }
 }
 
 /// What applying an event asks the controller to do.
@@ -167,4 +176,10 @@ nonisolated extension Loci_Chat_DomainType {
     default: "general"
     }
   }
+}
+
+nonisolated extension Loci_Poi_POIDetailedInfo {
+  /// A key for ForEach and map selection. The server sometimes sends places
+  /// with no id, so those fall back to name plus coordinates.
+  var stableID: String { id.isEmpty ? "\(name)|\(latitude)|\(longitude)" : id }
 }

@@ -6,13 +6,16 @@ import SwiftUI
 /// session, `onStarted` gets the link to push.
 struct SearchComposer: View {
   var placeholder = "Ask Loci — “3 days in Lisbon with kids”"
+  /// Text another control puts in the box (a category chip); cleared once taken.
+  var seed: Binding<String>?
   var cityName: String?
   var latitude: Double?
   var longitude: Double?
   var sessionId: String?
+  var useDefaultProfile = true
   let onStarted: (SessionLink) -> Void
 
-  @State private var controller = SearchSessionController.shared
+  private let controller = SearchSessionController.shared
   @State private var text = ""
   @State private var awaitingStart = false
   @State private var error: String?
@@ -44,6 +47,11 @@ struct SearchComposer: View {
           .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
       }
     }
+    .onChange(of: seed?.wrappedValue) { _, value in
+      guard let value, !value.isEmpty else { return }
+      text = value
+      seed?.wrappedValue = ""
+    }
     .onChange(of: controller.startedLink) { _, link in
       guard awaitingStart, let link else { return }
       awaitingStart = false
@@ -72,7 +80,14 @@ struct SearchComposer: View {
     awaitingStart = true
     Task {
       do {
-        try await controller.start(query: query, cityName: cityName, latitude: latitude, longitude: longitude, sessionId: sessionId)
+        try await controller.start(
+          query: query,
+          cityName: cityName,
+          latitude: latitude,
+          longitude: longitude,
+          sessionId: sessionId,
+          useDefaultProfile: useDefaultProfile
+        )
         text = ""
       } catch SearchSessionController.StartError.noDefaultProfile {
         awaitingStart = false

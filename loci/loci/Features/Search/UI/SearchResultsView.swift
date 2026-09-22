@@ -12,7 +12,7 @@ struct SearchResultsView: View {
   let link: SessionLink
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @State private var controller = SearchSessionController.shared
+  private let controller = SearchSessionController.shared
   @State private var restored: SearchState?
   @State private var isRestoring = false
   @State private var saveStatus: String?
@@ -101,7 +101,7 @@ struct SearchResultsView: View {
     }
 
     LazyVStack(spacing: 12) {
-      ForEach(Array(state.places.enumerated()), id: \.offset) { _, poi in
+      ForEach(state.places, id: \.stableID) { poi in
         POICardView(poi: poi).transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
       }
     }

@@ -6,8 +6,8 @@ import SwiftUI
 /// composer that starts a streaming search, and the landing point for deep
 /// links and notification taps (`AppRouter.pendingSession`).
 struct AssistantView: View {
-  @State private var router = AppRouter.shared
-  @State private var controller = SearchSessionController.shared
+  private let router = AppRouter.shared
+  private let controller = SearchSessionController.shared
   @State private var path: [SessionLink] = []
   @State private var sessions: [Loci_Chat_ChatSession] = []
   @State private var error: String?
