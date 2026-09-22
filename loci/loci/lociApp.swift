@@ -17,7 +17,9 @@ import SwiftUI
   var body: some Scene {
     WindowGroup {
       Group {
-        if isCheckingAuth {
+        if let preview = DesignPreview.requested {
+          preview.body
+        } else if isCheckingAuth {
           ZStack {
             Color.lociPaper.ignoresSafeArea()
             ProgressView()
