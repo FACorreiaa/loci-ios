@@ -49,9 +49,9 @@ public struct LoginScreen: View {
     VStack(spacing: 12) {
       Image("LociMascot").resizable().scaledToFit().frame(width: 96, height: 96).padding(.top, 16)
 
-      Text("Loci").font(.system(size: 32, weight: .bold, design: .serif)).foregroundColor(.lociInk)
+      Text("Loci").font(.lociDisplay(34)).foregroundStyle(Color.lociInk)
 
-      Text("Your Intelligent Travel Companion").font(.subheadline).foregroundColor(.lociInk.opacity(0.7))
+      Text("Your intelligent travel companion").font(.lociBody(15)).foregroundStyle(Color.lociMutedInk)
     }
   }
 
@@ -63,7 +63,7 @@ public struct LoginScreen: View {
           viewModel.clearMessages()
         }
       } label: {
-        Text("Sign In").font(.subheadline.weight(.semibold)).foregroundColor(viewModel.isSignup ? .lociInk.opacity(0.5) : .lociInk).frame(
+        Text("Sign In").font(.subheadline.weight(.semibold)).foregroundStyle(viewModel.isSignup ? Color.lociMutedInk : Color.lociInk).frame(
           maxWidth: .infinity
         ).padding(.vertical, 10).background(
           ZStack {
@@ -85,7 +85,7 @@ public struct LoginScreen: View {
           viewModel.clearMessages()
         }
       } label: {
-        Text("Create Account").font(.subheadline.weight(.semibold)).foregroundColor(viewModel.isSignup ? .lociInk : .lociInk.opacity(0.5)).frame(
+        Text("Create Account").font(.subheadline.weight(.semibold)).foregroundStyle(viewModel.isSignup ? Color.lociInk : Color.lociMutedInk).frame(
           maxWidth: .infinity
         ).padding(.vertical, 10).background(
           ZStack {
@@ -106,26 +106,26 @@ public struct LoginScreen: View {
   @ViewBuilder private var feedbackMessages: some View {
     if let errorMessage = viewModel.errorMessage {
       HStack(spacing: 8) {
-        Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.red)
-        Text(errorMessage).font(.footnote).foregroundColor(.red)
+        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Color.lociDestructive)
+        Text(errorMessage).font(.footnote).foregroundStyle(Color.lociDestructive)
         Spacer()
-      }.padding(12).background(Color.red.opacity(0.08)).cornerRadius(LociTheme.cornerRadius)
+      }.padding(12).background(Color.lociDestructive.opacity(0.08)).cornerRadius(LociTheme.cornerRadius)
     }
 
     if let successMessage = viewModel.successMessage {
       HStack(spacing: 8) {
-        Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
-        Text(successMessage).font(.footnote).foregroundColor(.green)
+        Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.lociForest)
+        Text(successMessage).font(.footnote).foregroundStyle(Color.lociForest)
         Spacer()
-      }.padding(12).background(Color.green.opacity(0.08)).cornerRadius(LociTheme.cornerRadius)
+      }.padding(12).background(Color.lociForest.opacity(0.08)).cornerRadius(LociTheme.cornerRadius)
     }
   }
 
   @ViewBuilder private var oauthDivider: some View {
     HStack(spacing: 16) {
-      Rectangle().fill(Color.lociBorder.opacity(0.8)).frame(height: 1)
-      Text("or").font(.footnote).foregroundColor(.lociInk.opacity(0.6))
-      Rectangle().fill(Color.lociBorder.opacity(0.8)).frame(height: 1)
+      Rectangle().fill(Color.lociBorder).frame(height: 1)
+      Text("or").font(.footnote).foregroundStyle(Color.lociMutedInk)
+      Rectangle().fill(Color.lociBorder).frame(height: 1)
     }.padding(.vertical, 4)
   }
 

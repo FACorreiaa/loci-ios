@@ -31,10 +31,10 @@ public struct LociTextField: View {
 
   public var body: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text(title).font(.caption.weight(.medium)).foregroundColor(.lociInk.opacity(0.8))
+      Text(title).font(.caption.weight(.medium)).foregroundStyle(Color.lociMutedInk)
 
       HStack(spacing: 12) {
-        Image(systemName: systemImage).foregroundColor(.lociInk.opacity(0.5)).frame(width: 20)
+        Image(systemName: systemImage).foregroundStyle(Color.lociMutedInk).frame(width: 20)
 
         if isSecure && !isShowingPassword {
           SecureField(placeholder, text: $text).textContentType(textContentType).autocorrectionDisabled().textInputAutocapitalization(.never)
@@ -47,11 +47,11 @@ public struct LociTextField: View {
           Button {
             isShowingPassword.toggle()
           } label: {
-            Image(systemName: isShowingPassword ? "eye.slash" : "eye").foregroundColor(.lociInk.opacity(0.4))
+            Image(systemName: isShowingPassword ? "eye.slash" : "eye").foregroundStyle(Color.lociMutedInk)
           }
         }
       }.padding(.horizontal, 14).padding(.vertical, 12).background(Color.lociCard).cornerRadius(LociTheme.cornerRadius).overlay(
-        RoundedRectangle(cornerRadius: LociTheme.cornerRadius).stroke(Color.lociBorder.opacity(0.6), lineWidth: LociTheme.borderWidth)
+        RoundedRectangle(cornerRadius: LociTheme.cornerRadius).stroke(Color.lociBorder, lineWidth: LociTheme.borderWidth)
       )
     }
   }

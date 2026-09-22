@@ -24,6 +24,7 @@ struct DiscoverView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 24) {
           hero
+          InSeasonBand(seed: $composerSeed)
           quickCategoriesSection
           if let page {
             trendingSection(page.trending)
