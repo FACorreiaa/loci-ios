@@ -4,7 +4,7 @@ import Testing
 
 @testable import loci
 
-struct OAuthWebAuthTests {
+@MainActor struct OAuthWebAuthTests {
   @Test func nativeRedirectURIUsesLociScheme() {
     #expect(OAuthWebAuth.nativeRedirectURI(provider: "google") == "loci://oauth2redirect/google")
     #expect(OAuthWebAuth.nativeRedirectURI(provider: "apple") == "loci://oauth2redirect/apple")

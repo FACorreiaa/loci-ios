@@ -17,13 +17,13 @@ public enum SecureStoreError: LocalizedError, Equatable {
   }
 }
 
-public protocol SecureStringStoring: Sendable {
+public nonisolated protocol SecureStringStoring: Sendable {
   func string(for key: String) throws -> String?
   func setString(_ value: String, for key: String) throws
   func removeValue(for key: String) throws
 }
 
-public final class KeychainStringStore: SecureStringStoring, @unchecked Sendable {
+public nonisolated final class KeychainStringStore: SecureStringStoring, @unchecked Sendable {
   private let service: String
 
   public init(service: String = Bundle.main.bundleIdentifier ?? "com.fernandocorreia.loci") { self.service = service }
@@ -48,7 +48,7 @@ public final class KeychainStringStore: SecureStringStoring, @unchecked Sendable
       kSecClass: kSecClassGenericPassword, kSecAttrService: service, kSecAttrAccount: key, kSecAttrSynchronizable: kCFBooleanFalse as Any,
     ]
 
-    let attributes: [CFString: Any] = [kSecValueData: data, kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly]
+    let attributes: [CFString: Any] = [kSecValueData: data, kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
 
     let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
     if updateStatus == errSecSuccess { return }

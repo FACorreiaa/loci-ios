@@ -15,8 +15,7 @@ import UIKit
   }
 
   public func listConnections() async throws -> [Loci_Calendar_CalendarConnection] {
-    var headers: Connect.Headers = [:]
-    if let token = try? await AuthSessionManager.shared.validAccessToken() { headers["Authorization"] = ["Bearer \(token)"] }
+    let headers: Connect.Headers = [:]
     let res = await client.listCalendarConnections(request: Loci_Calendar_ListCalendarConnectionsRequest(), headers: headers)
     if let err = res.error { throw APIError.custom(err.message ?? "Could not load calendars.") }
     return res.message?.connections ?? []
@@ -24,8 +23,7 @@ import UIKit
 
   public func connect(_ provider: Loci_Calendar_CalendarProvider) async throws {
     let path = provider == .calendly ? "calendly" : "google-calendar"
-    var headers: Connect.Headers = [:]
-    if let token = try? await AuthSessionManager.shared.validAccessToken() { headers["Authorization"] = ["Bearer \(token)"] }
+    let headers: Connect.Headers = [:]
 
     var start = Loci_Calendar_StartCalendarConnectRequest()
     start.provider = provider
@@ -76,8 +74,7 @@ import UIKit
   }
 
   public func disconnect(id: String) async throws {
-    var headers: Connect.Headers = [:]
-    if let token = try? await AuthSessionManager.shared.validAccessToken() { headers["Authorization"] = ["Bearer \(token)"] }
+    let headers: Connect.Headers = [:]
     var req = Loci_Calendar_DisconnectCalendarRequest()
     req.connectionID = id
     let res = await client.disconnectCalendar(request: req, headers: headers)

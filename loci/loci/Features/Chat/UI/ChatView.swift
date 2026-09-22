@@ -86,8 +86,7 @@ public struct ChatView: View {
     isSending = true
 
     Task {
-      var headers: Connect.Headers = [:]
-      if let token = try? await AuthSessionManager.shared.validAccessToken() { headers["Authorization"] = ["Bearer \(token)"] }
+      let headers: Connect.Headers = [:]
 
       if let currentSession = sessionId {
         var request = Loci_Chat_ContinueChatRequest()

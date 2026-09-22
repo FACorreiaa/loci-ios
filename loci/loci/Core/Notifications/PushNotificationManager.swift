@@ -81,6 +81,7 @@ import UserNotifications
     let userInfo = response.notification.request.content.userInfo
     self.lastNotificationPayload = userInfo
     NotificationCenter.default.post(name: .pushNotificationDidReceiveResponse, object: userInfo)
+    if let link = SessionLink(userInfo: userInfo) { AppRouter.shared.open(link) }
     completionHandler()
   }
 }

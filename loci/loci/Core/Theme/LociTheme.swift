@@ -1,65 +1,109 @@
 import SwiftUI
+import UIKit
 
+/// Design tokens from loci-client/docs/NATIVE_DESIGN.md. Change them there first.
 public enum LociTheme {
   // MARK: - Spacing & Corner Radius
   public static let cornerRadius: CGFloat = 12.8
   public static let cornerRadiusHero: CGFloat = 14.4
   public static let borderWidth: CGFloat = 1.0
   public static let defaultPadding: CGFloat = 16.0
+  public static let cardPadding: CGFloat = 16.0
+  public static let minTapTarget: CGFloat = 44.0
 
   // MARK: - Motion
   public static let defaultSpring = Animation.spring(response: 0.35, dampingFraction: 0.86)
+  /// Streamed results arriving: 400ms, cubic-bezier(0.16, 1, 0.3, 1).
+  public static let resultArrive = Animation.timingCurve(0.16, 1, 0.3, 1, duration: 0.4)
+  /// A selection settling: 250ms, cubic-bezier(0.22, 1, 0.36, 1).
+  public static let selectionSettle = Animation.timingCurve(0.22, 1, 0.36, 1, duration: 0.25)
+  /// What Reduce Motion falls back to: a short fade, no movement.
+  public static let reducedFade = Animation.easeOut(duration: 0.2)
+
+  /// Map day colours, in order (day 1 first). Cycle past day 8.
+  public static let dayColors: [Color] = [0x294D3C, 0x5A7A55, 0xC76B4A, 0x8A6E2F, 0x3D5A4A, 0xA85A3A, 0x6B8F71, 0xD4845C].map { Color(hex: $0) }
+  public static let clusterColor = Color(hex: 0x294D3C)
+  public static let ungroupedColor = Color(hex: 0x6B7C72)
+
+  public static func dayColor(_ day: Int) -> Color { dayColors[max(day - 1, 0) % dayColors.count] }
 }
 
 public extension Color {
-  // MARK: - Brand Core Colors
-  static let lociCoral = Color("AccentColor")  // Primary brand coral (#FA7862)
-  static let lociPaper = Color(
-    UIColor { trait in
-      trait.userInterfaceStyle == .dark
-        ? UIColor(red: 0.063, green: 0.102, blue: 0.086, alpha: 1.0)  // #101A16
-        : UIColor(red: 0.992, green: 0.961, blue: 0.918, alpha: 1.0)  // #FDF5EA
-    }
-  )
-  static let lociInk = Color(
-    UIColor { trait in
-      trait.userInterfaceStyle == .dark
-        ? UIColor(red: 0.929, green: 0.910, blue: 0.863, alpha: 1.0)  // #EDE8DC
-        : UIColor(red: 0.196, green: 0.231, blue: 0.259, alpha: 1.0)  // #323B42
-    }
-  )
-  static let lociForest = Color(
-    UIColor { trait in
-      trait.userInterfaceStyle == .dark
-        ? UIColor(red: 0.659, green: 0.722, blue: 0.588, alpha: 1.0)  // #A8B896
-        : UIColor(red: 0.129, green: 0.302, blue: 0.235, alpha: 1.0)  // #214D3C
-    }
-  )
-  static let lociSage = Color(
-    UIColor { trait in
-      trait.userInterfaceStyle == .dark
-        ? UIColor(red: 0.220, green: 0.282, blue: 0.251, alpha: 1.0)  // #384840
-        : UIColor(red: 0.847, green: 0.878, blue: 0.816, alpha: 1.0)  // #D8E0D0
-    }
-  )
-  static let lociCard = Color(
-    UIColor { trait in
-      trait.userInterfaceStyle == .dark
-        ? UIColor(red: 0.086, green: 0.125, blue: 0.098, alpha: 1.0)  // #162019
-        : UIColor(red: 0.992, green: 0.984, blue: 0.969, alpha: 1.0)  // #FDFBF7
-    }
-  )
-  static let lociBorder = Color(
-    UIColor { trait in
-      trait.userInterfaceStyle == .dark
-        ? UIColor(red: 0.220, green: 0.282, blue: 0.251, alpha: 1.0)  // #384840
-        : UIColor(red: 0.812, green: 0.773, blue: 0.710, alpha: 1.0)  // #CFC5B5
-    }
-  )
-  static let lociMuted = Color(
-    UIColor { trait in
-      trait.userInterfaceStyle == .dark
-        ? UIColor(red: 0.122, green: 0.161, blue: 0.137, alpha: 1.0) : UIColor(red: 0.910, green: 0.886, blue: 0.839, alpha: 1.0)  // #E8E2D6
-    }
-  )
+  nonisolated init(hex: UInt32) {
+    self.init(
+      red: Double((hex >> 16) & 0xFF) / 255,
+      green: Double((hex >> 8) & 0xFF) / 255,
+      blue: Double(hex & 0xFF) / 255
+    )
+  }
+
+  nonisolated private static func dynamic(light: UInt32, dark: UInt32) -> Color {
+    Color(
+      UIColor { trait in
+        let hex = trait.userInterfaceStyle == .dark ? dark : light
+        return UIColor(
+          red: CGFloat((hex >> 16) & 0xFF) / 255,
+          green: CGFloat((hex >> 8) & 0xFF) / 255,
+          blue: CGFloat(hex & 0xFF) / 255,
+          alpha: 1
+        )
+      }
+    )
+  }
+
+  // MARK: - Tokens (NATIVE_DESIGN §1)
+  /// background
+  static let lociPaper = dynamic(light: 0xF5F0E6, dark: 0x101A16)
+  /// foreground
+  static let lociInk = dynamic(light: 0x1A2E26, dark: 0xEDE8DC)
+  /// card
+  static let lociCard = dynamic(light: 0xFDFBF7, dark: 0x162019)
+  /// primary
+  static let lociForest = dynamic(light: 0x214D3C, dark: 0xA8B896)
+  /// secondary (also the active tab fill)
+  static let lociSage = dynamic(light: 0xD8E0D0, dark: 0x384840)
+  /// muted. Dark value kept from the app's earlier palette; NATIVE_DESIGN gives none.
+  static let lociMuted = dynamic(light: 0xE8E2D6, dark: 0x1F2923)
+  /// mutedForeground. NATIVE_DESIGN gives no dark value; this one is web's (styles/base.css).
+  static let lociMutedInk = dynamic(light: 0x5A6B62, dark: 0xB9AFA2)
+  /// accent (terracotta)
+  static let lociCoral = dynamic(light: 0xC76B4A, dark: 0xD4845C)
+  /// border
+  static let lociBorder = dynamic(light: 0xCFC5B5, dark: 0x384840)
+  /// destructive. Dark value from web (styles/base.css), as above.
+  static let lociDestructive = dynamic(light: 0xB33A32, dark: 0xDA534E)
+}
+
+// MARK: - Type (NATIVE_DESIGN §2)
+
+public extension Font {
+  /// Fraunces, for destination headlines. Scales with Dynamic Type.
+  static func lociDisplay(_ size: CGFloat = 34) -> Font {
+    .custom("Fraunces", size: size, relativeTo: .largeTitle).weight(.semibold)
+  }
+  static func lociTitle(_ size: CGFloat = 24) -> Font { .custom("Fraunces", size: size, relativeTo: .title).weight(.semibold) }
+  /// DM Sans, for UI text.
+  static func lociHeadline(_ size: CGFloat = 17) -> Font {
+    .custom("DM Sans", size: size, relativeTo: .headline).weight(.medium)
+  }
+  static func lociBody(_ size: CGFloat = 16) -> Font { .custom("DM Sans", size: size, relativeTo: .body) }
+  static func lociCaption(_ size: CGFloat = 12) -> Font { .custom("DM Sans", size: size, relativeTo: .caption) }
+  /// Space Mono, for coordinates, sequence numbers and status. Pair with `.textCase(.uppercase)` and tracking.
+  static func lociCoord(_ size: CGFloat = 11) -> Font { .custom("Space Mono", size: size, relativeTo: .caption2) }
+}
+
+public extension View {
+  /// A flat card: card fill, 1px border, NATIVE_DESIGN radius. No shadow.
+  func lociCard(padding: CGFloat = LociTheme.cardPadding) -> some View {
+    self.padding(padding).background(Color.lociCard)
+      .clipShape(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder, lineWidth: LociTheme.borderWidth)
+      )
+  }
+
+  /// Space Mono label styling: uppercase with tracking.
+  func lociCoordStyle(_ size: CGFloat = 11) -> some View {
+    self.font(.lociCoord(size)).textCase(.uppercase).tracking(1.2).foregroundStyle(Color.lociMutedInk)
+  }
 }
