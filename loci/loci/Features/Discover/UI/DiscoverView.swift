@@ -1,103 +1,167 @@
-import Connect
 import LociConnectProto
 import SwiftUI
 
-public struct DiscoverView: View {
-  @State private var query: String = ""
-  @State private var selectedCategory: String = "All"
-  @State private var pois: [Loci_Poi_POIDetailedInfo] = []
-  @State private var isLoading: Bool = false
-  @State private var errorMessage: String?
+/// Discover (web: /discover). DiscoverService.GetDiscoverPage for trending
+/// cities, featured collections and recent discoveries; a search box that runs
+/// ChatService.StreamChat without a profile, as web's Discover does; quick
+/// categories that fill the query; entry points to Nearby and Compare.
+struct DiscoverView: View {
+  /// web: routes/discover.tsx `categories`
+  static let quickCategories: [(name: String, symbol: String)] = [
+    ("Restaurants", "fork.knife"), ("Hotels", "bed.double"), ("Activities", "target"), ("Attractions", "building.columns"),
+    ("Nightlife", "moon.stars"), ("Shopping", "bag"), ("Museums", "paintpalette"), ("Parks", "tree"),
+    ("Beaches", "beach.umbrella"), ("Adventure", "mountain.2"), ("Cultural", "theatermasks"), ("Markets", "storefront"),
+  ]
 
-  private let categories = ["All", "Dining", "Sights", "Lodging", "Culture"]
-  private let client: Loci_Poi_PoiserviceClient
+  @State private var path: [SessionLink] = []
+  @State private var page: Loci_Discover_DiscoverPageData?
+  @State private var city = ""
+  @State private var composerSeed = ""
+  @State private var error: String?
 
-  public init(client: Loci_Poi_PoiserviceClient = Loci_Poi_PoiserviceClient(client: ConnectTransport.shared.protocolClient)) { self.client = client }
-
-  public var body: some View {
-    NavigationStack {
-      VStack(spacing: 0) {
-        // Search Bar
-        HStack(spacing: 10) {
-          Image(systemName: "magnifyingglass").foregroundColor(.lociInk.opacity(0.5))
-          TextField("Search destinations, restaurants, sights...", text: $query).autocorrectionDisabled().onSubmit { search() }
-          if !query.isEmpty {
-            Button {
-              query = ""
-              search()
-            } label: {
-              Image(systemName: "xmark.circle.fill").foregroundColor(.lociInk.opacity(0.4))
-            }
-          }
-        }.padding(.horizontal, 14).padding(.vertical, 12).background(Color.lociCard).cornerRadius(LociTheme.cornerRadius).overlay(
-          RoundedRectangle(cornerRadius: LociTheme.cornerRadius).stroke(Color.lociBorder.opacity(0.6), lineWidth: LociTheme.borderWidth)
-        ).padding(.horizontal, 16).padding(.top, 8)
-
-        // Category Chips
-        ScrollView(.horizontal, showsIndicators: false) {
-          HStack(spacing: 8) {
-            ForEach(categories, id: \.self) { category in
-              Button {
-                selectedCategory = category
-                search()
-              } label: {
-                Text(category).font(.subheadline.weight(.medium)).padding(.horizontal, 14).padding(.vertical, 8).background(
-                  selectedCategory == category ? Color.lociForest : Color.lociCard
-                ).foregroundColor(selectedCategory == category ? .white : .lociInk).cornerRadius(20).overlay(
-                  RoundedRectangle(cornerRadius: 20).stroke(selectedCategory == category ? Color.clear : Color.lociBorder.opacity(0.6), lineWidth: 1)
-                )
-              }
-            }
-          }.padding(.horizontal, 16).padding(.vertical, 12)
-        }
-
-        // Results / States
-        if isLoading {
-          Spacer()
-          ProgressView()
-          Spacer()
-        } else if let errorMessage {
-          Spacer()
-          VStack(spacing: 8) {
-            Image(systemName: "exclamationmark.circle").font(.largeTitle).foregroundColor(.lociCoral)
-            Text(errorMessage).font(.subheadline).foregroundColor(.lociInk.opacity(0.7))
-            Button("Retry") { search() }.foregroundColor(.lociCoral)
-          }.padding()
-          Spacer()
-        } else if pois.isEmpty {
-          Spacer()
-          VStack(spacing: 12) {
-            Image("LociMascot").resizable().scaledToFit().frame(width: 80, height: 80).opacity(0.8)
-            Text("Find Your Next Place").font(.headline).foregroundColor(.lociInk)
-            Text("Search for cities, sights, cafes, or hidden gems to begin exploring.").font(.subheadline).foregroundColor(.lociInk.opacity(0.6))
-              .multilineTextAlignment(.center).padding(.horizontal, 32)
-          }
-          Spacer()
-        } else {
-          ScrollView {
-            LazyVStack(spacing: 12) { ForEach(pois, id: \.id) { poi in POICardView(poi: poi) } }.padding(.horizontal, 16).padding(.top, 4).padding(
-              .bottom,
-              24
-            )
+  var body: some View {
+    NavigationStack(path: $path) {
+      ScrollView {
+        VStack(alignment: .leading, spacing: 24) {
+          hero
+          quickCategoriesSection
+          if let page {
+            trendingSection(page.trending)
+            featuredSection(page.featured)
+            recentSection(page.recentDiscoveries)
+          } else {
+            ProgressView().frame(maxWidth: .infinity)
           }
         }
-      }.background(Color.lociPaper.ignoresSafeArea()).navigationTitle("Discover")
-    }.task { if pois.isEmpty { search() } }
+        .padding(LociTheme.defaultPadding)
+      }
+      .background(Color.lociPaper.ignoresSafeArea())
+      .navigationTitle("Discover")
+      .navigationDestination(for: SessionLink.self) { SearchResultsView(link: $0) }
+      .refreshable { await load() }
+      .task { if page == nil { await load() } }
+      .errorAlert($error)
+    }
   }
 
-  private func search() {
-    isLoading = true
-    errorMessage = nil
-    Task {
-      var request = Loci_Poi_SearchPOIRequest()
-      request.query = query
-      if selectedCategory != "All" { request.searchType = selectedCategory.lowercased() }
+  // MARK: - Sections
 
-      let response = await client.searchPoi(request: request, headers: [:])
-      await MainActor.run {
-        self.isLoading = false
-        if let error = response.error { self.errorMessage = error.message } else if let message = response.message { self.pois = message.pois }
+  private var hero: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Where to next?").font(.lociDisplay(30)).foregroundStyle(Color.lociInk)
+      TextField("City (optional)", text: $city)
+        .font(.lociBody())
+        .textContentType(.addressCity)
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .background(Color.lociCard, in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder))
+      SearchComposer(
+        placeholder: "Restaurants, hotels, a day out…",
+        seed: $composerSeed,
+        cityName: city.trimmingCharacters(in: .whitespaces).isEmpty ? nil : city.trimmingCharacters(in: .whitespaces),
+        useDefaultProfile: false
+      ) { path.append($0) }
+      HStack(spacing: 12) {
+        NavigationLink { NearbyView() } label: { Label("Near me", systemImage: "location") }
+        NavigationLink { CompareView() } label: { Label("Weekend: compare two cities", systemImage: "arrow.left.arrow.right") }
       }
+      .font(.lociCaption(13))
+      .buttonStyle(.bordered)
+      .tint(.lociForest)
+    }
+  }
+
+  private var quickCategoriesSection: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Quick categories").font(.lociHeadline())
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 8) {
+          ForEach(Self.quickCategories, id: \.name) { category in
+            Button {
+              composerSeed = category.name
+            } label: {
+              Label(category.name, systemImage: category.symbol).font(.lociCaption(13))
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(Color.lociSage, in: Capsule())
+                .foregroundStyle(Color.lociInk)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  @ViewBuilder private func trendingSection(_ trending: [Loci_Discover_TrendingDiscovery]) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Trending today").font(.lociHeadline())
+      if trending.isEmpty {
+        Text("No trending discoveries yet today").foregroundStyle(Color.lociMutedInk)
+      } else {
+        ForEach(trending, id: \.cityName) { item in
+          Button {
+            city = item.cityName
+          } label: {
+            HStack {
+              Text(item.emoji)
+              Text(item.cityName).font(.lociBody()).foregroundStyle(Color.lociInk)
+              Spacer()
+              Text("\(item.searchCount) searches").lociCoordStyle(10)
+            }
+            .lociCard(padding: 12)
+          }
+        }
+      }
+    }
+  }
+
+  @ViewBuilder private func featuredSection(_ featured: [Loci_Discover_FeaturedCollection]) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Featured collections").font(.lociHeadline())
+      if featured.isEmpty {
+        Text("No featured collections available").foregroundStyle(Color.lociMutedInk)
+      } else {
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 12) {
+            ForEach(featured, id: \.category) { item in
+              Button {
+                composerSeed = item.title
+              } label: {
+                VStack(alignment: .leading, spacing: 6) {
+                  Text(item.emoji).font(.title)
+                  Text(item.title).font(.lociHeadline(15)).foregroundStyle(Color.lociInk).multilineTextAlignment(.leading)
+                  Text("\(item.itemCount) places").lociCoordStyle(10)
+                }
+                .frame(width: 160, alignment: .leading)
+                .lociCard(padding: 14)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  @ViewBuilder private func recentSection(_ sessions: [Loci_Chat_ChatSession]) -> some View {
+    if !sessions.isEmpty {
+      VStack(alignment: .leading, spacing: 8) {
+        Text("Your recent discoveries").font(.lociHeadline())
+        ForEach(sessions, id: \.id) { session in
+          NavigationLink(value: AssistantView.link(for: session)) {
+            SessionRow(session: session).frame(maxWidth: .infinity, alignment: .leading).lociCard(padding: 12)
+          }
+        }
+      }
+    }
+  }
+
+  private func load() async {
+    do {
+      page = try await rpc("Could not load Discover.") {
+        await Loci_Discover_DiscoverServiceClient(client: ConnectTransport.shared.protocolClient).getDiscoverPage(request: .init(), headers: [:])
+      }.data
+    } catch {
+      page = Loci_Discover_DiscoverPageData()
+      self.error = error.userMessage
     }
   }
 }

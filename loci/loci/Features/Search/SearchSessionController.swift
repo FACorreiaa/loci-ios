@@ -55,19 +55,24 @@ import UIKit
 
   /// Start a search. Replaces any running one: one active search at a time.
   /// `sessionId` continues an existing conversation (web: follow-up messages).
+  /// `useDefaultProfile` is false for Discover and Nearby, which web runs
+  /// without a profile; the dashboard and chat need one.
   func start(
     query: String,
     cityName: String? = nil,
     latitude: Double? = nil,
     longitude: Double? = nil,
     profileId: String? = nil,
-    sessionId: String? = nil
+    sessionId: String? = nil,
+    useDefaultProfile: Bool = true
   ) async throws {
     let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return }
-    var resolvedProfile = profileId
-    if resolvedProfile == nil { resolvedProfile = try await defaultProfileId() }
-    guard let profile = resolvedProfile else { throw StartError.noDefaultProfile }
+    var profile = profileId
+    if profile == nil, useDefaultProfile {
+      profile = try await defaultProfileId()
+      if profile == nil { throw StartError.noDefaultProfile }
+    }
 
     stop()
     _ = await PushNotificationManager.shared.requestAuthorizationIfNeeded()
@@ -119,7 +124,7 @@ import UIKit
       do {
         for try await event in events {
           guard let self else { return }
-          self.receive(event)
+          await self.receive(event)
         }
         await self?.streamEnded()
       } catch is CancellationError {
@@ -130,7 +135,7 @@ import UIKit
     }
   }
 
-  private func receive(_ event: Loci_Chat_StreamEvent) {
+  private func receive(_ event: Loci_Chat_StreamEvent) async {
     let effect = state.apply(event)
     if var envelope {
       envelope.sessionId = state.sessionId ?? envelope.sessionId
@@ -142,7 +147,7 @@ import UIKit
     }
     switch effect {
     case .started(let link): startedLink = link
-    case .completed, .failed: Task { await finish() }
+    case .completed, .failed: await finish()
     case nil: break
     }
   }
