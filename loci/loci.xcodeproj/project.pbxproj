@@ -10,6 +10,10 @@
 		0DC776E2305DBE860029F87E /* LociConnectProto in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776E1305DBE860029F87E /* LociConnectProto */; };
 		0DC776E5305DBE860029F87E /* Connect in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776E4305DBE860029F87E /* Connect */; };
 		0DC776F2305DBE860029F87E /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776F1305DBE860029F87E /* GoogleSignIn */; };
+		14314FDF44DCB0760A62D268 /* NearbyWalkAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC7483382DCDDCF36790C44 /* NearbyWalkAttributes.swift */; };
+		50572CA008FED317A5104806 /* NearbyWalkLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE42D50A7E3826BD5FA47F13 /* NearbyWalkLiveActivity.swift */; };
+		C72D3152FC1BE9A7745BFFAF /* NearbyWalkWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2685B34C7CC0A36E8298F99 /* NearbyWalkWidgetBundle.swift */; };
+		FDFD1BBF53B00464BE0EA46F /* NearbyWalkWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9FDE55B8878D3A2ADFF78A2F /* NearbyWalkWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,27 +31,60 @@
 			remoteGlobalIDString = 0DC776A8305DBE860029F87E;
 			remoteInfo = loci;
 		};
+		112689145952406739AE957A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0DC776A1305DBE860029F87E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 84B3461439C2C9B0663217BD;
+			remoteInfo = NearbyWalkWidget;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		09A10EC157EDA0B08ACB8387 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				FDFD1BBF53B00464BE0EA46F /* NearbyWalkWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		0DC776A9305DBE860029F87E /* loci.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = loci.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0DC776B8305DBE860029F87E /* lociTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = lociTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0DC776C2305DBE860029F87E /* lociUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = lociUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3034AC953E062C1A6B18581D /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5AC7483382DCDDCF36790C44 /* NearbyWalkAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NearbyWalkAttributes.swift; path = loci/Shared/NearbyWalkAttributes.swift; sourceTree = "<group>"; };
+		8890887E5BBEFB65EA0664A2 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		9FDE55B8878D3A2ADFF78A2F /* NearbyWalkWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NearbyWalkWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2685B34C7CC0A36E8298F99 /* NearbyWalkWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NearbyWalkWidgetBundle.swift; sourceTree = "<group>"; };
+		CE42D50A7E3826BD5FA47F13 /* NearbyWalkLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NearbyWalkLiveActivity.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0DC776AB305DBE860029F87E /* loci */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = loci;
 			sourceTree = "<group>";
 		};
 		0DC776BB305DBE860029F87E /* lociTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = lociTests;
 			sourceTree = "<group>";
 		};
 		0DC776C5305DBE860029F87E /* lociUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = lociUITests;
 			sourceTree = "<group>";
 		};
@@ -78,6 +115,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DE23AB50B1C13626D4403324 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -88,6 +132,9 @@
 				0DC776BB305DBE860029F87E /* lociTests */,
 				0DC776C5305DBE860029F87E /* lociUITests */,
 				0DC776AA305DBE860029F87E /* Products */,
+				2D93C9B1795953E9F5946140 /* Frameworks */,
+				508FA22A4A1B0C1446B053E5 /* NearbyWalkWidget */,
+				5AC7483382DCDDCF36790C44 /* NearbyWalkAttributes.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -97,8 +144,36 @@
 				0DC776A9305DBE860029F87E /* loci.app */,
 				0DC776B8305DBE860029F87E /* lociTests.xctest */,
 				0DC776C2305DBE860029F87E /* lociUITests.xctest */,
+				9FDE55B8878D3A2ADFF78A2F /* NearbyWalkWidget.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		2D93C9B1795953E9F5946140 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				698B56850C7BC8E176FCB4FD /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		508FA22A4A1B0C1446B053E5 /* NearbyWalkWidget */ = {
+			isa = PBXGroup;
+			children = (
+				A2685B34C7CC0A36E8298F99 /* NearbyWalkWidgetBundle.swift */,
+				CE42D50A7E3826BD5FA47F13 /* NearbyWalkLiveActivity.swift */,
+				3034AC953E062C1A6B18581D /* Info.plist */,
+			);
+			name = NearbyWalkWidget;
+			path = NearbyWalkWidget;
+			sourceTree = "<group>";
+		};
+		698B56850C7BC8E176FCB4FD /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				8890887E5BBEFB65EA0664A2 /* Foundation.framework */,
+			);
+			name = iOS;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -111,10 +186,12 @@
 				0DC776A5305DBE860029F87E /* Sources */,
 				0DC776A6305DBE860029F87E /* Frameworks */,
 				0DC776A7305DBE860029F87E /* Resources */,
+				09A10EC157EDA0B08ACB8387 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				25EFCB0B3781FE3998DFFCCB /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				0DC776AB305DBE860029F87E /* loci */,
@@ -146,8 +223,6 @@
 				0DC776BB305DBE860029F87E /* lociTests */,
 			);
 			name = lociTests;
-			packageProductDependencies = (
-			);
 			productName = lociTests;
 			productReference = 0DC776B8305DBE860029F87E /* lociTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -169,11 +244,26 @@
 				0DC776C5305DBE860029F87E /* lociUITests */,
 			);
 			name = lociUITests;
-			packageProductDependencies = (
-			);
 			productName = lociUITests;
 			productReference = 0DC776C2305DBE860029F87E /* lociUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		84B3461439C2C9B0663217BD /* NearbyWalkWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6FA0E24C73F28EBB90AE886A /* Build configuration list for PBXNativeTarget "NearbyWalkWidget" */;
+			buildPhases = (
+				68D3106886103CFA89ED0E71 /* Sources */,
+				DE23AB50B1C13626D4403324 /* Frameworks */,
+				4BF6AE1E26EF9EC2794365CD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NearbyWalkWidget;
+			productName = NearbyWalkWidget;
+			productReference = 9FDE55B8878D3A2ADFF78A2F /* NearbyWalkWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -208,7 +298,7 @@
 			mainGroup = 0DC776A0305DBE860029F87E;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				0DC776E0305DBE860029F87E /* XCLocalSwiftPackageReference "../../loci-connect-proto" */,
+				0DC776E0305DBE860029F87E /* XCLocalSwiftPackageReference "loci-connect-proto" */,
 				0DC776E3305DBE860029F87E /* XCRemoteSwiftPackageReference "connect-swift" */,
 				0DC776F0305DBE860029F87E /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
@@ -220,6 +310,7 @@
 				0DC776A8305DBE860029F87E /* loci */,
 				0DC776B7305DBE860029F87E /* lociTests */,
 				0DC776C1305DBE860029F87E /* lociUITests */,
+				84B3461439C2C9B0663217BD /* NearbyWalkWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -240,6 +331,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		0DC776C0305DBE860029F87E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4BF6AE1E26EF9EC2794365CD /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -270,6 +368,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		68D3106886103CFA89ED0E71 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C72D3152FC1BE9A7745BFFAF /* NearbyWalkWidgetBundle.swift in Sources */,
+				50572CA008FED317A5104806 /* NearbyWalkLiveActivity.swift in Sources */,
+				14314FDF44DCB0760A62D268 /* NearbyWalkAttributes.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -282,6 +390,12 @@
 			isa = PBXTargetDependency;
 			target = 0DC776A8305DBE860029F87E /* loci */;
 			targetProxy = 0DC776C3305DBE860029F87E /* PBXContainerItemProxy */;
+		};
+		25EFCB0B3781FE3998DFFCCB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = NearbyWalkWidget;
+			target = 84B3461439C2C9B0663217BD /* NearbyWalkWidget */;
+			targetProxy = 112689145952406739AE957A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -460,9 +574,12 @@
 		0DC776CD305DBE860029F87E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APS_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = loci.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				CONNECT_BASE_URL = "http://localhost:8000";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
 				ENABLE_APP_SANDBOX = YES;
@@ -485,9 +602,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				MARKETING_VERSION = 1.0;
-				APS_ENVIRONMENT = development;
-				CODE_SIGN_ENTITLEMENTS = loci.entitlements;
-				CONNECT_BASE_URL = "http://localhost:8000";
 				PRODUCT_BUNDLE_IDENTIFIER = com.fernandocorreia.loci;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -506,9 +620,12 @@
 		0DC776CE305DBE860029F87E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = loci.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				CONNECT_BASE_URL = "https://api.lociai.fyi";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
 				ENABLE_APP_SANDBOX = YES;
@@ -531,9 +648,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				MARKETING_VERSION = 1.0;
-				APS_ENVIRONMENT = production;
-				CODE_SIGN_ENTITLEMENTS = loci.entitlements;
-				CONNECT_BASE_URL = "https://api.lociai.fyi";
 				PRODUCT_BUNDLE_IDENTIFIER = com.fernandocorreia.loci;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -552,9 +666,12 @@
 		0DC776CE305DBE860029F87F /* Beta */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = loci.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				CONNECT_BASE_URL = "https://api.lociai.fyi";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
 				ENABLE_APP_SANDBOX = YES;
@@ -578,9 +695,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				MARKETING_VERSION = 1.0;
-				APS_ENVIRONMENT = production;
-				CODE_SIGN_ENTITLEMENTS = loci.entitlements;
-				CONNECT_BASE_URL = "https://api.lociai.fyi";
 				PRODUCT_BUNDLE_IDENTIFIER = com.fernandocorreia.loci.beta;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -737,6 +851,101 @@
 			};
 			name = Beta;
 		};
+		A33B1F914FF2A23CC59838B6 /* Beta */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 84X9WYBF36;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NearbyWalkWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Nearby walk";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fernandocorreia.loci.beta.NearbyWalkWidget;
+				PRODUCT_NAME = NearbyWalkWidget;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Beta;
+		};
+		C71D7E24DA96D7E162395FB1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 84X9WYBF36;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NearbyWalkWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Nearby walk";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fernandocorreia.loci.NearbyWalkWidget;
+				PRODUCT_NAME = NearbyWalkWidget;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		EF6C3B205E414A8E3BAC9244 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 84X9WYBF36;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NearbyWalkWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Nearby walk";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fernandocorreia.loci.NearbyWalkWidget;
+				PRODUCT_NAME = NearbyWalkWidget;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -780,10 +989,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		6FA0E24C73F28EBB90AE886A /* Build configuration list for PBXNativeTarget "NearbyWalkWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C71D7E24DA96D7E162395FB1 /* Release */,
+				EF6C3B205E414A8E3BAC9244 /* Debug */,
+				A33B1F914FF2A23CC59838B6 /* Beta */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		0DC776E0305DBE860029F87E /* XCLocalSwiftPackageReference "../../loci-connect-proto" */ = {
+		0DC776E0305DBE860029F87E /* XCLocalSwiftPackageReference "loci-connect-proto" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = "../../loci-connect-proto";
 		};
@@ -811,7 +1030,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		0DC776E1305DBE860029F87E /* LociConnectProto */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 0DC776E0305DBE860029F87E /* XCLocalSwiftPackageReference "../../loci-connect-proto" */;
+			package = 0DC776E0305DBE860029F87E /* XCLocalSwiftPackageReference "loci-connect-proto" */;
 			productName = LociConnectProto;
 		};
 		0DC776E4305DBE860029F87E /* Connect */ = {

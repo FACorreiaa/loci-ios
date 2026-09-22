@@ -66,6 +66,10 @@
 	<string>Loci shows your trips next to events already on this iPhone, and can add a trip to the Calendar app.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Loci uses your location to find places near you and to plan from where you are.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Loci counts your steps and distance while you walk to nearby places.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>PostHogHost</key>
 	<string>https://eu.i.posthog.com</string>
 	<key>PostHogProjectToken</key>
@@ -81,6 +85,7 @@
 	<array>
 		<string>fetch</string>
 		<string>remote-notification</string>
+		<string>location</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict/>

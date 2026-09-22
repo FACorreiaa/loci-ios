@@ -27,6 +27,7 @@ struct NearbyView: View {
   @State private var showList = true
   @State private var sessionId: String?
   @State private var error: String?
+  private let walk = NearbyWalk.shared
 
   /// Only this screen's search, not whatever else is running.
   private var places: [Loci_Poi_POIDetailedInfo] {
@@ -71,7 +72,9 @@ struct NearbyView: View {
     }
     .onChange(of: radiusKm) { Task { await search() } }
     .sheet(isPresented: $showList) {
-      NearbyList(places: places, selectedID: $selectedID, isSearching: isSearching, onRetry: { Task { await search() } })
+      NearbyList(places: places, selectedID: $selectedID, isSearching: isSearching, walk: walk, radiusKm: radiusKm) {
+        Task { await search() }
+      }
         .presentationDetents([.fraction(0.25), .medium, .large])
         .presentationBackgroundInteraction(.enabled(upThrough: .medium))
         .presentationDragIndicator(.visible)
@@ -82,6 +85,8 @@ struct NearbyView: View {
     .onChange(of: controller.startedLink) { _, link in
       if isSearching, sessionId == nil { sessionId = link?.sessionId }
     }
+    .onChange(of: places.map(\.stableID)) { Task { await walk.update(places: places) } }
+    .onChange(of: walk.tracker.steps) { walk.refreshActivity() }
   }
 
   private func search() async {
@@ -118,11 +123,14 @@ struct NearbyList: View {
   let places: [Loci_Poi_POIDetailedInfo]
   @Binding var selectedID: String?
   let isSearching: Bool
+  let walk: NearbyWalk
+  let radiusKm: Int
   let onRetry: () -> Void
 
   var body: some View {
     ScrollViewReader { proxy in
       List {
+        WalkRow(walk: walk, places: places, radiusKm: radiusKm)
         if isSearching, places.isEmpty {
           HStack {
             ProgressView()
@@ -164,5 +172,38 @@ struct NearbyList: View {
         withAnimation(LociTheme.selectionSettle) { proxy.scrollTo(id, anchor: .top) }
       }
     }
+  }
+}
+
+/// Start/stop the walk, with live steps and distance while it runs.
+/// Motion & Fitness is asked on the first start; Live Activities need no prompt.
+struct WalkRow: View {
+  let walk: NearbyWalk
+  let places: [Loci_Poi_POIDetailedInfo]
+  let radiusKm: Int
+
+  var body: some View {
+    HStack(spacing: 12) {
+      if walk.isActive {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(walk.tracker.stepsText).font(.lociHeadline(16)).foregroundStyle(Color.lociInk).contentTransition(.numericText())
+          Text(walk.tracker.deniedByUser ? "Steps off: allow Motion & Fitness in Settings" : "\(walk.tracker.distanceText) · \(places.count) places fenced")
+            .lociCoordStyle(10)
+        }
+        Spacer()
+        Button("Stop", systemImage: "stop.fill") { Task { await walk.stop() } }
+          .buttonStyle(.bordered).tint(.lociCoral)
+      } else {
+        VStack(alignment: .leading, spacing: 2) {
+          Text("Walk it").font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
+          Text("Count steps and get a nudge when you pass a place").lociCoordStyle(10)
+        }
+        Spacer()
+        Button("Start", systemImage: "figure.walk") { Task { await walk.start(places: places, radiusKm: radiusKm) } }
+          .buttonStyle(.borderedProminent).tint(.lociForest)
+          .disabled(places.isEmpty)
+      }
+    }
+    .listRowBackground(Color.lociSage.opacity(0.35))
   }
 }
