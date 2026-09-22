@@ -1,100 +1,66 @@
-import AuthenticationServices
-import Connect
 import Foundation
+import GoogleSignIn
 import LociConnectProto
 import UIKit
 
-@MainActor public final class GoogleAuthService: NSObject, ASWebAuthenticationPresentationContextProviding {
+/// Google sign-in through the Google SDK, with no stop at the website.
+///
+/// This used to open the web OAuth flow and bounce back through
+/// lociai.fyi/auth/oauth/google/callback. That page never loaded on devices
+/// where Safari had the site's service worker, which answered every
+/// navigation with the /offline page (TestFlight showed the site's "Something
+/// went wrong"). And past that, the app sent the callback URL's `state` where
+/// the server needed the one GetOAuthURL returned. The SDK signs in with the iOS
+/// client and returns an ID token the server verifies directly.
+@MainActor public final class GoogleAuthService {
   public static let shared = GoogleAuthService()
 
-  private let client: Loci_CustomAuth_CustomAuthServiceClient
-  private let sessionManager: AuthSessionManager
-  private var webAuthSession: ASWebAuthenticationSession?
+  private let clientID: String
 
-  public init(client: Loci_CustomAuth_CustomAuthServiceClient? = nil, sessionManager: AuthSessionManager? = nil) {
-    self.client = client ?? Loci_CustomAuth_CustomAuthServiceClient(client: ConnectTransport.shared.protocolClient)
-    self.sessionManager = sessionManager ?? .shared
-  }
+  public init(clientID: String = AppConfig.shared.googleClientID) { self.clientID = clientID }
 
   public func signInWithGoogle() async throws -> Loci_CustomAuth_OAuthCallbackResponse {
-    let callbackScheme = OAuthWebAuth.callbackScheme
-    let redirectUri = OAuthWebAuth.nativeRedirectURI(provider: "google")
-
-    var req = Loci_CustomAuth_GetOAuthURLRequest()
-    req.provider = .google
-    req.redirectUri = redirectUri
-
-    let res = await client.getOauthURL(request: req, headers: [:])
-    if let err = res.error { throw APIError.custom("Google sign-in isn't available right now. Try email and password instead.") }
-    guard let message = res.message, let authURL = URL(string: message.authURL) else { throw APIError.invalidResponse }
-
-    let callbackURL: URL
-    do {
-      callbackURL = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
-        let session = ASWebAuthenticationSession(url: authURL, callbackURLScheme: callbackScheme) { callbackURL, error in
-          if let error {
-            continuation.resume(throwing: OAuthWebAuth.isCancellation(error) ? APIError.cancelled : error)
-          } else if let callbackURL {
-            continuation.resume(returning: callbackURL)
-          } else {
-            continuation.resume(throwing: APIError.invalidResponse)
-          }
-        }
-        session.presentationContextProvider = self
-        session.prefersEphemeralWebBrowserSession = false
-        self.webAuthSession = session
-        session.start()
-      }
-    } catch let error as APIError {
-      throw error
-    } catch {
-      if OAuthWebAuth.isCancellation(error) { throw APIError.cancelled }
+    guard let presenter = Self.topViewController() else {
       throw APIError.custom("Google sign-in didn't finish. Please try again.")
     }
+    let nonce = NativeSignIn.makeNonce()
 
-    guard let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false) else {
-      throw APIError.invalidResponse
+    GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
+
+    let result: GIDSignInResult
+    do {
+      result = try await GIDSignIn.sharedInstance.signIn(
+        withPresenting: presenter,
+        hint: nil,
+        additionalScopes: nil,
+        nonce: nonce
+      )
+    } catch {
+      throw Self.mapError(error)
     }
-    let queryItems = components.queryItems ?? []
-    if let oauthError = queryItems.first(where: { $0.name == "error" })?.value, !oauthError.isEmpty {
-      throw APIError.custom("Google sign-in was declined.")
+
+    guard let idToken = result.user.idToken?.tokenString else {
+      throw APIError.custom("Google sign-in didn't finish. Please try again.")
     }
+    // Loci keeps its own session; the SDK's copy of the Google one is not
+    // needed and should not outlive this call.
+    defer { GIDSignIn.sharedInstance.signOut() }
 
-    let code = queryItems.first(where: { $0.name == "code" })?.value ?? ""
-    let state = queryItems.first(where: { $0.name == "state" })?.value ?? message.state
-    guard !code.isEmpty else { throw APIError.invalidResponse }
-
-    var callbackReq = Loci_CustomAuth_OAuthCallbackRequest()
-    callbackReq.provider = .google
-    callbackReq.code = code
-    callbackReq.state = state
-
-    let callbackRes = await client.oauthCallback(request: callbackReq, headers: [:])
-    if let err = callbackRes.error { throw APIError.custom("Google sign-in didn't finish. Please try again.") }
-    guard let callbackMsg = callbackRes.message else { throw APIError.invalidResponse }
-
-    try await sessionManager.storeSession(
-      accessToken: callbackMsg.accessToken,
-      refreshToken: callbackMsg.refreshToken,
-      userId: callbackMsg.userID,
-      username: callbackMsg.username
-    )
-
-    return callbackMsg
+    return try await NativeSignIn.signIn(provider: .google, idToken: idToken, nonce: nonce)
   }
 
-  public nonisolated func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-    MainActor.assumeIsolated {
-      let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-      if let window = OAuthWebAuth.presentationWindow(from: scenes) { return window }
-      // Last resort: the key window of the first scene. Never a detached UIWindow —
-      // ASWebAuthenticationSession treats that as a failed session (error 1).
-      if let scene = scenes.first {
-        let window = UIWindow(windowScene: scene)
-        window.makeKeyAndVisible()
-        return window
-      }
-      return ASPresentationAnchor()
-    }
+  /// Cancel is silent; anything else is a banner.
+  nonisolated static func mapError(_ error: Error) -> Error {
+    let ns = error as NSError
+    if ns.domain == kGIDSignInErrorDomain, ns.code == GIDSignInError.canceled.rawValue { return APIError.cancelled }
+    if error is APIError { return error }
+    return APIError.custom("Google sign-in didn't finish. Please try again.")
+  }
+
+  private static func topViewController() -> UIViewController? {
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    var top = OAuthWebAuth.presentationWindow(from: scenes)?.rootViewController
+    while let presented = top?.presentedViewController { top = presented }
+    return top
   }
 }

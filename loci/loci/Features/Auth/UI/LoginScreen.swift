@@ -1,8 +1,10 @@
+import AuthenticationServices
 import SwiftUI
 
 public struct LoginScreen: View {
   @StateObject private var viewModel: LoginViewModel
   @Namespace private var animationNamespace
+  @Environment(\.colorScheme) private var colorScheme
 
   public init(onAuthenticated: @escaping () -> Void = {}) { _viewModel = StateObject(wrappedValue: LoginViewModel(onAuthenticated: onAuthenticated)) }
 
@@ -21,6 +23,7 @@ public struct LoginScreen: View {
           }
 
           oauthDivider
+          appleSignInButton
           googleSignInButton
         }.padding(.horizontal, 24).padding(.bottom, 32)
       }.background(Color.lociPaper.ignoresSafeArea()).sheet(isPresented: $viewModel.showForgotPassword) {
@@ -126,6 +129,20 @@ public struct LoginScreen: View {
     }.padding(.vertical, 4)
   }
 
+  /// The system button, not a lookalike: App Review holds Sign in with Apple
+  /// to Apple's own artwork. The request itself is built in
+  /// AppleSignInService, so this only starts it.
+  @ViewBuilder private var appleSignInButton: some View {
+    AppleSignInLabel(style: colorScheme == .dark ? .white : .black).frame(height: 50).cornerRadius(LociTheme.cornerRadius)
+      .overlay(
+        Button {
+          viewModel.performAppleSignIn()
+        } label: {
+          Color.clear.contentShape(Rectangle())
+        }.accessibilityLabel("Sign in with Apple")
+      ).disabled(viewModel.isLoading)
+  }
+
   @ViewBuilder private var googleSignInButton: some View {
     Button {
       viewModel.performGoogleSignIn()
@@ -138,4 +155,21 @@ public struct LoginScreen: View {
       )
     }.disabled(viewModel.isLoading)
   }
+}
+
+/// Apple's button artwork with no action of its own. SwiftUI's
+/// SignInWithAppleButton insists on owning the request and its completion,
+/// which would split the flow between the view and AppleSignInService.
+private struct AppleSignInLabel: UIViewRepresentable {
+  let style: ASAuthorizationAppleIDButton.Style
+
+  func makeUIView(context: Context) -> ASAuthorizationAppleIDButton {
+    let button = ASAuthorizationAppleIDButton(type: .continue, style: style)
+    button.cornerRadius = LociTheme.cornerRadius
+    button.isUserInteractionEnabled = false
+    button.isAccessibilityElement = false
+    return button
+  }
+
+  func updateUIView(_ uiView: ASAuthorizationAppleIDButton, context: Context) {}
 }
