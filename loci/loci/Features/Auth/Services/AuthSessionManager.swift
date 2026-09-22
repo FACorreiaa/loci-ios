@@ -22,10 +22,10 @@ public final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable 
   public static let shared = AuthSessionManager()
 
   private let secureStore: SecureStringStoring
-  private let accessTokenKey = "loci_auth_access_token"
-  private let refreshTokenKey = "loci_auth_refresh_token"
-  private let userIdKey = "loci_auth_user_id"
-  private let usernameKey = "loci_auth_username"
+  private let accessTokenKey = AuthKeychainKeys.accessToken
+  private let refreshTokenKey = AuthKeychainKeys.refreshToken
+  private let userIdKey = AuthKeychainKeys.userId
+  private let usernameKey = AuthKeychainKeys.username
 
   public private(set) var currentUserID: String?
   public private(set) var currentUsername: String?
@@ -36,29 +36,16 @@ public final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable 
     self.currentUsername = try? secureStore.string(for: usernameKey)
   }
 
+  /// True when there is a session to resume. An expired access token is refreshed
+  /// here; if the refresh cannot reach the server, the session is kept (the refresh
+  /// token is still in the Keychain) and the next call retries it.
   public func restoreSessionIfNeeded() async -> Bool {
-    do {
-      let token = try await validAccessToken()
-      return !(token?.isEmpty ?? true)
-    } catch { return false }
+    if let token = try? await validAccessToken(), !token.isEmpty { return true }
+    return !((try? secureStore.string(for: refreshTokenKey))?.isEmpty ?? true)
   }
 
-  public func validAccessToken() async throws -> String? {
-    guard let token = try secureStore.string(for: accessTokenKey), !token.isEmpty else { return nil }
-
-    if let expiry = JWTTokenInspector.expirationDate(in: token) {
-      if expiry <= Date() {
-        // If expired, try to refresh via refreshTokenKey
-        if let rToken = try secureStore.string(for: refreshTokenKey), !rToken.isEmpty {
-          return nil  // Needs refresh
-        }
-        await invalidateSession()
-        return nil
-      }
-    }
-
-    return token
-  }
+  /// A usable access token, refreshed first if the stored one has expired.
+  public func validAccessToken() async throws -> String? { await AuthTokenProvider.shared.accessToken() }
 
   public func getRefreshToken() async throws -> String? { try secureStore.string(for: refreshTokenKey) }
 

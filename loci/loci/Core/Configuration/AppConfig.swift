@@ -1,6 +1,6 @@
 import Foundation
 
-public struct AppConfig: Sendable {
+public nonisolated struct AppConfig: Sendable {
   public static let shared = AppConfig()
 
   public enum Environment: String, Sendable {

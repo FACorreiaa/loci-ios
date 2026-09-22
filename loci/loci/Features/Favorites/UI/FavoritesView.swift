@@ -66,8 +66,7 @@ public struct FavoritesView: View {
     errorMessage = nil
 
     Task {
-      var headers: Connect.Headers = [:]
-      if let token = try? await AuthSessionManager.shared.validAccessToken() { headers["Authorization"] = ["Bearer \(token)"] }
+      let headers: Connect.Headers = [:]
 
       var request = Loci_Favorites_V1_GetFavoritesRequest()
       request.userID = userId

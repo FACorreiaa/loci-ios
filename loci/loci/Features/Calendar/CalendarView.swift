@@ -214,8 +214,7 @@ public struct CalendarView: View {
     isLoading = true
     errorMessage = nil
     Task {
-      var headers: Connect.Headers = [:]
-      if let token = try? await AuthSessionManager.shared.validAccessToken() { headers["Authorization"] = ["Bearer \(token)"] }
+      let headers: Connect.Headers = [:]
       let response = await client.listTrips(request: Loci_Trip_ListTripsRequest(), headers: headers)
       await MainActor.run {
         isLoading = false
@@ -238,8 +237,7 @@ public struct CalendarView: View {
       return copy
     }
     Task {
-      var headers: Connect.Headers = [:]
-      if let token = try? await AuthSessionManager.shared.validAccessToken() { headers["Authorization"] = ["Bearer \(token)"] }
+      let headers: Connect.Headers = [:]
       var req = Loci_Trip_SaveTripRequest()
       req.trip = updated
       req.baseVersion = trip.version

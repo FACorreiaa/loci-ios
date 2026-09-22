@@ -3,7 +3,7 @@ import Testing
 
 @testable import loci
 
-struct CalendarMathTests {
+@MainActor struct CalendarMathTests {
   @Test func dateKeyUsesLocalDay() throws {
     var cal = Calendar(identifier: .gregorian)
     cal.timeZone = try #require(TimeZone(secondsFromGMT: 0))

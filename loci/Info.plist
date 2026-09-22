@@ -14,8 +14,6 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -39,31 +37,40 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ConnectBaseURL</key>
+	<string>$(CONNECT_BASE_URL)</string>
 	<key>GoogleOAuthClientID</key>
 	<string>1062609475304-00i5dpghpvgrbjalksnklg8cddgih8b3.apps.googleusercontent.com</string>
 	<key>GoogleOAuthReversedClientID</key>
 	<string>com.googleusercontent.apps.1062609475304-00i5dpghpvgrbjalksnklg8cddgih8b3</string>
-	<key>PostHogProjectToken</key>
-	<string>phc_xtQKkiev2PEpGZhrLFAYR5cfPLVPuXTx9wXnMF99XmJE</string>
-	<key>PostHogHost</key>
-	<string>https://eu.i.posthog.com</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
 	<key>MapboxAPIKey</key>
 	<string>$(MAPBOX_API_KEY)</string>
-	<key>ConnectBaseURL</key>
-	<string>$(CONNECT_BASE_URL)</string>
-	<key>NSCalendarsUsageDescription</key>
-	<string>Loci shows your trips next to events already on this iPhone, and can add a trip to the Calendar app.</string>
-	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Loci shows your trips next to events already on this iPhone, and can add a trip to the Calendar app.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Loci shows your trips next to events already on this iPhone, and can add a trip to the Calendar app.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Loci shows your trips next to events already on this iPhone, and can add a trip to the Calendar app.</string>
+	<key>PostHogHost</key>
+	<string>https://eu.i.posthog.com</string>
+	<key>PostHogProjectToken</key>
+	<string>phc_xtQKkiev2PEpGZhrLFAYR5cfPLVPuXTx9wXnMF99XmJE</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Fraunces.ttf</string>
+		<string>DMSans.ttf</string>
+		<string>SpaceMono-Regular.ttf</string>
+		<string>SpaceMono-Bold.ttf</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>
