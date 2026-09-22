@@ -6,6 +6,7 @@ public final class AppDelegate: NSObject, UIApplicationDelegate {
     -> Bool
   {
     PushNotificationManager.shared.configure()
+    SearchSessionController.registerBackgroundTask()
     return true
   }
 
