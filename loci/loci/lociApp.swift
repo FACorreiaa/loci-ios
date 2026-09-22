@@ -5,6 +5,7 @@
 //  Created by Fernando Correia Chill on 18/09/2026.
 //
 
+import GoogleSignIn
 import SwiftUI
 
 @main struct lociApp: App {
@@ -42,7 +43,12 @@ import SwiftUI
           isAuthenticated = false
           isCheckingAuth = false
         }
-      }.onOpenURL { url in AppRouter.shared.open(url) }
+      }.onOpenURL { url in
+        // The Google SDK's redirect (the reversed client ID scheme) is its own;
+        // everything else is a Loci deep link.
+        if GIDSignIn.sharedInstance.handle(url) { return }
+        AppRouter.shared.open(url)
+      }
         .onChange(of: scenePhase) { _, phase in
           switch phase {
           case .background: SearchSessionController.shared.sceneDidEnterBackground()

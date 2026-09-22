@@ -107,12 +107,16 @@ import SwiftUI
     }
   }
 
-  public func performGoogleSignIn() {
+  public func performGoogleSignIn() { performNativeSignIn { try await GoogleAuthService.shared.signInWithGoogle() } }
+
+  public func performAppleSignIn() { performNativeSignIn { try await AppleSignInService.shared.signInWithApple() } }
+
+  private func performNativeSignIn(_ signIn: @escaping () async throws -> Loci_CustomAuth_OAuthCallbackResponse) {
     clearMessages()
     isLoading = true
     Task {
       do {
-        _ = try await GoogleAuthService.shared.signInWithGoogle()
+        _ = try await signIn()
         self.isLoading = false
         self.onAuthenticated()
       } catch {
