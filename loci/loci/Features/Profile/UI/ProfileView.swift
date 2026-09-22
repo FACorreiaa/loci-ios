@@ -20,23 +20,11 @@ public struct ProfileView: View {
           }.padding(.vertical, 8)
         }.listRowBackground(Color.lociCard)
 
-        Section("Preferences") {
+        Section {
           NavigationLink {
-            CalendarConnectionsView()
+            SettingsView()
           } label: {
-            Label("Calendars", systemImage: "calendar")
-          }
-
-          NavigationLink {
-            NotificationSettingsView()
-          } label: {
-            Label("Notifications", systemImage: "bell.badge")
-          }
-
-          NavigationLink {
-            Text("Offline data caching options.").padding()
-          } label: {
-            Label("Offline Storage", systemImage: "arrow.down.circle")
+            Label("Settings", systemImage: "gearshape")
           }
         }.listRowBackground(Color.lociCard)
 
@@ -46,7 +34,7 @@ public struct ProfileView: View {
             Spacer()
             Text("1.0.0 (Beta)").foregroundColor(.secondary)
           }
-          Link(destination: URL(string: "https://loci.travel")!) {
+          Link(destination: URL(string: "https://lociai.fyi")!) {
             HStack {
               Text("Loci Web")
               Spacer()

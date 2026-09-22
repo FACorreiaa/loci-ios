@@ -23,6 +23,7 @@ public struct CalendarConnectionsView: View {
           Task { await toggle(.calendly) }
         }
       }
+      TripCalendarFeedSection()
       if let message {
         Section { Text(message).font(.footnote).foregroundColor(.lociInk.opacity(0.7)) }
       }
