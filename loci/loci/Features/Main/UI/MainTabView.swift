@@ -15,7 +15,7 @@ public struct MainTabView: View {
 
       AssistantView().tabItem { Label("Assistant", systemImage: "bubble.left.and.bubble.right.fill") }.tag(AppRouter.Tab.assistant)
 
-      FavoritesView().tabItem { Label("Saved", systemImage: "bookmark.fill") }.tag(AppRouter.Tab.saved)
+      SavedView().tabItem { Label("Saved", systemImage: "bookmark.fill") }.tag(AppRouter.Tab.saved)
 
       ProfileView(onSignOut: onSignOut).tabItem { Label("Profile", systemImage: "person.fill") }.tag(AppRouter.Tab.profile)
     }.tint(.lociForest)
