@@ -52,3 +52,20 @@ nonisolated extension APIError {
     }
   }
 }
+
+/// Call a unary RPC with the refresh-and-retry-once policy, returning the message
+/// or throwing an `APIError`. `fallback` is the user-facing text when the server
+/// sends no message of its own.
+nonisolated func rpc<Output>(_ fallback: String, _ call: @Sendable () async -> ResponseMessage<Output>) async throws -> Output {
+  try await withAuthRetry(call).unwrap(fallback)
+}
+
+/// `rpc` with the request passed through, so a `var` built up before the call
+/// is copied in rather than captured by the `@Sendable` closure.
+nonisolated func rpc<Input: Sendable, Output>(
+  _ fallback: String,
+  _ request: Input,
+  _ call: @Sendable (Input) async -> ResponseMessage<Output>
+) async throws -> Output {
+  try await withAuthRetry { await call(request) }.unwrap(fallback)
+}

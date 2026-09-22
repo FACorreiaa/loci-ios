@@ -35,6 +35,8 @@ public struct NotificationSettingsView: View {
         }
       }.listRowBackground(Color.lociCard)
 
+      ServerNotificationSettingsSection()
+
       if let token = notificationManager.deviceToken {
         Section("APNS Device Token") {
           VStack(alignment: .leading, spacing: 6) {
