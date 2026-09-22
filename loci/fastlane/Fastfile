@@ -7,6 +7,7 @@ RELEASE_SCHEME = "loci"                # Release -> com.fernandocorreia.loci (Ap
 BETA_DEV_SCHEME = "loci Beta"          # Beta -> com.fernandocorreia.loci.beta (TestFlight)
 BUNDLE_ID = "com.fernandocorreia.loci"
 BETA_BUNDLE_ID = "com.fernandocorreia.loci.beta"
+WIDGET_TARGET = "NearbyWalkWidget"          # -> <app bundle id>.NearbyWalkWidget
 
 REPO_ROOT = File.expand_path("../..", __dir__)
 
@@ -137,6 +138,17 @@ platform :ios do
       code_sign_identity: "Apple Distribution",
       profile_name: "match AppStore #{bundle_id}",
       targets: ["loci"],
+      build_configurations: [config]
+    )
+    # The Live Activity extension ships inside the app with its own bundle id
+    # and profile (both listed in the Matchfile).
+    update_code_signing_settings(
+      path: PROJECT,
+      use_automatic_signing: false,
+      team_id: "84X9WYBF36",
+      code_sign_identity: "Apple Distribution",
+      profile_name: "match AppStore #{bundle_id}.#{WIDGET_TARGET}",
+      targets: [WIDGET_TARGET],
       build_configurations: [config]
     )
   end

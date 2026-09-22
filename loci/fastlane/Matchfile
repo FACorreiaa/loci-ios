@@ -5,8 +5,11 @@ git_url("https://github.com/FACorreiaa/loci-certificates.git")
 storage_mode("git")
 type("appstore")
 # Prod App Store + side-by-side TestFlight beta
+# The Live Activity widget extension ships inside each app and signs with its own profile.
 app_identifier([
   "com.fernandocorreia.loci",
-  "com.fernandocorreia.loci.beta"
+  "com.fernandocorreia.loci.beta",
+  "com.fernandocorreia.loci.NearbyWalkWidget",
+  "com.fernandocorreia.loci.beta.NearbyWalkWidget"
 ])
 team_id("84X9WYBF36")
