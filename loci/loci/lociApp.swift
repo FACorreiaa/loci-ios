@@ -11,6 +11,7 @@ import SwiftUI
   @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
   @State private var isAuthenticated: Bool = false
   @State private var isCheckingAuth: Bool = true
+  @Environment(\.scenePhase) private var scenePhase
 
   var body: some Scene {
     WindowGroup {
@@ -42,6 +43,13 @@ import SwiftUI
           isCheckingAuth = false
         }
       }.onOpenURL { url in AppRouter.shared.open(url) }
+        .onChange(of: scenePhase) { _, phase in
+          switch phase {
+          case .background: SearchSessionController.shared.sceneDidEnterBackground()
+          case .active: SearchSessionController.shared.sceneDidBecomeActive()
+          default: break
+          }
+        }
     }
   }
 }

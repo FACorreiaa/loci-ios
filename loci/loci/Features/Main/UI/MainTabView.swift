@@ -13,7 +13,7 @@ public struct MainTabView: View {
 
       CalendarView().tabItem { Label("Calendar", systemImage: "calendar") }.tag(AppRouter.Tab.calendar)
 
-      ChatView().tabItem { Label("Assistant", systemImage: "bubble.left.and.bubble.right.fill") }.tag(AppRouter.Tab.assistant)
+      AssistantView().tabItem { Label("Assistant", systemImage: "bubble.left.and.bubble.right.fill") }.tag(AppRouter.Tab.assistant)
 
       FavoritesView().tabItem { Label("Saved", systemImage: "bookmark.fill") }.tag(AppRouter.Tab.saved)
 

@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.fernandocorreia.loci.search-reconcile</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>$(INFOPLIST_KEY_CFBundleDisplayName)</string>
 	<key>CFBundleExecutable</key>
@@ -70,6 +74,11 @@
 		<string>DMSans.ttf</string>
 		<string>SpaceMono-Regular.ttf</string>
 		<string>SpaceMono-Bold.ttf</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict/>

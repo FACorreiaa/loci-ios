@@ -29,6 +29,16 @@ import UserNotifications
     self.authorizationStatus = settings.authorizationStatus
   }
 
+  /// Ask for permission the first time only; afterwards report whether alerts can show.
+  @discardableResult public func requestAuthorizationIfNeeded() async -> Bool {
+    await refreshAuthorizationStatus()
+    switch authorizationStatus {
+    case .notDetermined: return await requestAuthorization()
+    case .authorized, .provisional, .ephemeral: return true
+    default: return false
+    }
+  }
+
   /// Request push notification authorization from the user.
   @discardableResult public func requestAuthorization() async -> Bool {
     do {
