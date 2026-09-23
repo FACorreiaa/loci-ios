@@ -119,9 +119,22 @@ struct SessionRow: View {
     return firstUser ?? (session.cityName.isEmpty ? "Conversation" : session.cityName)
   }
 
+  /// The newest message when the agent posted it on its own: shown under the
+  /// title with its caption, so a standing task's news is visible from the list.
+  private var proactive: MuseMessage? {
+    session.conversationHistory.last.map(MuseMessage.init).flatMap { $0.caption != nil && !$0.text.isEmpty ? $0 : nil }
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 2) {
       Text(title).lineLimit(2).foregroundStyle(Color.lociInk)
+      if let proactive, let caption = proactive.caption {
+        VStack(alignment: .leading, spacing: 2) {
+          MuseCaption(text: caption).padding(.horizontal, -4)
+          Text(MuseMessageView.markdown(proactive.text)).font(.lociBody(15)).foregroundStyle(Color.museText).lineLimit(2)
+        }
+        .padding(.vertical, 4)
+      }
       HStack {
         if !session.cityName.isEmpty { Text(session.cityName) }
         if session.hasUpdatedAt { Text(session.updatedAt.date, style: .relative) }

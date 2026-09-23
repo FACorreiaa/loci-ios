@@ -23,6 +23,9 @@ struct SearchResultsView: View {
   @State private var error: String?
   @State private var isComposing = false
   @State private var flash: MuseActivity.Flash?
+  /// Proactive messages and the standing-task card, after the search turn.
+  @State private var thread = MuseThread()
+  @State private var scroll = ScrollPosition()
 
   /// The live search when it is this session, otherwise what was restored.
   private var state: SearchState? {
@@ -41,6 +44,7 @@ struct SearchResultsView: View {
         if let state {
           SearchTranscript(state: state, caption: caption) { query in Task { await rerun(query) } }
           actions(state)
+          MuseThreadTail(thread: thread, sessionId: state.sessionId ?? link.sessionId)
         } else if isRestoring {
           ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
         } else {
@@ -50,6 +54,10 @@ struct SearchResultsView: View {
       .padding(.horizontal, LociTheme.defaultPadding)
       .padding(.vertical, 12)
     }
+    .scrollPosition($scroll)
+    // A card or a confirmation lands under a long answer: bring it into view.
+    .onChange(of: thread.card != nil) { _, hasCard in if hasCard { scrollToEnd() } }
+    .onChange(of: thread.confirmedWatchId) { _, id in if id != nil { scrollToEnd() } }
     .background(Color.museCanvas.ignoresSafeArea())
     .safeAreaInset(edge: .top, spacing: 0) {
       MuseChatHeader(
@@ -66,7 +74,10 @@ struct SearchResultsView: View {
     .interactivePopEnabled()
     .errorAlert($error)
     .museFlash($flash, status: state?.status, places: state?.places.count ?? 0)
-    .task(id: link.sessionId) { await restoreIfNeeded() }
+    .task(id: link.sessionId) {
+      await restoreIfNeeded()
+      await thread.loadHistory(sessionId: link.sessionId)
+    }
     .onAppear { controller.viewingSessionId = link.sessionId }
     .onDisappear { if controller.viewingSessionId == link.sessionId { controller.viewingSessionId = nil } }
   }
@@ -116,7 +127,8 @@ struct SearchResultsView: View {
         cityName: state.cityName,
         sessionId: state.sessionId,
         style: .muse,
-        onFocusChange: { isComposing = $0 }
+        onFocusChange: { isComposing = $0 },
+        intercept: offerStandingTask
       ) { _ in }
         .padding(.horizontal, LociTheme.defaultPadding)
         .padding(.vertical, 10)
@@ -139,6 +151,18 @@ struct SearchResultsView: View {
   private func newChat() {
     dismiss()
     router.startNewChat()
+  }
+
+  private func scrollToEnd() {
+    withAnimation(LociTheme.resultArrive) { scroll.scrollTo(edge: .bottom) }
+  }
+
+  /// A follow-up that reads like "every morning, tell me…" becomes a
+  /// standing-task card on this thread instead of a new search.
+  private func offerStandingTask(_ text: String) -> Bool {
+    guard StandingRequest.matches(text) else { return false }
+    Task { await thread.offer(text) }
+    return true
   }
 
   private func restoreIfNeeded() async {
