@@ -192,7 +192,7 @@ struct DaySection: View {
   @Binding var selectedID: String?
   var onOpen: (Loci_Poi_POIDetailedInfo) -> Void
 
-  private var color: Color { showsDayLabel ? LociTheme.dayColor(group.number) : LociTheme.ungroupedColor }
+  private var color: Color { showsDayLabel ? LociTheme.dayColor(group.number) : LociTheme.listColor }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
