@@ -16,10 +16,13 @@ struct SearchResultsView: View {
 
   @Environment(\.dismiss) private var dismiss
   private let controller = SearchSessionController.shared
+  private let router = AppRouter.shared
   @State private var restored: SearchState?
   @State private var isRestoring = false
   @State private var saveStatus: String?
   @State private var error: String?
+  @State private var isComposing = false
+  @State private var flash: MuseActivity.Flash?
 
   /// The live search when it is this session, otherwise what was restored.
   private var state: SearchState? {
@@ -49,12 +52,20 @@ struct SearchResultsView: View {
     }
     .background(Color.museCanvas.ignoresSafeArea())
     .safeAreaInset(edge: .top, spacing: 0) {
-      MuseChatHeader(leadingSystemImage: "chevron.left", leadingLabel: "Back", onLeading: { dismiss() }, onNewChat: { dismiss() })
+      MuseChatHeader(
+        activity: .resolve(state, flash: flash, isListening: isComposing),
+        leadingSystemImage: "chevron.left",
+        leadingLabel: "Back",
+        onLeading: { dismiss() },
+        onNewChat: newChat
+      )
     }
     .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
     .navigationTitle(link.destination.title)
     .toolbarVisibility(.hidden, for: .navigationBar)
+    .interactivePopEnabled()
     .errorAlert($error)
+    .museFlash($flash, status: state?.status, places: state?.places.count ?? 0)
     .task(id: link.sessionId) { await restoreIfNeeded() }
     .onAppear { controller.viewingSessionId = link.sessionId }
     .onDisappear { if controller.viewingSessionId == link.sessionId { controller.viewingSessionId = nil } }
@@ -62,22 +73,12 @@ struct SearchResultsView: View {
 
   // MARK: - Pieces
 
-  /// City and progress above the answer. Stage B moves progress into the header status.
+  /// The city above the answer, and the place count once it has finished.
+  /// Progress lives in the header's status line.
   private var caption: String? {
-    let parts = [state?.cityName ?? link.cityName, statusLine].compactMap { $0 }.filter { !$0.isEmpty }
+    let count = state.flatMap { $0.status == .completed && !$0.places.isEmpty ? "\($0.places.count) places" : nil }
+    let parts = [state?.cityName ?? link.cityName, count].compactMap { $0 }.filter { !$0.isEmpty }
     return parts.isEmpty ? nil : parts.joined(separator: " · ")
-  }
-
-  private var statusLine: String? {
-    guard let state else { return nil }
-    switch state.status {
-    case .streaming:
-      if let stage = state.progressStage { return state.progressPercent.map { "\(stage) · \($0)%" } ?? stage }
-      return "Planning…"
-    case .detached: return "Still working — you can leave this screen"
-    case .completed: return "\(state.places.count) places"
-    case .failed, .idle: return nil
-    }
   }
 
   /// Save and Share, which lived in the navigation bar before the Muse header replaced it.
@@ -108,7 +109,13 @@ struct SearchResultsView: View {
     } else if let state, !state.isActive, state.sessionId != nil {
       // Follow-ups continue this session (web /chat sends sessionId + cityName),
       // so the page keeps showing the live state under the same link.
-      SearchComposer(placeholder: "Ask a follow-up", cityName: state.cityName, sessionId: state.sessionId, style: .muse) { _ in }
+      SearchComposer(
+        placeholder: "Ask a follow-up",
+        cityName: state.cityName,
+        sessionId: state.sessionId,
+        style: .muse,
+        onFocusChange: { isComposing = $0 }
+      ) { _ in }
         .padding(.horizontal, LociTheme.defaultPadding)
         .padding(.vertical, 10)
         .background(Color.museCanvas)
@@ -124,6 +131,13 @@ struct SearchResultsView: View {
   }
 
   // MARK: - Actions
+
+  /// "New chat": leave this page for Ask Loci with the cursor in its composer,
+  /// from whichever tab pushed it (Discover, Saved or Ask Loci itself).
+  private func newChat() {
+    dismiss()
+    router.startNewChat()
+  }
 
   private func restoreIfNeeded() async {
     guard controller.state.sessionId != link.sessionId, restored == nil else { return }

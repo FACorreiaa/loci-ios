@@ -106,7 +106,7 @@ import UIKit
   func stop() {
     streamTask?.cancel()
     streamTask = nil
-    if state.isActive { state.status = state.hasResult ? .completed : .failed("Stopped.") }
+    if state.isActive { state.status = state.hasResult ? .completed : .failed(SearchState.stoppedMessage) }
     if var envelope {
       envelope.finished = true
       envelope.notified = true

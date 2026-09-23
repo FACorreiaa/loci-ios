@@ -37,6 +37,9 @@ public enum LociTheme {
     /// Bubble max widths, as a fraction of the transcript's content width.
     public static let userBubbleWidth: CGFloat = 0.85
     public static let agentBubbleWidth: CGFloat = 0.94
+    /// The working ring: its stroke, and how far outside the avatar it sits.
+    public static let ringWidth: CGFloat = 3
+    public static let ringInset: CGFloat = 5
   }
 }
 
@@ -98,6 +101,8 @@ public extension Color {
   static let musePill = lociMuted
   static let museText = lociInk
   static let museTextSecondary = lociMutedInk
+  /// The avatar's working ring: the app accent (the user bubble's coral).
+  static let museRing = lociCoral
 }
 
 // MARK: - Type (NATIVE_DESIGN §2)

@@ -17,6 +17,8 @@ struct SearchComposer: View {
   var style: Style = .standard
   /// Bump to put the cursor in the field (the Muse header's "New chat").
   var focusRequest = 0
+  /// Told when the field gains or loses the cursor: the Muse header's "is listening".
+  var onFocusChange: (Bool) -> Void = { _ in }
   let onStarted: (SessionLink) -> Void
 
   enum Style { case standard, muse }
@@ -63,6 +65,7 @@ struct SearchComposer: View {
       }
     }
     .onChange(of: focusRequest) { isFocused = true }
+    .onChange(of: isFocused) { _, focused in onFocusChange(focused) }
     .onChange(of: seed?.wrappedValue) { _, value in
       guard let value, !value.isEmpty else { return }
       text = value
