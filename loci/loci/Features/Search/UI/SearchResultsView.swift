@@ -8,10 +8,13 @@ import SwiftUI
 /// the structured events land. Opened later (a notification tap, a deep link)
 /// it restores the session the way web's `restoreOrHydrateSession` does:
 /// the live search, then this phone's copy, then GetChatSession, then a re-run.
+///
+/// Drawn as a Muse chat (apps/_reviews/muse-chat-contract.md): the query is the
+/// user bubble, the answer and its places are the agent bubble.
 struct SearchResultsView: View {
   let link: SessionLink
 
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dismiss) private var dismiss
   private let controller = SearchSessionController.shared
   @State private var restored: SearchState?
   @State private var isRestoring = false
@@ -23,32 +26,34 @@ struct SearchResultsView: View {
     controller.state.sessionId == link.sessionId ? controller.state : restored
   }
 
+  /// This page is showing the search that is streaming right now.
+  private var isLive: Bool {
+    guard let state else { return false }
+    return state.isActive && controller.state.sessionId == link.sessionId
+  }
+
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 16) {
-        header
+      VStack(alignment: .leading, spacing: 12) {
         if let state {
-          content(state)
+          SearchTranscript(state: state, caption: caption) { query in Task { await rerun(query) } }
+          actions(state)
         } else if isRestoring {
           ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
         } else {
           unavailable
         }
       }
-      .padding(LociTheme.defaultPadding)
+      .padding(.horizontal, LociTheme.defaultPadding)
+      .padding(.vertical, 12)
     }
-    .background(Color.lociPaper.ignoresSafeArea())
-    .safeAreaInset(edge: .bottom) {
-      // Follow-ups continue this session (web /chat sends sessionId + cityName),
-      // so the page keeps showing the live state under the same link.
-      if let state, !state.isActive, state.sessionId != nil {
-        SearchComposer(placeholder: "Ask a follow-up", cityName: state.cityName, sessionId: state.sessionId) { _ in }
-          .padding(LociTheme.defaultPadding).background(.bar)
-      }
+    .background(Color.museCanvas.ignoresSafeArea())
+    .safeAreaInset(edge: .top, spacing: 0) {
+      MuseChatHeader(leadingSystemImage: "chevron.left", leadingLabel: "Back", onLeading: { dismiss() }, onNewChat: { dismiss() })
     }
+    .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
     .navigationTitle(link.destination.title)
-    .navigationBarTitleDisplayMode(.inline)
-    .toolbar { toolbar }
+    .toolbarVisibility(.hidden, for: .navigationBar)
     .errorAlert($error)
     .task(id: link.sessionId) { await restoreIfNeeded() }
     .onAppear { controller.viewingSessionId = link.sessionId }
@@ -57,12 +62,10 @@ struct SearchResultsView: View {
 
   // MARK: - Pieces
 
-  private var header: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      if let city = state?.cityName ?? link.cityName { Text(city).font(.lociDisplay()).foregroundStyle(Color.lociInk) }
-      if let query = state?.query, !query.isEmpty { Text(query).font(.lociBody()).foregroundStyle(Color.lociMutedInk) }
-      if let status = statusLine { Text(status).lociCoordStyle() }
-    }
+  /// City and progress above the answer. Stage B moves progress into the header status.
+  private var caption: String? {
+    let parts = [state?.cityName ?? link.cityName, statusLine].compactMap { $0 }.filter { !$0.isEmpty }
+    return parts.isEmpty ? nil : parts.joined(separator: " · ")
   }
 
   private var statusLine: String? {
@@ -77,52 +80,39 @@ struct SearchResultsView: View {
     }
   }
 
-  @ViewBuilder private func content(_ state: SearchState) -> some View {
-    if case .failed(let message) = state.status {
-      failure(message, query: state.query)
-    }
-
-    if let itinerary = state.itinerary, state.destination == .itinerary, !itinerary.itineraryResponse.itineraryName.isEmpty {
-      VStack(alignment: .leading, spacing: 6) {
-        Text(itinerary.itineraryResponse.itineraryName).font(.lociTitle())
-        if !itinerary.itineraryResponse.overallDescription.isEmpty {
-          Text(itinerary.itineraryResponse.overallDescription).font(.lociBody())
+  /// Save and Share, which lived in the navigation bar before the Muse header replaced it.
+  @ViewBuilder private func actions(_ state: SearchState) -> some View {
+    let canSave = !isLive && state.status == .completed && state.destination == .itinerary
+    if canSave || state.hasResult {
+      HStack(spacing: 8) {
+        if canSave {
+          Button(saveStatus ?? "Save", systemImage: "bookmark") { Task { await save(state) } }.disabled(saveStatus != nil)
+        }
+        if state.hasResult {
+          ShareLink(item: ItineraryShareText.text(for: state)) { Label("Share", systemImage: "square.and.arrow.up") }
         }
       }
-      .lociCard()
-    } else if !state.text.isEmpty, state.places.isEmpty {
-      // Tokens as they arrive, until a structured result replaces them.
-      Text(state.text).font(.lociBody()).foregroundStyle(Color.lociInk)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .lociCard()
-        .animation(reduceMotion ? nil : LociTheme.reducedFade, value: state.text)
-    } else if state.isActive, state.places.isEmpty {
-      SkeletonCards()
-    }
-
-    LazyVStack(spacing: 12) {
-      ForEach(state.places, id: \.stableID) { poi in
-        POICardView(poi: poi).transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
-      }
-    }
-    .animation(reduceMotion ? LociTheme.reducedFade : LociTheme.resultArrive, value: state.places.count)
-
-    if state.status == .completed, state.places.isEmpty, state.destination != .itinerary {
-      Text("The list finished on the server but didn't reach this phone.").foregroundStyle(Color.lociMutedInk)
-      rerunButton(query: state.query)
+      .buttonStyle(MusePillButtonStyle())
+      .padding(.leading, 4)
     }
   }
 
-  private func failure(_ message: String, query: String) -> some View {
-    VStack(alignment: .leading, spacing: 10) {
-      Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(Color.lociDestructive)
-      if !query.isEmpty { rerunButton(query: query) }
+  /// Stop while this search streams; the follow-up composer once it has finished.
+  @ViewBuilder private var bottomBar: some View {
+    if isLive {
+      Button("Stop", systemImage: "stop.fill") { controller.stop() }
+        .buttonStyle(MusePillButtonStyle())
+        .frame(maxWidth: .infinity)
+        .padding(LociTheme.defaultPadding)
+        .background(Color.museCanvas)
+    } else if let state, !state.isActive, state.sessionId != nil {
+      // Follow-ups continue this session (web /chat sends sessionId + cityName),
+      // so the page keeps showing the live state under the same link.
+      SearchComposer(placeholder: "Ask a follow-up", cityName: state.cityName, sessionId: state.sessionId, style: .muse) { _ in }
+        .padding(.horizontal, LociTheme.defaultPadding)
+        .padding(.vertical, 10)
+        .background(Color.museCanvas)
     }
-    .lociCard()
-  }
-
-  private func rerunButton(query: String) -> some View {
-    Button("Run the search again") { Task { await rerun(query) } }.buttonStyle(.borderedProminent).tint(.lociForest)
   }
 
   private var unavailable: some View {
@@ -130,23 +120,6 @@ struct SearchResultsView: View {
       Label("Search not found", systemImage: "magnifyingglass")
     } description: {
       Text("This search finished on another device or has expired.")
-    }
-  }
-
-  @ToolbarContentBuilder private var toolbar: some ToolbarContent {
-    if let state, state.isActive, controller.state.sessionId == link.sessionId {
-      ToolbarItem(placement: .primaryAction) {
-        Button("Stop", systemImage: "stop.circle") { controller.stop() }
-      }
-    } else if let state, state.status == .completed, state.destination == .itinerary {
-      ToolbarItem(placement: .primaryAction) {
-        Button(saveStatus ?? "Save", systemImage: "bookmark") { Task { await save(state) } }.disabled(saveStatus != nil)
-      }
-    }
-    if let state, state.hasResult {
-      ToolbarItem(placement: .secondaryAction) {
-        ShareLink(item: ItineraryShareText.text(for: state)) { Label("Share", systemImage: "square.and.arrow.up") }
-      }
     }
   }
 
@@ -182,6 +155,79 @@ struct SearchResultsView: View {
       }
       saveStatus = "Saved"
     } catch { self.error = error.userMessage }
+  }
+}
+
+/// One search as a chat turn: the query as the user bubble, then everything
+/// the server sent back inside a single agent bubble. Pure rendering of a
+/// `SearchState`, so the design preview can show it without a session.
+struct SearchTranscript: View {
+  let state: SearchState
+  var caption: String?
+  var onRerun: (String) -> Void = { _ in }
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  private var hasAgentTurn: Bool { state.status != .idle || !state.text.isEmpty || state.hasResult }
+  private var hasItineraryTitle: Bool {
+    guard let itinerary = state.itinerary else { return false }
+    return state.destination == .itinerary && !itinerary.itineraryResponse.itineraryName.isEmpty
+  }
+  private var showsSkeleton: Bool { state.isActive && state.places.isEmpty && state.text.isEmpty && !hasItineraryTitle }
+  private var arrival: AnyTransition { reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity) }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      if !state.query.isEmpty {
+        MuseBubble(role: .user) { Text(state.query) }
+      }
+      if let caption {
+        Text(caption).lociCoordStyle().padding(.horizontal, 4).padding(.top, 4)
+      }
+      if hasAgentTurn {
+        MuseBubble(role: .agent) { agentContent }.transition(arrival)
+      }
+    }
+    .animation(reduceMotion ? LociTheme.reducedFade : LociTheme.resultArrive, value: hasAgentTurn)
+  }
+
+  private var agentContent: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      if case .failed(let message) = state.status {
+        Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(Color.lociDestructive)
+        if !state.query.isEmpty { rerunButton }
+      }
+
+      if hasItineraryTitle, let response = state.itinerary?.itineraryResponse {
+        Text(response.itineraryName).font(.lociTitle())
+        if !response.overallDescription.isEmpty { Text(response.overallDescription) }
+      } else if !state.text.isEmpty, state.places.isEmpty {
+        // Tokens as they arrive, until a structured result replaces them. The caret sits in the bubble.
+        Text(state.status == .streaming ? state.text + " ▍" : state.text)
+          .animation(reduceMotion ? nil : LociTheme.reducedFade, value: state.text)
+      } else if showsSkeleton {
+        SkeletonCards()
+      }
+
+      if !state.places.isEmpty {
+        LazyVStack(spacing: 12) {
+          ForEach(state.places, id: \.stableID) { poi in
+            POICardView(poi: poi).transition(arrival)
+          }
+        }
+        .animation(reduceMotion ? LociTheme.reducedFade : LociTheme.resultArrive, value: state.places.count)
+      }
+
+      if state.status == .completed, state.places.isEmpty, state.destination != .itinerary {
+        Text("The list finished on the server but didn't reach this phone.").foregroundStyle(Color.museTextSecondary)
+        rerunButton
+      }
+    }
+    .frame(maxWidth: state.places.isEmpty && !showsSkeleton ? nil : .infinity, alignment: .leading)
+  }
+
+  private var rerunButton: some View {
+    Button("Run the search again") { onRerun(state.query) }.buttonStyle(.borderedProminent).tint(.lociForest)
   }
 }
 

@@ -11,35 +11,51 @@ struct AssistantView: View {
   @State private var path: [SessionLink] = []
   @State private var sessions: [Loci_Chat_ChatSession] = []
   @State private var error: String?
+  @State private var composerFocus = 0
 
   var body: some View {
     NavigationStack(path: $path) {
-      List {
-        if let live = controller.state.link, controller.state.isActive {
-          Section("Running now") {
-            NavigationLink(value: live) {
-              Label(controller.state.query, systemImage: "sparkles").lineLimit(2)
+      ScrollViewReader { proxy in
+        List {
+          if let live = controller.state.link, controller.state.isActive {
+            Section("Running now") {
+              NavigationLink(value: live) {
+                Label(controller.state.query, systemImage: "sparkles").lineLimit(2)
+              }
+              .id(Self.topRow)
+            }
+            .listRowBackground(Color.museAgentBubble)
+          }
+          Section("Recent") {
+            ForEach(sessions, id: \.id) { session in
+              NavigationLink(value: Self.link(for: session)) { SessionRow(session: session) }
             }
           }
+          .listRowBackground(Color.museAgentBubble)
         }
-        Section("Recent") {
-          ForEach(sessions, id: \.id) { session in
-            NavigationLink(value: Self.link(for: session)) { SessionRow(session: session) }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.museCanvas.ignoresSafeArea())
+        .overlay {
+          if sessions.isEmpty, !controller.state.isActive {
+            ContentUnavailableView("Ask Loci anything", systemImage: "bubble.left.and.bubble.right", description: Text("Where to, and for how long?"))
           }
         }
-      }
-      .listStyle(.insetGrouped)
-      .scrollContentBackground(.hidden)
-      .background(Color.lociPaper.ignoresSafeArea())
-      .overlay {
-        if sessions.isEmpty, !controller.state.isActive {
-          ContentUnavailableView("Ask Loci anything", systemImage: "bubble.left.and.bubble.right", description: Text("Where to, and for how long?"))
+        .safeAreaInset(edge: .top, spacing: 0) {
+          MuseChatHeader(
+            onLeading: { scrollToTop(proxy) },
+            onNewChat: { composerFocus += 1 }
+          )
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+          SearchComposer(style: .muse, focusRequest: composerFocus) { path.append($0) }
+            .padding(.horizontal, LociTheme.defaultPadding)
+            .padding(.vertical, 10)
+            .background(Color.museCanvas)
         }
       }
-      .safeAreaInset(edge: .bottom) {
-        SearchComposer { path.append($0) }.padding(LociTheme.defaultPadding).background(.bar)
-      }
       .navigationTitle("Ask Loci")
+      .toolbarVisibility(.hidden, for: .navigationBar)
       .navigationDestination(for: SessionLink.self) { SearchResultsView(link: $0) }
       .refreshable { await load() }
       .task { await load() }
@@ -47,6 +63,15 @@ struct AssistantView: View {
       .onChange(of: router.pendingSession) { openPending() }
       .errorAlert($error)
     }
+  }
+
+  private static let topRow = "running-now"
+
+  /// The header's left button: back to the top of the conversation list.
+  private func scrollToTop(_ proxy: ScrollViewProxy) {
+    let target: String? = controller.state.isActive && controller.state.link != nil ? Self.topRow : sessions.first?.id
+    guard let target else { return }
+    withAnimation(LociTheme.selectionSettle) { proxy.scrollTo(target, anchor: .top) }
   }
 
   private func openPending() {

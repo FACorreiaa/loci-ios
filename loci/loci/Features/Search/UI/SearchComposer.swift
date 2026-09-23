@@ -13,7 +13,13 @@ struct SearchComposer: View {
   var longitude: Double?
   var sessionId: String?
   var useDefaultProfile = true
+  /// `.muse` draws the field as the Muse chat composer (musePill fill, radius 24). Behaviour is the same.
+  var style: Style = .standard
+  /// Bump to put the cursor in the field (the Muse header's "New chat").
+  var focusRequest = 0
   let onStarted: (SessionLink) -> Void
+
+  enum Style { case standard, muse }
 
   private let controller = SearchSessionController.shared
   @State private var text = ""
@@ -22,19 +28,28 @@ struct SearchComposer: View {
   @State private var needsProfile = false
   @State private var confirmReplace = false
   @State private var showProfiles = false
+  @FocusState private var isFocused: Bool
 
   private var isStreaming: Bool { controller.state.isActive }
+  private var fieldRadius: CGFloat { style == .muse ? LociTheme.Muse.bubbleRadius : LociTheme.cornerRadius }
 
   var body: some View {
     HStack(alignment: .bottom, spacing: 8) {
       TextField(placeholder, text: $text, axis: .vertical)
-        .font(.lociBody())
+        .font(style == .muse ? .museBody : .lociBody())
         .lineLimit(1...4)
         .submitLabel(.send)
         .onSubmit(send)
+        .focused($isFocused)
         .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(Color.lociCard, in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder))
+        .background(
+          style == .muse ? Color.musePill : Color.lociCard,
+          in: RoundedRectangle(cornerRadius: fieldRadius, style: .continuous)
+        )
+        .overlay(
+          RoundedRectangle(cornerRadius: fieldRadius, style: .continuous)
+            .stroke(style == .muse ? Color.clear : Color.lociBorder)
+        )
 
       if isStreaming, awaitingStart || controller.startedLink != nil {
         Button("Stop", systemImage: "stop.fill") { controller.stop() }
@@ -47,6 +62,7 @@ struct SearchComposer: View {
           .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
       }
     }
+    .onChange(of: focusRequest) { isFocused = true }
     .onChange(of: seed?.wrappedValue) { _, value in
       guard let value, !value.isEmpty else { return }
       text = value
