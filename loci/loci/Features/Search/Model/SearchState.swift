@@ -43,6 +43,9 @@ nonisolated struct SearchState: Equatable, Sendable {
 
   var isActive: Bool { status == .streaming || status == .detached }
 
+  /// The failure a user's Stop leaves behind. Not a snag, so the header stays quiet.
+  static let stoppedMessage = "Stopped."
+
   var link: SessionLink? {
     sessionId.map { SessionLink(destination: destination, sessionId: $0, cityName: cityName, domain: domain) }
   }
@@ -104,6 +107,10 @@ nonisolated extension SearchState {
       return link.map(SearchEffect.started)
     case .token(let token), .partial(let token):
       text += token.text
+      // The newest signal wins: once words arrive the header says "is writing"
+      // until the server names another stage.
+      progressStage = nil
+      progressPercent = nil
     case .progress(let progress):
       progressStage = progress.stage
       progressPercent = progress.hasPercent ? Int(progress.percent) : nil

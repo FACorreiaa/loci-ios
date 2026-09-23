@@ -12,6 +12,8 @@ struct AssistantView: View {
   @State private var sessions: [Loci_Chat_ChatSession] = []
   @State private var error: String?
   @State private var composerFocus = 0
+  @State private var isComposing = false
+  @State private var flash: MuseActivity.Flash?
 
   var body: some View {
     NavigationStack(path: $path) {
@@ -43,12 +45,13 @@ struct AssistantView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
           MuseChatHeader(
+            activity: .resolve(controller.state, flash: flash, isListening: isComposing),
             onLeading: { scrollToTop(proxy) },
             onNewChat: { composerFocus += 1 }
           )
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-          SearchComposer(style: .muse, focusRequest: composerFocus) { path.append($0) }
+          SearchComposer(style: .muse, focusRequest: composerFocus, onFocusChange: { isComposing = $0 }) { path.append($0) }
             .padding(.horizontal, LociTheme.defaultPadding)
             .padding(.vertical, 10)
             .background(Color.museCanvas)
@@ -61,6 +64,8 @@ struct AssistantView: View {
       .task { await load() }
       .onAppear(perform: openPending)
       .onChange(of: router.pendingSession) { openPending() }
+      .onChange(of: router.newChatRequest) { Task { await startNewChat() } }
+      .museFlash($flash, status: controller.state.status, places: controller.state.places.count)
       .errorAlert($error)
     }
   }
@@ -72,6 +77,15 @@ struct AssistantView: View {
     let target: String? = controller.state.isActive && controller.state.link != nil ? Self.topRow : sessions.first?.id
     guard let target else { return }
     withAnimation(LociTheme.selectionSettle) { proxy.scrollTo(target, anchor: .top) }
+  }
+
+  /// "New chat" from a results page: back to this root, then the cursor in the
+  /// composer once the pop has finished (focus set mid-transition is dropped).
+  private func startNewChat() async {
+    let wasPushed = !path.isEmpty
+    path = []
+    if wasPushed { try? await Task.sleep(for: .milliseconds(450)) }
+    composerFocus += 1
   }
 
   private func openPending() {

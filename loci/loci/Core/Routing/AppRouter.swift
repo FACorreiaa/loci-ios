@@ -95,12 +95,20 @@ public nonisolated struct SessionLink: Sendable, Equatable, Hashable {
 
   public var selectedTab: Tab = .discover
   public var pendingSession: SessionLink?
+  /// Bumped by "New chat" on a results page: Ask Loci pops to its root and
+  /// puts the cursor in its composer, whichever tab the page was on.
+  public private(set) var newChatRequest = 0
 
   /// Returns true when the URL was a Loci route; false lets other handlers see it.
   @discardableResult public func open(_ url: URL) -> Bool {
     guard let link = SessionLink(url: url) else { return false }
     open(link)
     return true
+  }
+
+  public func startNewChat() {
+    selectedTab = .assistant
+    newChatRequest += 1
   }
 
   public func open(_ link: SessionLink) {

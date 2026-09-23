@@ -8,8 +8,24 @@ enum DesignPreview: String {
   case inSeason
   /// The Muse chat (SearchResultsView's pieces) with a finished answer.
   case museChat
-  /// The Muse chat while tokens stream in.
+  /// The Muse chat while tokens stream in ("is writing", ring turning).
   case museChatStreaming
+  /// Stream open, nothing back yet: "is thinking".
+  case museChatThinking
+  /// The server named a stage: "is {stage}", cut at 32 characters.
+  case museChatStage
+  /// The stream let go and the server is still going.
+  case museChatDetached
+  /// The 1.2s after a search finishes.
+  case museChatCelebrating
+  /// The moment after a search fails.
+  case museChatSnag
+  /// The follow-up composer has the cursor.
+  case museChatListening
+  /// A pushed results page with the navigation bar hidden, for checking swipe-back.
+  case museChatPush
+  /// The same push with the bar showing: the control for the swipe-back check.
+  case museChatPushBar
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -25,7 +41,17 @@ enum DesignPreview: String {
     switch self {
     case .inSeason: InSeasonPreview()
     case .museChat: MuseChatPreview(state: .museSampleCompleted)
-    case .museChatStreaming: MuseChatPreview(state: .museSampleStreaming, status: "Ready")
+    case .museChatStreaming: MuseChatPreview(state: .museSampleStreaming)
+    case .museChatThinking: MuseChatPreview(state: .museSampleThinking)
+    case .museChatStage:
+      MuseChatPreview(state: .museSampleThinking.with { $0.progressStage = "Checking opening hours and the tram timetable" })
+    case .museChatDetached: MuseChatPreview(state: .museSampleStreaming.with { $0.status = .detached })
+    case .museChatCelebrating: MuseChatPreview(state: .museSampleCompleted, flash: .celebrating(places: 2))
+    case .museChatSnag:
+      MuseChatPreview(state: .museSampleThinking.with { $0.status = .failed("The search failed. Try again in a moment.") }, flash: .snag)
+    case .museChatListening: MuseChatPreview(state: .museSampleCompleted, isListening: true)
+    case .museChatPush: MuseChatPushPreview()
+    case .museChatPushBar: MuseChatPushPreview(hidesBar: false)
     }
   }
 }
@@ -60,7 +86,9 @@ private struct InSeasonPreview: View {
 /// so it can be screenshotted without signing in.
 private struct MuseChatPreview: View {
   let state: SearchState
-  var status = "Ready"
+  /// Held for the screenshot instead of timing out.
+  var flash: MuseActivity.Flash?
+  var isListening = false
 
   var body: some View {
     ScrollView {
@@ -69,9 +97,35 @@ private struct MuseChatPreview: View {
         .padding(.vertical, 12)
     }
     .background(Color.museCanvas.ignoresSafeArea())
-    .safeAreaInset(edge: .top, spacing: 0) { MuseChatHeader(status: status, leadingSystemImage: "chevron.left", leadingLabel: "Back") }
+    .safeAreaInset(edge: .top, spacing: 0) {
+      MuseChatHeader(activity: .resolve(state, flash: flash, isListening: isListening), leadingSystemImage: "chevron.left", leadingLabel: "Back")
+    }
     .safeAreaInset(edge: .bottom, spacing: 0) {
       PreviewComposer().padding(.horizontal, LociTheme.defaultPadding).padding(.vertical, 10).background(Color.museCanvas)
+    }
+  }
+}
+
+/// A root list pushing the Muse chat the way Ask Loci does (navigation bar
+/// hidden on the pushed page), so swipe-back can be checked without signing in.
+private struct MuseChatPushPreview: View {
+  var hidesBar = true
+
+  var body: some View {
+    NavigationStack {
+      List {
+        NavigationLink("Open the chat", value: "chat")
+      }
+      .navigationTitle("Ask Loci")
+      .navigationDestination(for: String.self) { _ in
+        if hidesBar {
+          MuseChatPreview(state: .museSampleCompleted)
+            .toolbarVisibility(.hidden, for: .navigationBar)
+            .interactivePopEnabled()
+        } else {
+          MuseChatPreview(state: .museSampleCompleted)
+        }
+      }
     }
   }
 }
@@ -93,6 +147,16 @@ private struct PreviewComposer: View {
 }
 
 extension SearchState {
+  func with(_ change: (inout SearchState) -> Void) -> SearchState {
+    var copy = self
+    change(&copy)
+    return copy
+  }
+
+  static var museSampleThinking: SearchState {
+    museSampleStreaming.with { $0.text = "" }
+  }
+
   static var museSampleStreaming: SearchState {
     var state = SearchState()
     state.cityName = "Lisbon"

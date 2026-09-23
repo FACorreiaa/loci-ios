@@ -4,11 +4,14 @@ import SwiftUI
 /// on the left, a "New chat" pill on the right, and Loci's 110pt avatar in the
 /// middle with a pill naming the agent and its status.
 ///
+/// `activity` comes from `MuseActivity.resolve`: the status line, and the ring
+/// that says Loci is working.
+///
 /// Place it with `.safeAreaInset(edge: .top)` so the transcript scrolls under
 /// it; it draws its own 120pt canvas → clear scrim, so it needs no blur.
 struct MuseChatHeader: View {
   var name = "Loci"
-  var status = "Ready"
+  var activity = MuseActivity.ready
   var leadingSystemImage = "list.bullet"
   var leadingLabel = "Conversations"
   var onLeading: () -> Void = {}
@@ -33,7 +36,7 @@ struct MuseChatHeader: View {
       .padding(.horizontal, LociTheme.defaultPadding)
 
       VStack(spacing: 8) {
-        MuseAvatar()
+        MuseAvatar(mood: activity.mood)
         identity
       }
       .padding(.horizontal, 64)
@@ -46,13 +49,13 @@ struct MuseChatHeader: View {
   private var identity: some View {
     VStack(spacing: 1) {
       Text(name).font(.museName).foregroundStyle(Color.museText)
-      Text(status)
+      Text(activity.status)
         .font(.museStatus)
         .foregroundStyle(Color.museTextSecondary)
         .multilineTextAlignment(.center)
         .lineLimit(2)
         .contentTransition(reduceMotion ? .identity : .opacity)
-        .animation(reduceMotion ? nil : LociTheme.reducedFade, value: status)
+        .animation(reduceMotion ? nil : LociTheme.reducedFade, value: activity.status)
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 6)
@@ -62,10 +65,27 @@ struct MuseChatHeader: View {
   }
 }
 
-/// Loci's avatar. Idle art only; the working ring arrives with stage B.
-/// It never floats or bobs, so Reduce Motion needs nothing extra here.
+/// Loci's avatar: idle art always (there is no working art), with a ring for
+/// the mood. It never floats or bobs.
 struct MuseAvatar: View {
+  var mood: MuseMood = .idle
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var celebrationScale: CGFloat = 1
+
   var body: some View {
+    art
+      .overlay { MuseRing(mood: mood).padding(-LociTheme.Muse.ringInset) }
+      .scaleEffect(celebrationScale)
+      .onChange(of: mood) { _, new in
+        guard new == .celebrating, !reduceMotion else { return }
+        withAnimation(LociTheme.defaultSpring) { celebrationScale = 1.06 } completion: {
+          withAnimation(LociTheme.defaultSpring) { celebrationScale = 1 }
+        }
+      }
+  }
+
+  private var art: some View {
     Image("LociMascot")
       .resizable()
       .scaledToFit()
@@ -76,6 +96,55 @@ struct MuseAvatar: View {
       .clipShape(Circle())
       .overlay(Circle().stroke(Color.museCanvas, lineWidth: 3))
       .accessibilityHidden(true)
+  }
+}
+
+/// The ring around the avatar. Working: a coral arc going round (a full static
+/// ring under Reduce Motion). Listening: a faint full ring. Celebrating: a full
+/// coral ring. Idle: none.
+struct MuseRing: View {
+  let mood: MuseMood
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  var body: some View {
+    ZStack {
+      switch mood {
+      case .idle:
+        EmptyView()
+      case .listening:
+        Circle().stroke(Color.museRing.opacity(0.45), lineWidth: LociTheme.Muse.ringWidth)
+      case .celebrating:
+        Circle().stroke(Color.museRing, lineWidth: LociTheme.Muse.ringWidth)
+      case .working:
+        if reduceMotion {
+          Circle().stroke(Color.museRing, lineWidth: LociTheme.Muse.ringWidth)
+        } else {
+          spinningArc
+        }
+      }
+    }
+    .animation(reduceMotion ? nil : LociTheme.reducedFade, value: mood)
+    .allowsHitTesting(false)
+    .accessibilityHidden(true)
+  }
+
+  /// One turn every 1.4s, driven by the frame clock so it never snaps back.
+  private var spinningArc: some View {
+    TimelineView(.animation) { context in
+      let turn = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.4) / 1.4
+      ZStack {
+        Circle().stroke(Color.museRing.opacity(0.18), lineWidth: LociTheme.Muse.ringWidth)
+        Circle()
+          .trim(from: 0, to: 0.32)
+          .stroke(
+            AngularGradient(colors: [Color.museRing.opacity(0), Color.museRing], center: .center, startAngle: .degrees(0), endAngle: .degrees(115)),
+            style: StrokeStyle(lineWidth: LociTheme.Muse.ringWidth, lineCap: .round)
+          )
+          .rotationEffect(.degrees(turn * 360))
+      }
+    }
+    .transition(.opacity)
   }
 }
 
@@ -147,10 +216,30 @@ struct MuseBubble<Content: View>: View {
   .safeAreaInset(edge: .top, spacing: 0) { MuseChatHeader() }
 }
 
-#Preview("Header — long status") {
-  VStack {
-    MuseChatHeader(status: "is still working — you can leave this screen and come back later")
-    Spacer()
+#Preview("Header — states") {
+  ScrollView {
+    VStack(spacing: 24) {
+      MuseChatHeader(activity: .resolve(status: .streaming))
+      MuseChatHeader(activity: .resolve(status: .streaming, progressStage: "Checking opening hours"))
+      MuseChatHeader(activity: .resolve(status: .detached))
+      MuseChatHeader(activity: .resolve(status: .completed, flash: .celebrating(places: 7)))
+      MuseChatHeader(activity: .resolve(status: .idle, isListening: true))
+    }
   }
   .background(Color.museCanvas.ignoresSafeArea())
+}
+
+extension View {
+  /// Hold the celebrating / hit-a-snag flash that a search earns when it ends,
+  /// then clear it after its duration so the header settles on Ready.
+  func museFlash(_ flash: Binding<MuseActivity.Flash?>, status: SearchState.Status?, places: Int) -> some View {
+    onChange(of: status) { old, new in
+      if let earned = MuseActivity.flash(from: old, to: new, places: places) { flash.wrappedValue = earned }
+    }
+    .task(id: flash.wrappedValue) {
+      guard let current = flash.wrappedValue else { return }
+      try? await Task.sleep(for: current.duration)
+      if !Task.isCancelled, flash.wrappedValue == current { flash.wrappedValue = nil }
+    }
+  }
 }
