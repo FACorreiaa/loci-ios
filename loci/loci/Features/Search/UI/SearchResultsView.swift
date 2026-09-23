@@ -4,8 +4,8 @@ import SwiftUI
 /// The result page for one search session: web's `/itinerary`, `/hotels`,
 /// `/restaurants` and `/activities` with `?sessionId=&cityName=&domain=`.
 ///
-/// While the search runs it shows tokens as they arrive, then the places as
-/// the structured events land. Opened later (a notification tap, a deep link)
+/// While the search runs it shows skeleton cards, then the places as the
+/// structured events land; tokens are never rendered (web does the same). Opened later (a notification tap, a deep link)
 /// it restores the session the way web's `restoreOrHydrateSession` does:
 /// the live search, then this phone's copy, then GetChatSession, then a re-run.
 ///
@@ -76,21 +76,23 @@ struct SearchResultsView: View {
   /// The city above the answer, and the place count once it has finished.
   /// Progress lives in the header's status line.
   private var caption: String? {
-    let count = state.flatMap { $0.status == .completed && !$0.places.isEmpty ? "\($0.places.count) places" : nil }
+    let count = state.flatMap { !$0.isActive && !$0.places.isEmpty ? "\($0.places.count) places" : nil }
     let parts = [state?.cityName ?? link.cityName, count].compactMap { $0 }.filter { !$0.isEmpty }
     return parts.isEmpty ? nil : parts.joined(separator: " · ")
   }
 
   /// Save and Share, which lived in the navigation bar before the Muse header replaced it.
   @ViewBuilder private func actions(_ state: SearchState) -> some View {
-    let canSave = !isLive && state.status == .completed && state.destination == .itinerary
+    let canSave = !isLive && state.hasResult
     if canSave || state.hasResult {
       HStack(spacing: 8) {
         if canSave {
           Button(saveStatus ?? "Save", systemImage: "bookmark") { Task { await save(state) } }.disabled(saveStatus != nil)
         }
         if state.hasResult {
-          ShareLink(item: ItineraryShareText.text(for: state)) { Label("Share", systemImage: "square.and.arrow.up") }
+          ShareLink(item: ShareText.build(title: shareTitle(state), groups: state.dayGroups, description: state.cityData?.description_p)) {
+            Label("Share", systemImage: "square.and.arrow.up")
+          }
         }
       }
       .buttonStyle(MusePillButtonStyle())
@@ -152,21 +154,19 @@ struct SearchResultsView: View {
     } catch { self.error = error.userMessage }
   }
 
-  /// ItineraryService.BookmarkItinerary with the fields web's /itinerary Save sends.
-  private func save(_ state: SearchState) async {
-    var request = Loci_Itinerary_BookmarkRequest()
+  private func shareTitle(_ state: SearchState) -> String {
     let city = state.cityData?.city ?? state.cityName ?? ""
     let name = state.itinerary?.itineraryResponse.itineraryName ?? ""
-    request.primaryCityName = city
-    request.title = name.isEmpty ? "\(city) itinerary" : name
-    request.description_p = state.cityData.map { $0.description_p.isEmpty ? "Itinerary for \(city)" : $0.description_p } ?? "Itinerary for \(city)"
-    request.tags = []
-    request.isPublic = false
-    if let sessionId = state.sessionId { request.sessionID = sessionId }
+    return name.isEmpty ? state.destination.bookmarkTitle(city: city) : name
+  }
+
+  /// Web's Save: the phone already keeps its copy when the search finishes;
+  /// this adds the account bookmark with the fields /itinerary sends.
+  private func save(_ state: SearchState) async {
+    let city = state.cityData?.city ?? state.cityName ?? ""
+    let description = state.cityData.map { $0.description_p.isEmpty ? "Itinerary for \(city)" : $0.description_p } ?? "Itinerary for \(city)"
     do {
-      _ = try await rpc("Could not save the itinerary.", request) {
-        await Loci_Itinerary_ItineraryServiceClient(client: ConnectTransport.shared.protocolClient).bookmarkItinerary(request: $0, headers: [:])
-      }
+      try await ResultsAPI.bookmark(title: shareTitle(state), description: description, cityName: city, sessionId: state.sessionId)
       saveStatus = "Saved"
     } catch { self.error = error.userMessage }
   }
@@ -182,12 +182,7 @@ struct SearchTranscript: View {
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-  private var hasAgentTurn: Bool { state.status != .idle || !state.text.isEmpty || state.hasResult }
-  private var hasItineraryTitle: Bool {
-    guard let itinerary = state.itinerary else { return false }
-    return state.destination == .itinerary && !itinerary.itineraryResponse.itineraryName.isEmpty
-  }
-  private var showsSkeleton: Bool { state.isActive && state.places.isEmpty && state.text.isEmpty && !hasItineraryTitle }
+  private var hasAgentTurn: Bool { state.status != .idle || state.hasResult }
   private var arrival: AnyTransition { reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity) }
 
   var body: some View {
@@ -199,49 +194,10 @@ struct SearchTranscript: View {
         Text(caption).lociCoordStyle().padding(.horizontal, 4).padding(.top, 4)
       }
       if hasAgentTurn {
-        MuseBubble(role: .agent) { agentContent }.transition(arrival)
+        MuseBubble(role: .agent) { ResultsPage(state: state, onRerun: onRerun) }.transition(arrival)
       }
     }
     .animation(reduceMotion ? LociTheme.reducedFade : LociTheme.resultArrive, value: hasAgentTurn)
-  }
-
-  private var agentContent: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      if case .failed(let message) = state.status {
-        Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(Color.lociDestructive)
-        if !state.query.isEmpty { rerunButton }
-      }
-
-      if hasItineraryTitle, let response = state.itinerary?.itineraryResponse {
-        Text(response.itineraryName).font(.lociTitle())
-        if !response.overallDescription.isEmpty { Text(response.overallDescription) }
-      } else if !state.text.isEmpty, state.places.isEmpty {
-        // Tokens as they arrive, until a structured result replaces them. The caret sits in the bubble.
-        Text(state.status == .streaming ? state.text + " ▍" : state.text)
-          .animation(reduceMotion ? nil : LociTheme.reducedFade, value: state.text)
-      } else if showsSkeleton {
-        SkeletonCards()
-      }
-
-      if !state.places.isEmpty {
-        LazyVStack(spacing: 12) {
-          ForEach(state.places, id: \.stableID) { poi in
-            POICardView(poi: poi).transition(arrival)
-          }
-        }
-        .animation(reduceMotion ? LociTheme.reducedFade : LociTheme.resultArrive, value: state.places.count)
-      }
-
-      if state.status == .completed, state.places.isEmpty, state.destination != .itinerary {
-        Text("The list finished on the server but didn't reach this phone.").foregroundStyle(Color.museTextSecondary)
-        rerunButton
-      }
-    }
-    .frame(maxWidth: state.places.isEmpty && !showsSkeleton ? nil : .infinity, alignment: .leading)
-  }
-
-  private var rerunButton: some View {
-    Button("Run the search again") { onRerun(state.query) }.buttonStyle(.borderedProminent).tint(.lociForest)
   }
 }
 
@@ -266,28 +222,5 @@ struct SkeletonCards: View {
     }
     .redacted(reason: .placeholder)
     .accessibilityLabel("Loading results")
-  }
-}
-
-/// Plain-text share of a result, grouped by day like web's share text,
-/// ending with "Generated from Loci".
-enum ItineraryShareText {
-  static func text(for state: SearchState) -> String {
-    var lines: [String] = []
-    let city = state.cityName ?? state.cityData?.city ?? ""
-    if let name = state.itinerary?.itineraryResponse.itineraryName, !name.isEmpty { lines.append(name) } else if !city.isEmpty {
-      lines.append("\(state.destination.title) in \(city)")
-    }
-    let byDay = Dictionary(grouping: state.places) { $0.hasDay ? Int($0.day) : 0 }
-    for day in byDay.keys.sorted() {
-      lines.append("")
-      if day > 0 { lines.append("Day \(day)") }
-      for poi in byDay[day] ?? [] {
-        lines.append("• \(poi.name)" + (poi.address.isEmpty ? "" : " — \(poi.address)"))
-      }
-    }
-    lines.append("")
-    lines.append("Generated from Loci")
-    return lines.joined(separator: "\n")
   }
 }

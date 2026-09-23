@@ -147,7 +147,11 @@ import UIKit
     }
     switch effect {
     case .started(let link): startedLink = link
-    case .completed, .failed: await finish()
+    case .completed:
+      // COMPLETE with load_from_session: the result is stored, not streamed (web fetches it too).
+      if state.needsSessionFetch, let sessionId = state.sessionId { await fetchStoredResult(sessionId: sessionId) }
+      await finish()
+    case .failed: await finish()
     case nil: break
     }
   }
@@ -178,7 +182,8 @@ import UIKit
   private func finish() async {
     guard var envelope, !envelope.finished else { return }
     envelope.finished = true
-    if state.status == .completed { store.saveResult(state) }
+    // A partial result is still a result: web keeps it and shows the error on the rail.
+    if state.status == .completed || state.hasResult { store.saveResult(state) }
     let isViewing = isForeground && viewingSessionId != nil && viewingSessionId == state.sessionId
     if !envelope.notified, !isViewing, let link = state.link {
       envelope.notified = true
@@ -235,13 +240,21 @@ import UIKit
       let session = try? await rpc("", request, { await self.chat.getChatSession(request: $0, headers: [:]) }).session,
       session.hasCurrentItinerary, session.updatedAt.date >= started.addingTimeInterval(-5)
     else { return false }
-    if state.destination == .itinerary || !state.hasResult {
-      if state.destination == .itinerary { state.itinerary = session.currentItinerary }
-      if state.cityData == nil, session.currentItinerary.hasGeneralCityData { state.cityData = session.currentItinerary.generalCityData }
-    }
+    if state.destination == .itinerary || !state.hasResult { state.adopt(session.currentItinerary) }
     state.status = .completed
     await finish()
     return true
+  }
+
+  /// GetChatSession for a result the stream announced but did not carry.
+  private func fetchStoredResult(sessionId: String) async {
+    var request = Loci_Chat_GetChatSessionRequest()
+    request.sessionID = sessionId
+    guard let session = try? await rpc("", request, { await self.chat.getChatSession(request: $0, headers: [:]) }).session,
+      session.hasCurrentItinerary
+    else { return }
+    state.adopt(session.currentItinerary)
+    state.needsSessionFetch = false
   }
 
   // MARK: - App lifecycle
@@ -316,7 +329,7 @@ import UIKit
   // MARK: - Opening a session
 
   /// The state to show for a session link: the live search, this phone's saved
-  /// copy, or the server's (itineraries only; web does the same).
+  /// copy, or the server's (every domain since proto v5.22 stores the lists).
   func state(for link: SessionLink) async -> SearchState? {
     if state.sessionId == link.sessionId { return state }
     if let saved = store.loadResult(for: link) { return saved }

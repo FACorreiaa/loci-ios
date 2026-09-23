@@ -113,9 +113,9 @@ import Testing
     #expect(MuseActivity.resolve(status: .streaming, progressStage: "semantic_context_generated").status == "is thinking")
   }
 
-  @Test func stagePhraseCutsAt32Characters() {
+  @Test func stagePhraseCutsAt32Characters() throws {
     let long = "checking opening hours and the tram timetable for every stop"
-    let phrase = try! #require(MuseActivity.stagePhrase(long))
+    let phrase = try #require(MuseActivity.stagePhrase(long))
     #expect(phrase.count <= MuseActivity.maxStageLength)
     #expect(phrase == "checking opening hours and the…")
     #expect(phrase.hasSuffix("…"))

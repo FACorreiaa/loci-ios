@@ -12,6 +12,18 @@ nonisolated struct SearchState: Equatable, Sendable {
     case detached
     case completed
     case failed(String)
+    /// ERROR arrived after places had already streamed: web keeps the results
+    /// and shows the error on the status rail. Not a dead end.
+    case completedWithError(String)
+  }
+
+  /// What the page shows, in web's `ItineraryStreamView` terms.
+  enum Phase: Equatable, Sendable {
+    /// Nothing to show yet: skeleton cards.
+    case skeleton
+    /// Places are in, more may come (photos, days).
+    case enriching
+    case done
   }
 
   var sessionId: String?
@@ -41,10 +53,44 @@ nonisolated struct SearchState: Equatable, Sendable {
   /// so the id alone would drop real events.
   var seen: Set<String> = []
 
+  /// The server's `planned_days`; 0 when unknown.
+  var plannedDays = 0
+  /// COMPLETE said the result is not on the stream: fetch it with GetChatSession.
+  var needsSessionFetch = false
+
   var isActive: Bool { status == .streaming || status == .detached }
 
   /// The failure a user's Stop leaves behind. Not a snag, so the header stays quiet.
   static let stoppedMessage = "Stopped."
+
+  var phase: Phase {
+    if !hasResult { return .skeleton }
+    return isActive ? .enriching : .done
+  }
+
+  /// The text of a failure, whether it ended the search or came after results.
+  var failureMessage: String? {
+    switch status {
+    case .failed(let message), .completedWithError(let message): message
+    default: nil
+    }
+  }
+
+  /// Itinerary stops grouped by day (web `groupStopsByDay`); lists are one group.
+  var dayGroups: [DayGroup] {
+    switch destination {
+    case .itinerary: DayGrouping.groups(places)
+    default: places.isEmpty ? [] : [DayGroup(number: 1, stops: places)]
+    }
+  }
+
+  /// Top-level places outside the itinerary: "More to explore".
+  var extras: [Loci_Poi_POIDetailedInfo] {
+    guard destination == .itinerary, let itinerary else { return [] }
+    let planned = itinerary.itineraryResponse.pointsOfInterest
+    guard !planned.isEmpty else { return [] }
+    return DayGrouping.extras(all: itinerary.pointsOfInterest + generalPOIs, itinerary: planned)
+  }
 
   var link: SessionLink? {
     sessionId.map { SessionLink(destination: destination, sessionId: $0, cityName: cityName, domain: domain) }
@@ -134,15 +180,29 @@ nonisolated extension SearchState {
       activities = payload.activities
       absorb(city: payload.hasGeneralCityData ? payload.generalCityData : nil)
     case .error(let error):
-      status = .failed(error.userMessage.isEmpty ? "The search failed." : error.userMessage)
+      let message = error.userMessage.isEmpty ? "The search failed." : error.userMessage
+      status = hasResult ? .completedWithError(message) : .failed(message)
       return .failed(message: error.userMessage, retryable: error.retryable)
     case .complete(let complete):
       if !complete.sessionID.isEmpty { sessionId = complete.sessionID }
-      if complete.hasResult, destination == .itinerary || itinerary == nil { itinerary = complete.result }
+      if complete.hasResult, complete.result.hasContent, destination == .itinerary || itinerary == nil {
+        adopt(complete.result)
+      }
+      needsSessionFetch = complete.loadFromSession && !hasResult
       status = .completed
       return .completed
     }
     return nil
+  }
+
+  /// Take a full AiCityResponse, from the stream, the phone's copy or GetChatSession.
+  mutating func adopt(_ result: Loci_Chat_AiCityResponse) {
+    itinerary = result
+    if result.hasItineraryResponse { plannedDays = Int(result.itineraryResponse.plannedDays) }
+    if !result.hotels.isEmpty { hotels = result.hotels }
+    if !result.restaurants.isEmpty { restaurants = result.restaurants }
+    if !result.activities.isEmpty { activities = result.activities }
+    absorb(city: result.hasGeneralCityData ? result.generalCityData : nil)
   }
 
   private mutating func absorb(city: Loci_City_GeneralCityData?) {
@@ -189,4 +249,13 @@ nonisolated extension Loci_Poi_POIDetailedInfo {
   /// A key for ForEach and map selection. The server sometimes sends places
   /// with no id, so those fall back to name plus coordinates.
   var stableID: String { id.isEmpty ? "\(name)|\(latitude)|\(longitude)" : id }
+}
+
+nonisolated extension Loci_Chat_AiCityResponse {
+  /// Web's `responseHasContent`: a COMPLETE with an empty result must not wipe
+  /// what the itinerary event already delivered.
+  var hasContent: Bool {
+    !pointsOfInterest.isEmpty || !hotels.isEmpty || !restaurants.isEmpty || !activities.isEmpty
+      || (hasItineraryResponse && !itineraryResponse.pointsOfInterest.isEmpty)
+  }
 }
