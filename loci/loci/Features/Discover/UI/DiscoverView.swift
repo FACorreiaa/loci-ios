@@ -18,12 +18,14 @@ struct DiscoverView: View {
   @State private var city = ""
   @State private var composerSeed = ""
   @State private var error: String?
+  @State private var here = HereBriefModel()
 
   var body: some View {
     NavigationStack(path: $path) {
       ScrollView {
         VStack(alignment: .leading, spacing: 24) {
           hero
+          HereBriefSection(model: here)
           InSeasonBand(seed: $composerSeed)
           quickCategoriesSection
           if let page {
@@ -39,8 +41,16 @@ struct DiscoverView: View {
       .background(Color.lociPaper.ignoresSafeArea())
       .navigationTitle("Discover")
       .navigationDestination(for: SessionLink.self) { SearchResultsView(link: $0) }
-      .refreshable { await load() }
-      .task { if page == nil { await load() } }
+      .refreshable {
+        async let brief: Void = here.load()
+        await load()
+        await brief
+      }
+      .task {
+        async let brief: Void = here.load()
+        if page == nil { await load() }
+        await brief
+      }
       .errorAlert($error)
     }
   }
@@ -50,6 +60,9 @@ struct DiscoverView: View {
   private var hero: some View {
     VStack(alignment: .leading, spacing: 12) {
       Text("Where to next?").font(.lociDisplay(30)).foregroundStyle(Color.lociInk)
+      if !here.placeName.isEmpty {
+        Text(here.placeName).font(.lociCaption(13)).foregroundStyle(Color.lociForest)
+      }
       TextField("City (optional)", text: $city)
         .font(.lociBody())
         .textContentType(.addressCity)
