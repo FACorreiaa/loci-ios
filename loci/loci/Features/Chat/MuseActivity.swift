@@ -52,7 +52,7 @@ nonisolated struct MuseActivity: Equatable, Sendable {
       return MuseActivity(mood: .working, status: hasText ? "is writing" : "is thinking")
     case .detached:
       return MuseActivity(mood: .working, status: "is still working — you can leave")
-    case .idle, .completed, .failed, nil:
+    case .idle, .completed, .completedWithError, .failed, nil:
       break
     }
     switch flash {
@@ -83,6 +83,8 @@ nonisolated struct MuseActivity: Equatable, Sendable {
     guard old == .streaming || old == .detached else { return nil }
     switch new {
     case .completed: return .celebrating(places: places)
+    // Places arrived before the error: a partial win, the rail shows the snag.
+    case .completedWithError: return places > 0 ? .celebrating(places: places) : .snag
     case .failed(let message): return message == SearchState.stoppedMessage ? nil : .snag
     default: return nil
     }

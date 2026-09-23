@@ -26,6 +26,11 @@ enum DesignPreview: String {
   case museChatPush
   /// The same push with the bar showing: the control for the swipe-back check.
   case museChatPushBar
+  /// A finished Rome itinerary: header, map hero, two days, "Show the rest", extras, Trip Kit.
+  case results
+  /// The same page scrolled to the days, and to the Trip Kit.
+  case resultsDays
+  case resultsKit
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -52,6 +57,9 @@ enum DesignPreview: String {
     case .museChatListening: MuseChatPreview(state: .museSampleCompleted, isListening: true)
     case .museChatPush: MuseChatPushPreview()
     case .museChatPushBar: MuseChatPushPreview(hidesBar: false)
+    case .results: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places")
+    case .resultsDays: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places", scrollTo: ResultsPage.Anchor.days)
+    case .resultsKit: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places", scrollTo: ResultsPage.Anchor.kit)
     }
   }
 }
@@ -89,12 +97,21 @@ private struct MuseChatPreview: View {
   /// Held for the screenshot instead of timing out.
   var flash: MuseActivity.Flash?
   var isListening = false
+  var caption = "Lisbon"
+  var scrollTo: String?
 
   var body: some View {
-    ScrollView {
-      SearchTranscript(state: state, caption: "Lisbon")
-        .padding(.horizontal, LociTheme.defaultPadding)
-        .padding(.vertical, 12)
+    ScrollViewReader { proxy in
+      ScrollView {
+        SearchTranscript(state: state, caption: caption)
+          .padding(.horizontal, LociTheme.defaultPadding)
+          .padding(.vertical, 12)
+      }
+      .task {
+        guard let scrollTo else { return }
+        try? await Task.sleep(for: .seconds(1))
+        proxy.scrollTo(scrollTo, anchor: .top)
+      }
     }
     .background(Color.museCanvas.ignoresSafeArea())
     .safeAreaInset(edge: .top, spacing: 0) {
@@ -162,7 +179,9 @@ extension SearchState {
     state.cityName = "Lisbon"
     state.query = "3 days in Lisbon with kids, nothing too hilly"
     state.status = .streaming
-    state.text = "Lisbon is steep, so I'm keeping each day to one neighbourhood: Belém by the river first, then the flat Baixa grid, and a tram up to the castle for the one climb worth it."
+    state.text =
+      "Lisbon is steep, so I'm keeping each day to one neighbourhood: Belém by the river first,"
+        + " then the flat Baixa grid, and a tram up to the castle for the one climb worth it."
     return state
   }
 
@@ -171,7 +190,8 @@ extension SearchState {
     state.status = .completed
     var itinerary = Loci_Chat_AiCityResponse()
     itinerary.itineraryResponse.itineraryName = "Lisbon at a kid's pace"
-    itinerary.itineraryResponse.overallDescription = "Three short days, one neighbourhood each, with a playground or a pastry stop every couple of hours."
+    itinerary.itineraryResponse.overallDescription =
+      "Three short days, one neighbourhood each, with a playground or a pastry stop every couple of hours."
     state.itinerary = itinerary
     var tower = Loci_Poi_POIDetailedInfo()
     tower.id = "sample-belem"
@@ -186,6 +206,88 @@ extension SearchState {
     aquarium.rating = 4.7
     aquarium.descriptionPoi = "One giant tank, sea otters, and step-free all the way round."
     state.itinerary?.itineraryResponse.pointsOfInterest = [tower, aquarium]
+    return state
+  }
+}
+
+extension SearchState {
+  /// Three days in Rome with server-assigned days, one credited photo, an
+  /// extra outside the plan, and city facts. Offline: image URLs are inert.
+  static var resultsSample: SearchState {
+    var state = SearchState()
+    state.sessionId = "preview-rome"
+    state.destination = .itinerary
+    state.cityName = "Rome"
+    state.query = "3 days in Rome, first time, lots of walking"
+    state.status = .completed
+    var city = Loci_City_GeneralCityData()
+    city.city = "Rome"
+    city.country = "Italy"
+    city.description_p = "Layers of empire, church and café life stacked on seven hills; walk it and the city does the rest."
+    city.population = "2.8M"
+    city.area = "1,285 km²"
+    city.language = "Italian"
+    city.weather = "Mild, dry autumns"
+    city.centerLatitude = 41.9028
+    city.centerLongitude = 12.4964
+    state.cityData = city
+    var response = Loci_Chat_AiCityResponse()
+    response.generalCityData = city
+    response.itineraryResponse.itineraryName = "Rome on foot"
+    response.itineraryResponse.overallDescription = "Ancient Rome first, then the Renaissance centre, then the Vatican and Trastevere."
+    response.itineraryResponse.plannedDays = 3
+    struct Seed {
+      let name: String
+      let category: String
+      let lat: Double
+      let lon: Double
+      let day: Int
+      let rating: Double
+    }
+    let plan = [
+      Seed(name: "Colosseum", category: "Landmark", lat: 41.8902, lon: 12.4922, day: 1, rating: 4.8),
+      Seed(name: "Roman Forum", category: "Historic site", lat: 41.8925, lon: 12.4853, day: 1, rating: 4.7),
+      Seed(name: "Palatine Hill", category: "Park", lat: 41.8892, lon: 12.4875, day: 1, rating: 4.6),
+      Seed(name: "Capitoline Museums", category: "Museum", lat: 41.8933, lon: 12.4829, day: 1, rating: 4.6),
+      Seed(name: "Pantheon", category: "Landmark", lat: 41.8986, lon: 12.4769, day: 2, rating: 4.8),
+      Seed(name: "Piazza Navona", category: "Square", lat: 41.8992, lon: 12.4731, day: 2, rating: 4.7),
+      Seed(name: "Campo de' Fiori", category: "Market", lat: 41.8955, lon: 12.4722, day: 2, rating: 4.4),
+      Seed(name: "Trevi Fountain", category: "Landmark", lat: 41.9009, lon: 12.4833, day: 2, rating: 4.7),
+      Seed(name: "Vatican Museums", category: "Museum", lat: 41.9065, lon: 12.4536, day: 3, rating: 4.7),
+      Seed(name: "St. Peter's Basilica", category: "Church", lat: 41.9022, lon: 12.4539, day: 3, rating: 4.8),
+      Seed(name: "Trastevere", category: "Neighbourhood", lat: 41.8890, lon: 12.4694, day: 3, rating: 4.6),
+    ]
+    response.itineraryResponse.pointsOfInterest = plan.enumerated().map { offset, entry in
+      var poi = Loci_Poi_POIDetailedInfo()
+      poi.id = "preview-\(offset)"
+      poi.name = entry.name
+      poi.category = entry.category
+      poi.latitude = entry.lat
+      poi.longitude = entry.lon
+      poi.day = Int32(entry.day)
+      poi.priority = Int32(offset)
+      poi.rating = entry.rating
+      poi.descriptionPoi = "Worth the queue early; the light is best before ten and the crowds after."
+      poi.address = "Rome, Italy"
+      if offset == 0 {
+        var credit = Loci_Poi_POIImage()
+        credit.url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Colosseo_2020.jpg/640px-Colosseo_2020.jpg"
+        credit.attribution = "Wikimedia Commons"
+        credit.licence = "CC BY-SA 4.0"
+        poi.imageCredits = [credit]
+      }
+      return poi
+    }
+    var extra = Loci_Poi_POIDetailedInfo()
+    extra.id = "preview-extra"
+    extra.name = "Testaccio Market"
+    extra.category = "Market"
+    extra.latitude = 41.8770
+    extra.longitude = 12.4760
+    extra.rating = 4.5
+    extra.descriptionPoi = "Where Romans actually eat lunch."
+    response.pointsOfInterest = response.itineraryResponse.pointsOfInterest + [extra]
+    state.adopt(response)
     return state
   }
 }

@@ -43,7 +43,7 @@ struct NearbyView: View {
       ForEach(places, id: \.stableID) { poi in
         Marker(
           poi.name,
-          systemImage: Self.symbol(for: poi.category),
+          systemImage: PlaceSymbol.name(for: poi.category),
           coordinate: CLLocationCoordinate2D(latitude: poi.latitude, longitude: poi.longitude)
         )
           .tint(LociTheme.dayColor(Int(poi.hasDay ? poi.day : 1)))
@@ -104,17 +104,6 @@ struct NearbyView: View {
         useDefaultProfile: false
       )
     } catch { self.error = error.userMessage }
-  }
-
-  static func symbol(for category: String) -> String {
-    switch category.lowercased() {
-    case let c where c.contains("restaurant") || c.contains("food") || c.contains("cafe"): "fork.knife"
-    case let c where c.contains("hotel") || c.contains("accommodation"): "bed.double"
-    case let c where c.contains("museum"): "building.columns"
-    case let c where c.contains("park") || c.contains("nature"): "tree"
-    case let c where c.contains("bar") || c.contains("night"): "wineglass"
-    default: "mappin"
-    }
   }
 }
 

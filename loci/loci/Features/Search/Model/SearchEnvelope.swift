@@ -55,8 +55,10 @@ nonisolated struct SearchStore: Sendable {
     var payload = Loci_Chat_AiCityResponse()
     if let itinerary = state.itinerary { payload = itinerary }
     if let city = state.cityData, !payload.hasGeneralCityData { payload.generalCityData = city }
-    // Hotels, restaurants and activities ride in points_of_interest; the destination says which.
-    if state.destination != .itinerary { payload.pointsOfInterest = state.places }
+    payload.hotels = state.hotels
+    payload.restaurants = state.restaurants
+    payload.activities = state.activities
+    if payload.pointsOfInterest.isEmpty { payload.pointsOfInterest = state.generalPOIs }
     payload.sessionID = sessionId
     snapshot.complete.result = payload
     snapshot.complete.sessionID = sessionId
@@ -85,11 +87,13 @@ nonisolated extension SearchState {
     state.text = text
     state.status = .completed
     if result.hasGeneralCityData { state.cityData = result.generalCityData }
+    state.adopt(result)
+    // A phone copy saved before proto v5.22 kept a list in points_of_interest.
     switch link.destination {
-    case .itinerary: state.itinerary = result
-    case .hotels: state.hotels = result.pointsOfInterest
-    case .restaurants: state.restaurants = result.pointsOfInterest
-    case .activities: state.activities = result.pointsOfInterest
+    case .itinerary: break
+    case .hotels: if state.hotels.isEmpty { state.hotels = result.pointsOfInterest }
+    case .restaurants: if state.restaurants.isEmpty { state.restaurants = result.pointsOfInterest }
+    case .activities: if state.activities.isEmpty { state.activities = result.pointsOfInterest }
     }
     return state
   }

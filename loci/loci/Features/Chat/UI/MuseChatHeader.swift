@@ -208,7 +208,9 @@ struct MuseBubble<Content: View>: View {
   ScrollView {
     VStack(spacing: 12) {
       MuseBubble(role: .user) { Text("3 days in Lisbon with kids") }
-      MuseBubble(role: .agent) { Text("Here is a gentle plan: mornings by the river, afternoons in the shade, nothing more than 20 minutes on foot.") }
+      MuseBubble(role: .agent) {
+        Text("Here is a gentle plan: mornings by the river, afternoons in the shade, nothing more than 20 minutes on foot.")
+      }
     }
     .padding(LociTheme.defaultPadding)
   }

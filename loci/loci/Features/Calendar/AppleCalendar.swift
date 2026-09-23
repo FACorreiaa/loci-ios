@@ -43,6 +43,25 @@ import SwiftProtobuf
     }
   }
 
+  /// One event per stop, timed by `CalendarSchedule` (web's `.ics` from the
+  /// Trip Kit). Returns how many events were written.
+  @discardableResult func writeStops(_ events: [StopEvent]) throws -> Int {
+    guard isAuthorized else { throw APIError.custom("Calendar access was not granted.") }
+    let cal = try lociCalendar()
+    for stop in events {
+      let event = EKEvent(eventStore: store)
+      event.calendar = cal
+      event.title = stop.title
+      event.startDate = stop.start
+      event.endDate = stop.end
+      event.location = stop.location
+      event.notes = stop.notes.isEmpty ? "Loci" : "\(stop.notes)\n\nLoci"
+      try store.save(event, span: .thisEvent, commit: false)
+    }
+    try store.commit()
+    return events.count
+  }
+
   private func lociCalendar() throws -> EKCalendar {
     if let existing = store.calendars(for: .event).first(where: { $0.title == Self.lociCalendarTitle }) {
       return existing

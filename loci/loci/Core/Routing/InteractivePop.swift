@@ -7,11 +7,12 @@ extension View {
   /// while the bar is hidden; this hands it one that allows it whenever there
   /// is a page to go back to. Checked by MuseChatNavigationUITests.
   func interactivePopEnabled() -> some View {
-    background { InteractivePopEnabler().frame(width: 0, height: 0).accessibilityHidden(true) }
+    background { InteractivePop().frame(width: 0, height: 0).accessibilityHidden(true) }
   }
 }
 
-private struct InteractivePopEnabler: UIViewRepresentable {
+/// Named for the file: the enabler the `interactivePopEnabled()` modifier installs.
+private struct InteractivePop: UIViewRepresentable {
   func makeUIView(context: Context) -> Probe { Probe() }
   func updateUIView(_ probe: Probe, context: Context) { probe.enable() }
 

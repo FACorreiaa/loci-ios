@@ -26,6 +26,8 @@ public enum LociTheme {
   public static let ungroupedColor = Color(hex: 0x6B7C72)
 
   public static func dayColor(_ day: Int) -> Color { dayColors[max(day - 1, 0) % dayColors.count] }
+  /// Text on a day-coloured stamp or pin: the light paper in both schemes, since the stamps stay dark.
+  public static let stampInk = Color(hex: 0xF5F0E6)
 
   /// Muse chat metrics, from apps/_reviews/muse-chat-contract.md (shared across the four apps).
   public enum Muse {
