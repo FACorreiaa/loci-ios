@@ -57,6 +57,7 @@ Tests: `lociTests/ResultsParityTests.swift` (grouping, share text, Google Maps
 URL, calendar timing, Pro gate, reducer partial-failure and `load_from_session`,
 list restore, image choice, meta line).
 
-Web colour note: iOS uses NATIVE_DESIGN's `dayColors`; web's map uses
-`LOCI_DAY_COLORS`, a different palette. The two docs disagree; native keeps
-NATIVE_DESIGN until there is a verdict.
+Day colours: one palette on both, web's `LOCI_DAY_COLORS`, indexed the same
+way (`day % 8` with the server's 1-based day, so Day 1 is pine teal; a list
+with no days is day 0, coral; extras are the ungrouped grey). NATIVE_DESIGN
+§map palette was updated to match.

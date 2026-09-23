@@ -46,7 +46,8 @@ struct ResultsMapData: Equatable {
       for stop in group.stops where GoogleMapsRoute.hasCoordinate(stop) {
         let coordinate = CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude)
         let index = sequence[stop.stableID] ?? 0
-        pins.append(Pin(id: stop.stableID, name: stop.name, index: index, day: showsDays ? group.number : nil, coordinate: coordinate))
+        // A list without days is "day 0" on web: one colour, still numbered.
+        pins.append(Pin(id: stop.stableID, name: stop.name, index: index, day: showsDays ? group.number : 0, coordinate: coordinate))
         route.append(coordinate)
       }
       if showsDays {
@@ -246,7 +247,7 @@ private struct MapStopList: View {
 
   private func row(_ stop: Loci_Poi_POIDetailedInfo, day: Int) -> some View {
     HStack(spacing: 10) {
-      MapPin(number: sequence[stop.stableID] ?? 0, color: showsDays ? LociTheme.dayColor(day) : LociTheme.ungroupedColor)
+      MapPin(number: sequence[stop.stableID] ?? 0, color: showsDays ? LociTheme.dayColor(day) : LociTheme.listColor)
       VStack(alignment: .leading, spacing: 2) {
         Text(stop.name).font(.lociHeadline(15)).foregroundStyle(Color.lociInk).lineLimit(1)
         if let meta = StopMeta.line(for: stop, destination: destination) ?? (stop.category.isEmpty ? nil : stop.category) {
