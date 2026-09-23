@@ -26,6 +26,18 @@ public enum LociTheme {
   public static let ungroupedColor = Color(hex: 0x6B7C72)
 
   public static func dayColor(_ day: Int) -> Color { dayColors[max(day - 1, 0) % dayColors.count] }
+
+  /// Muse chat metrics, from apps/_reviews/muse-chat-contract.md (shared across the four apps).
+  public enum Muse {
+    public static let bubbleRadius: CGFloat = 24
+    public static let avatarSize: CGFloat = 110
+    public static let headerButtonSize: CGFloat = 40
+    /// Height of the canvas → clear gradient behind the header.
+    public static let scrimHeight: CGFloat = 120
+    /// Bubble max widths, as a fraction of the transcript's content width.
+    public static let userBubbleWidth: CGFloat = 0.85
+    public static let agentBubbleWidth: CGFloat = 0.94
+  }
 }
 
 public extension Color {
@@ -72,6 +84,20 @@ public extension Color {
   static let lociBorder = dynamic(light: 0xCFC5B5, dark: 0x384840)
   /// destructive. Dark value from web (styles/base.css), as above.
   static let lociDestructive = dynamic(light: 0xB33A32, dark: 0xDA534E)
+
+  // MARK: - Muse chat tokens (apps/_reviews/muse-chat-contract.md)
+  /// Chat canvas: #101A16 dark, lociPaper light.
+  static let museCanvas = dynamic(light: 0xF5F0E6, dark: 0x101A16)
+  /// Agent bubble: #162019 dark, lociCard light.
+  static let museAgentBubble = dynamic(light: 0xFDFBF7, dark: 0x162019)
+  /// User bubble: darkened coral in both schemes.
+  static let museUserBubble = Color(hex: 0xD4845C)
+  /// Ink on the user bubble. Always the dark ink: the light dark-mode ink fails contrast on coral.
+  static let museUserText = Color(hex: 0x1A2E26)
+  /// Header pill, header buttons and the composer field.
+  static let musePill = lociMuted
+  static let museText = lociInk
+  static let museTextSecondary = lociMutedInk
 }
 
 // MARK: - Type (NATIVE_DESIGN §2)
@@ -90,6 +116,11 @@ public extension Font {
   static func lociCaption(_ size: CGFloat = 12) -> Font { .custom("DM Sans", size: size, relativeTo: .caption) }
   /// Space Mono, for coordinates, sequence numbers and status. Pair with `.textCase(.uppercase)` and tracking.
   static func lociCoord(_ size: CGFloat = 11) -> Font { .custom("Space Mono", size: size, relativeTo: .caption2) }
+
+  /// Muse chat type. DM Sans at 17 has a ~22pt line, matching iOS `.body` 17/22.
+  static let museBody = Font.custom("DM Sans", size: 17, relativeTo: .body)
+  static let museName = Font.custom("DM Sans", size: 15, relativeTo: .subheadline).weight(.semibold)
+  static let museStatus = Font.custom("DM Sans", size: 13, relativeTo: .footnote)
 }
 
 public extension View {
