@@ -236,7 +236,7 @@ struct FullMapView: View {
       .task(id: focusedPin?.id) {
         lookAround = nil
         guard let pin = focusedPin else { return }
-        lookAround = await PlaceDetailSheet.lookAroundScene(at: pin.coordinate)
+        lookAround = await PlaceDetailView.lookAroundScene(at: pin.coordinate)
       }
       .ignoresSafeArea(edges: .bottom)
       .navigationTitle(title)
