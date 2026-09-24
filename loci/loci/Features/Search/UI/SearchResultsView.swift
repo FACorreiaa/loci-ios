@@ -26,6 +26,8 @@ struct SearchResultsView: View {
   /// Proactive messages and the standing-task card, after the search turn.
   @State private var thread = MuseThread()
   @State private var scroll = ScrollPosition()
+  /// A message a chat push named, to bring into view once it is on the page.
+  @State private var revealMessageId: String?
 
   /// The live search when it is this session, otherwise what was restored.
   private var state: SearchState? {
@@ -40,19 +42,26 @@ struct SearchResultsView: View {
 
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 12) {
-        if let state {
-          SearchTranscript(state: state, caption: caption) { query in Task { await rerun(query) } }
-          actions(state)
-          MuseThreadTail(thread: thread, sessionId: state.sessionId ?? link.sessionId)
-        } else if isRestoring {
-          ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
-        } else {
-          unavailable
+      ScrollViewReader { proxy in
+        VStack(alignment: .leading, spacing: 12) {
+          if let state {
+            SearchTranscript(state: state, caption: caption) { query in Task { await rerun(query) } }
+            actions(state)
+            MuseThreadTail(thread: thread, sessionId: state.sessionId ?? link.sessionId)
+          } else if isRestoring {
+            ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
+          } else {
+            unavailable
+          }
+        }
+        .padding(.horizontal, LociTheme.defaultPadding)
+        .padding(.vertical, 12)
+        .onChange(of: revealMessageId) { _, id in
+          guard let id else { return }
+          withAnimation(LociTheme.resultArrive) { proxy.scrollTo(id, anchor: .top) }
+          revealMessageId = nil
         }
       }
-      .padding(.horizontal, LociTheme.defaultPadding)
-      .padding(.vertical, 12)
     }
     .scrollPosition($scroll)
     // A card or a confirmation lands under a long answer: bring it into view.
@@ -77,6 +86,19 @@ struct SearchResultsView: View {
     .task(id: link.sessionId) {
       await restoreIfNeeded()
       await thread.loadHistory(sessionId: link.sessionId)
+      // Opened from a chat push (cold or warm start): the message is loaded now.
+      if let refresh = router.takeThreadRefresh(for: link.sessionId) { reveal(refresh) }
+    }
+    // A chat push for this page while it is on screen, or a tap on one that
+    // re-selects it: fetch the thread again so the new message appears.
+    .onChange(of: router.threadRefresh) { _, refresh in
+      guard refresh?.sessionId == link.sessionId, controller.viewingSessionId == link.sessionId,
+        let refresh = router.takeThreadRefresh(for: link.sessionId)
+      else { return }
+      Task {
+        await thread.loadHistory(sessionId: link.sessionId)
+        reveal(refresh)
+      }
     }
     .onAppear { controller.viewingSessionId = link.sessionId }
     .onDisappear { if controller.viewingSessionId == link.sessionId { controller.viewingSessionId = nil } }
@@ -155,6 +177,16 @@ struct SearchResultsView: View {
 
   private func scrollToEnd() {
     withAnimation(LociTheme.resultArrive) { scroll.scrollTo(edge: .bottom) }
+  }
+
+  /// Bring the pushed message into view; without an id this thread knows, the
+  /// newest message is at the end.
+  private func reveal(_ refresh: ThreadRefresh) {
+    if let id = refresh.messageId.flatMap(thread.messageId(matching:)) {
+      revealMessageId = id
+    } else if !thread.messages.isEmpty {
+      scrollToEnd()
+    }
   }
 
   /// A follow-up that reads like "every morning, tell me…" becomes a

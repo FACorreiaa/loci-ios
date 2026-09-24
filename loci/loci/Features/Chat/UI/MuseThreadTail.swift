@@ -15,7 +15,7 @@ struct MuseThreadTail: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
       ForEach(thread.messages) { message in
-        MuseMessageView(message: message).transition(arrival)
+        MuseMessageView(message: message).id(message.id).transition(arrival)
       }
       if let request = thread.request, let card = thread.card {
         MuseBubble(role: .user) { Text(request) }
