@@ -6,6 +6,7 @@ public struct MainTabView: View {
   public init(onSignOut: @escaping () -> Void = {}) { self.onSignOut = onSignOut }
 
   @Bindable private var router = AppRouter.shared
+  @Bindable private var pushPrimer = PushPrimer.shared
 
   public var body: some View {
     TabView(selection: $router.selectedTab) {
@@ -19,5 +20,9 @@ public struct MainTabView: View {
 
       ProfileView(onSignOut: onSignOut).tabItem { Label("Profile", systemImage: "person.fill") }.tag(AppRouter.Tab.profile)
     }.tint(.lociForest)
+      // Swiping the primer away is a "not now"; after a button this is a no-op.
+      .sheet(isPresented: $pushPrimer.isAsking, onDismiss: { pushPrimer.respond(false) }) {
+        PushPrimerSheet(primer: pushPrimer)
+      }
   }
 }
