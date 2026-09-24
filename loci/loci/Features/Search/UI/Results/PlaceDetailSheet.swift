@@ -44,6 +44,7 @@ struct PlaceDetailView: View {
   @State private var saved: Bool
   @State private var saving = false
   @State private var addingToList = false
+  @State private var reporting = false
   @State private var error: String?
 
   init(
@@ -85,6 +86,14 @@ struct PlaceDetailView: View {
           section("Your notes") { Text(notes).font(.lociBody(15)).foregroundStyle(Color.lociInk) }
         }
         if let facts, !facts.facts.isEmpty { PlaceFactsList(facts: facts) }
+        // Field reports hang off a stored POI, the same rule as Add to list and Reviews.
+        if ContributePayload.canReport(stop) {
+          Button("Report a fact", systemImage: "checkmark.seal") { reporting = true }
+            .font(.lociCaption(14).weight(.semibold))
+            .buttonStyle(.bordered)
+            .tint(Color.lociForest)
+            .accessibilityHint("Tell other travellers what's true here now: hours, access, noise, crowds.")
+        }
         contact
         chips
         // Reviews hang off a stored POI, the same rule as Add to list.
@@ -102,6 +111,7 @@ struct PlaceDetailView: View {
     .background(Color.lociPaper.ignoresSafeArea())
     .safeAreaInset(edge: .bottom) { footer }
     .sheet(isPresented: $addingToList) { AddToListSheet(stop: stop, destination: destination) }
+    .sheet(isPresented: $reporting) { ReportFactSheet(stop: stop) { Task { await loadFacts() } } }
     .errorAlert($error)
     .task(id: stop.id) {
       async let scene: Void = loadLookAround()
@@ -331,7 +341,7 @@ private struct PlaceFactsList: View {
       ForEach(Array(facts.facts.enumerated()), id: \.offset) { _, fact in
         HStack(alignment: .firstTextBaseline) {
           Text(Self.label(fact.field)).font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk).frame(width: 96, alignment: .leading)
-          Text(fact.value).font(.lociBody(14)).foregroundStyle(Color.lociInk)
+          Text(PlaceFactVocabulary.displayValue(fact.field, fact.value)).font(.lociBody(14)).foregroundStyle(Color.lociInk)
           Spacer()
           Text("\(Int((fact.confidence * 100).rounded()))%").lociCoordStyle(9)
         }
@@ -352,6 +362,26 @@ private struct PlaceFactsList: View {
     case .vibe: "Vibe"
     default: "Fact"
     }
+  }
+}
+
+/// "Report a fact" from a place: every field we know how to ask about, for this POI.
+private struct ReportFactSheet: View {
+  let stop: Loci_Poi_POIDetailedInfo
+  let onSubmitted: () -> Void
+
+  @Environment(\.dismiss) private var dismiss
+
+  var body: some View {
+    NavigationStack {
+      ClaimFormView(
+        task: VerificationTask.fromPlace(id: stop.id, name: stop.name),
+        service: ResultsSideData.isOffline ? PreviewContributeService() : ConnectContributeService(),
+        onSubmitted: onSubmitted
+      )
+      .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
+    }
+    .presentationDetents([.large])
   }
 }
 
