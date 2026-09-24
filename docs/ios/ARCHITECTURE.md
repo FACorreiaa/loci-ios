@@ -1200,7 +1200,7 @@ they come from: `loci-client/docs/NATIVE_DESIGN.md`, "change them there first".
 helper over a `UIColor` trait closure, so dark mode is free everywhere:
 
 ```swift
-// loci/loci/Core/Theme/LociTheme.swift:57
+// loci/loci/Core/Theme/LociTheme.swift:62
   nonisolated private static func dynamic(light: UInt32, dark: UInt32) -> Color {
     Color(
       UIColor { trait in
@@ -1208,7 +1208,7 @@ helper over a `UIColor` trait closure, so dark mode is free everywhere:
 ```
 
 ```swift
-// loci/loci/Core/Theme/LociTheme.swift:73
+// loci/loci/Core/Theme/LociTheme.swift:78
   static let lociPaper = dynamic(light: 0xF5F0E6, dark: 0x101A16)
   /// foreground
   static let lociInk = dynamic(light: 0x1A2E26, dark: 0xEDE8DC)
@@ -1225,7 +1225,7 @@ Where NATIVE_DESIGN gives no dark value (`muted`, `mutedForeground`,
 as `Font.loci*` functions that scale with Dynamic Type through `relativeTo:`:
 
 ```swift
-// loci/loci/Core/Theme/LociTheme.swift:114
+// loci/loci/Core/Theme/LociTheme.swift:119
   static func lociDisplay(_ size: CGFloat = 34) -> Font {
     .custom("Fraunces", size: size, relativeTo: .largeTitle).weight(.semibold)
   }
@@ -1248,25 +1248,30 @@ uses:
   public static let reducedFade = Animation.easeOut(duration: 0.2)
 
   /// Map day colours, in order (day 1 first). Cycle past day 8.
-  public static let dayColors: [Color] = [0x294D3C, 0x5A7A55, 0xC76B4A, 0x8A6E2F, 0x3D5A4A, 0xA85A3A, 0x6B8F71, 0xD4845C].map { Color(hex: $0) }
+  /// Web's `LOCI_DAY_COLORS` (loci-client/src/lib/theme-colors.ts), same order
+  /// and the same indexing: the server's 1-based day picks `dayColors[day % 8]`,
+  /// so Day 1 is pine teal on both, and a one-day list (day 0) is coral.
+  public static let dayColors: [Color] = [0xE2664A, 0x2F7D6E, 0xB07A2A, 0x7A5CA8, 0x4A7CB0, 0x8C6248, 0x5E8C3A, 0xA34F72].map { Color(hex: $0) }
   public static let clusterColor = Color(hex: 0x294D3C)
-  public static let ungroupedColor = Color(hex: 0x6B7C72)
+  public static let ungroupedColor = Color(hex: 0x6E7A82)
 
-  public static func dayColor(_ day: Int) -> Color { dayColors[max(day - 1, 0) % dayColors.count] }
+  public static func dayColor(_ day: Int) -> Color { dayColors[max(day, 0) % dayColors.count] }
+  /// Web's `colorForMapDay(0)`: the pins and stamps of a list that has no days.
+  public static var listColor: Color { dayColor(0) }
 ```
 
-The indexing rule: days are 1-based, day 1 is `dayColors[0]`, day 9 wraps to
-day 1's colour, and day 0 or negative is clamped to day 1. Extras and list
-pages use `ungroupedColor`. Per `12-results-parity.md`, this is the palette
-NATIVE_DESIGN §1 lists as web's `LOCI_DAY_COLORS`; web's own map has since
-diverged, and native keeps NATIVE_DESIGN until there is a verdict.
+The indexing rule is web's `colorForMapDay`: the server's 1-based day picks
+`dayColors[day % 8]`, so day 1 is pine teal, day 8 wraps to coral, and a list
+with no days (day 0, `listColor`) is coral. Extras use `ungroupedColor`. The
+palette is web's `LOCI_DAY_COLORS` in the same order since PR #12; NATIVE_DESIGN
+§map palette was corrected to match (loci-client #68).
 
 **Modifiers.** `.lociCard(padding:)` is the flat card (fill, 1 px border,
 continuous corners, no shadow); `.lociCoordStyle(size)` is Space Mono,
 uppercase, 1.2 tracking, muted ink:
 
 ```swift
-// loci/loci/Core/Theme/LociTheme.swift:135
+// loci/loci/Core/Theme/LociTheme.swift:140
   func lociCard(padding: CGFloat = LociTheme.cardPadding) -> some View {
     self.padding(padding).background(Color.lociCard)
       .clipShape(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
@@ -1529,9 +1534,10 @@ tests are not in CI.
   map hero plus list, tap to expand; Nearby is a full map with the list in a
   sheet; web's phone List/Map toggle is never copied
   (`12-results-parity.md`, `ResultsMapCard.swift:112`).
-- **Palette = NATIVE_DESIGN's day colours**, the list it labels
-  `LOCI_DAY_COLORS`. Web's map has since moved to a different palette; native
-  keeps the doc's values until there is a verdict (`12-results-parity.md`).
+- **Palette = web's `LOCI_DAY_COLORS`** (verdict 2026-09-24, PR #12). iOS had
+  copied a stale list from NATIVE_DESIGN; web's palette is the one built for
+  telling days apart on a map, so both clients use it, indexed the same way
+  (`12-results-parity.md`, `LociTheme.swift`).
 - **No StoreKit in Phase 1.** Billing is off-app; the Pro gate reads
   `GetSubscription` and links to `/pricing`. Settings omits the Billing tab
   for the same reason (`SettingsView.swift:3-5`).
@@ -1545,10 +1551,12 @@ tests are not in CI.
 - **Keychain for tokens**, `AfterFirstUnlockThisDeviceOnly`, not synchronised,
   so a background refresh can read them while the phone is locked and they
   never leave the device (`SecureStringStore.swift:51`).
-- **iOS keeps its own copy of a finished result per session.**
-  `GetChatSession` can only return an itinerary, and a phone that ran a hotel
-  search has already seen the hotels, so the finished state is serialised to
-  `result-<sessionId>.bin` and restored before the server is asked
+- **iOS keeps its own copy of a finished result per session.** Until proto
+  v5.22 `GetChatSession` could only return an itinerary, and a phone that ran
+  a hotel search had already seen the hotels, so the finished state is
+  serialised to `result-<sessionId>.bin` and restored before the server is
+  asked. The server now stores the lists too (api #73), so the copy is the
+  fast path and the offline path, not the only path
   (`SearchEnvelope.swift:23-25`, `SearchSessionController.state(for:)`).
 - **One active search, app-scoped.** Matching web's single
   `active_streaming_session`; starting another asks first, and the session
