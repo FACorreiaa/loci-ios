@@ -40,13 +40,16 @@ import SwiftProtobuf
       guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: day) else { return false }
       return day <= horizon && dayEnd > now
     }
-    guard let day = upcoming.min() else { return nil }
-    if calendar.isDate(day, inSameDayAs: now) {
-      let candidate = now.addingTimeInterval(6 * 3600)
-      return calendar.isDate(candidate, inSameDayAs: now) ? candidate : nil
+    for day in upcoming.sorted() {
+      if calendar.isDate(day, inSameDayAs: now) {
+        let candidate = now.addingTimeInterval(6 * 3600)
+        if calendar.isDate(candidate, inSameDayAs: now) { return candidate }
+        continue  // late in the day: the evening refresh for the next day instead
+      }
+      guard let evening = calendar.date(byAdding: .hour, value: -2, to: day) else { continue }
+      return max(evening, now)
     }
-    guard let evening = calendar.date(byAdding: .hour, value: -2, to: day) else { return nil }
-    return max(evening, now)
+    return nil
   }
 
   /// The work itself, also used by the foreground refresh. Refreshes the trip

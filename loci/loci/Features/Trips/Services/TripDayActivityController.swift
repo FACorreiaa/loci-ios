@@ -19,6 +19,27 @@ import UserNotifications
     let slots: [TimelineSlot]
   }
 
+  /// "tripId|dayId|startedAt", what UserDefaults keeps across a relaunch.
+  nonisolated struct RunningRecord: Equatable, Sendable {
+    let tripId: String
+    let dayId: String
+    let startedAt: Date
+
+    init(tripId: String, dayId: String, startedAt: Date) {
+      self.tripId = tripId
+      self.dayId = dayId
+      self.startedAt = startedAt
+    }
+
+    init?(raw: String) {
+      let parts = raw.split(separator: "|").map(String.init)
+      guard parts.count == 3, let seconds = TimeInterval(parts[2]) else { return nil }
+      self.init(tripId: parts[0], dayId: parts[1], startedAt: Date(timeIntervalSince1970: seconds))
+    }
+
+    var raw: String { "\(tripId)|\(dayId)|\(startedAt.timeIntervalSince1970)" }
+  }
+
   nonisolated static let endAfterLast: TimeInterval = 30 * 60
   nonisolated static let maxDuration: TimeInterval = 12 * 3600
   nonisolated static let notificationCategory = "tripDay"
@@ -39,7 +60,7 @@ import UserNotifications
   }
 
   func start(trip: Loci_Trip_TripDraft, day: Loci_Trip_TripDay, now: Date = Date()) async {
-    if running != nil { await end() }
+    await end()  // this one, and any left over from a relaunch
     let dayStart = trip.constraints.hasDayStartMinute ? Int(trip.constraints.dayStartMinute) : nil
     let slots = DayTimeline.slots(day: day, legs: trip.legs, dayStartMinute: dayStart)
     guard !slots.isEmpty else { return }
@@ -49,8 +70,8 @@ import UserNotifications
     manualIndex = nil
     let attributes = TripDayAttributes(tripId: trip.id, dayId: day.id, cityName: cityName, stopCount: slots.count, startedAt: now)
     let (state, _) = Self.state(slots: slots, manualIndex: nil, startedAt: now, now: now)
-    activity = try? Activity.request(attributes: attributes, content: ActivityContent(state: state, staleDate: nil), pushType: nil)
-    UserDefaults.standard.set("\(trip.id)|\(day.id)|\(now.timeIntervalSince1970)", forKey: Self.runningKey)
+    activity = try? Activity.request(attributes: attributes, content: ActivityContent(state: state, staleDate: state.slotEnd), pushType: nil)
+    UserDefaults.standard.set(RunningRecord(tripId: trip.id, dayId: day.id, startedAt: now).raw, forKey: Self.runningKey)
     await fences.arm(places: Self.fenceable(slots), from: slots.first?.coordinate)
     await scheduleReminders(slots)
   }
@@ -63,6 +84,14 @@ import UserNotifications
     await refresh(now: now)
   }
 
+  /// A reminder tap: move to the stop it named, never past it, and only for
+  /// the day that is running.
+  func advance(toReminder index: Int, tripId: String, dayId: String, now: Date = Date()) async {
+    guard let running, running.tripId == tripId, running.dayId == dayId else { return }
+    manualIndex = Self.manualIndex(afterReminderFor: index, current: manualIndex, slots: running.slots, now: now)
+    await refresh(now: now)
+  }
+
   /// Recompute the activity from the clock; ends it when the day is over.
   func refresh(now: Date = Date()) async {
     guard let running else { return }
@@ -72,14 +101,24 @@ import UserNotifications
       return
     }
     if let activity {
-      await activity.update(ActivityContent(state: state, staleDate: nil))
+      await activity.update(ActivityContent(state: state, staleDate: state.slotEnd))
     }
   }
 
+  /// On scene active: pick the activity back up after a relaunch, then let
+  /// the clock move it (or end it) — the schedule only drives it while the
+  /// app runs.
+  func refreshOrAdopt(now: Date = Date()) async {
+    if running == nil { await adoptFromCache() }
+    await refresh(now: now)
+  }
+
+  /// End this day's activity and any other trip-day activity the system
+  /// still holds (a relaunch can leave one behind).
   func end(final: TripDayAttributes.ContentState? = nil) async {
-    if let activity {
-      let last = final ?? activity.content.state
-      await activity.end(ActivityContent(state: last, staleDate: nil), dismissalPolicy: .default)
+    for live in Activity<TripDayAttributes>.activities {
+      let last = final ?? live.content.state
+      await live.end(ActivityContent(state: last, staleDate: nil), dismissalPolicy: .default)
     }
     activity = nil
     running = nil
@@ -89,27 +128,37 @@ import UserNotifications
     UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: Self.reminderIDs)
   }
 
-  /// Re-adopt an activity that survived a relaunch.
+  /// Re-adopt an activity that survived a relaunch, from the trips given.
+  /// The record is kept while the trip is not at hand (an empty or offline
+  /// list), and dropped only when the system no longer holds the activity.
   func adoptIfRunning(trips: [Loci_Trip_TripDraft]) async {
-    guard running == nil, let raw = UserDefaults.standard.string(forKey: Self.runningKey) else { return }
-    let parts = raw.split(separator: "|").map(String.init)
-    guard parts.count == 3, let seconds = TimeInterval(parts[2]),
-      let live = Activity<TripDayAttributes>.activities.first(where: { $0.attributes.dayId == parts[1] }),
-      let trip = trips.first(where: { $0.id == parts[0] }), let day = trip.days.first(where: { $0.id == parts[1] })
-    else {
+    guard running == nil, let raw = UserDefaults.standard.string(forKey: Self.runningKey), let record = RunningRecord(raw: raw) else { return }
+    guard let live = Activity<TripDayAttributes>.activities.first(where: { $0.attributes.dayId == record.dayId }) else {
       UserDefaults.standard.removeObject(forKey: Self.runningKey)
       return
     }
+    guard let trip = trips.first(where: { $0.id == record.tripId }), let day = trip.days.first(where: { $0.id == record.dayId }) else { return }
     activity = live
     let dayStart = trip.constraints.hasDayStartMinute ? Int(trip.constraints.dayStartMinute) : nil
+    let slots = DayTimeline.slots(day: day, legs: trip.legs, dayStartMinute: dayStart)
     running = Running(
       tripId: trip.id,
       dayId: day.id,
       cityName: day.cityName.isEmpty ? trip.cityName : day.cityName,
-      startedAt: Date(timeIntervalSince1970: seconds),
-      slots: DayTimeline.slots(day: day, legs: trip.legs, dayStartMinute: dayStart)
+      startedAt: record.startedAt,
+      slots: slots
     )
+    await fences.arm(places: Self.fenceable(slots), from: slots.first?.coordinate)
     await refresh()
+  }
+
+  /// The same, from the phone's cached trips, for a launch that does not
+  /// visit the trips list (a reminder tap into the editor).
+  private func adoptFromCache() async {
+    guard let raw = UserDefaults.standard.string(forKey: Self.runningKey), let record = RunningRecord(raw: raw) else { return }
+    var trips = await LocalCache.shared.get(Loci_Trip_ListTripsResponse.self, kind: .trips, id: "all")?.value.trips ?? []
+    if let single = await LocalCache.shared.get(Loci_Trip_TripDraft.self, kind: .trip, id: record.tripId)?.value { trips.append(single) }
+    await adoptIfRunning(trips: trips)
   }
 
   /// A fence around the next stop fired: the traveller got there early.
@@ -127,6 +176,13 @@ import UserNotifications
   nonisolated static func effectiveIndex(slots: [TimelineSlot], manualIndex: Int?, now: Date) -> Int {
     let scheduled = DayTimeline.current(slots, at: now)?.index ?? -1
     return max(scheduled, manualIndex ?? -1)
+  }
+
+  /// Where a reminder for slot `index` leaves the manual override: at that
+  /// stop, unless the schedule or an earlier tap is already past it.
+  nonisolated static func manualIndex(afterReminderFor index: Int, current: Int?, slots: [TimelineSlot], now: Date) -> Int? {
+    let scheduled = DayTimeline.current(slots, at: now)?.index ?? -1
+    return max(index, current ?? -1, scheduled)
   }
 
   nonisolated static func state(

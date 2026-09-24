@@ -39,6 +39,15 @@ footer "Connect to edit". Nothing is queued: option 1 of the spec, read-only.
 - Live Activities off in Settings: the Start button is disabled with a hint.
   Location denied: no fences, Next and the schedule still work.
 
+## Known gap: stop coordinates
+
+The server's trip mapper does not fill `TripStop.poi` today, so real trips
+arrive with no coordinates: the geofences and the "Next · 1.2 km" distance
+only run on fixtures and the design preview, and a real day advances by the
+schedule, Next and the reminders alone. Hydrating the POI in `tripToProto`
+(loci-connect-server `internal/domain/trip/mappers.go`) turns both on with no
+app change.
+
 ## Checking it
 
 Unit: `LocalCacheTests`, `CacheThroughTests`, `DayTimelineTests`,

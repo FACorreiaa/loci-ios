@@ -114,4 +114,27 @@ struct DayTimelineTests {
     #expect(DayTimeline.next(slots, after: slots[0])?.index == 1)
     #expect(DayTimeline.next(slots, after: slots[1]) == nil)
   }
+
+  /// The app's own Calendar pin used to store local midnight; east of UTC that
+  /// is the previous evening in UTC. The date must still read as that day.
+  @Test func todayMatchesTheCalendarDayEastOfUTCForALocalMidnightDate() throws {
+    var lisbonSummer = Calendar(identifier: .gregorian)
+    lisbonSummer.timeZone = try #require(TimeZone(identifier: "Europe/Athens"))  // UTC+3 in summer
+    let localMidnight = try #require(lisbonSummer.date(from: DateComponents(year: 2026, month: 7, day: 8)))  // 21:00Z on the 7th
+    var trip = Loci_Trip_TripDraft()
+    trip.days = [day(localMidnight, stops: [stop("A")])]
+    let now = try #require(lisbonSummer.date(from: DateComponents(year: 2026, month: 7, day: 8, hour: 10)))
+    #expect(DayTimeline.today(in: trip, now: now, calendar: lisbonSummer)?.id == trip.days[0].id)
+    let slots = DayTimeline.slots(day: trip.days[0], legs: [], calendar: lisbonSummer)
+    #expect(slots[0].start == lisbonSummer.date(from: DateComponents(year: 2026, month: 7, day: 8, hour: 9)))
+  }
+
+  /// What the app writes when it pins a trip: midnight UTC of the chosen day.
+  @Test func pinnedDateIsMidnightUTCOfTheChosenDay() throws {
+    var athens = Calendar(identifier: .gregorian)
+    athens.timeZone = try #require(TimeZone(identifier: "Europe/Athens"))
+    let chosen = try #require(athens.date(from: DateComponents(year: 2026, month: 7, day: 8, hour: 15)))
+    let pinned = DayTimeline.utcMidnight(ofDayContaining: chosen, calendar: athens)
+    #expect(pinned == (try date(2026, 7, 8, in: utc)))
+  }
 }

@@ -60,4 +60,26 @@ struct TripDayActivityTests {
     #expect(state.phase == .atStop && state.nextName == "B" && state.nextDistanceMeters == nil)
     #expect(TripDayActivityController.fenceable(slots).isEmpty)
   }
+
+  /// A reminder names the stop it is for; a late tap must not skip past it.
+  @Test func reminderIndexNeverSkipsAStop() {
+    let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+    let slots = [
+      slot(0, "A", start: t0, minutes: 60), slot(1, "B", start: t0.addingTimeInterval(4500), minutes: 60),
+      slot(2, "C", start: t0.addingTimeInterval(9000), minutes: 60),
+    ]
+    // The schedule is already on C when the reminder for B is tapped: stay on C.
+    let late = TripDayActivityController.manualIndex(afterReminderFor: 1, current: nil, slots: slots, now: t0.addingTimeInterval(9100))
+    #expect(TripDayActivityController.effectiveIndex(slots: slots, manualIndex: late, now: t0.addingTimeInterval(9100)) == 2)
+    // Tapped on time: B.
+    let onTime = TripDayActivityController.manualIndex(afterReminderFor: 1, current: nil, slots: slots, now: t0.addingTimeInterval(3700))
+    #expect(onTime == 1)
+  }
+
+  /// A relaunch keeps the running record until the trip is in the cache again.
+  @Test func runningRecordSurvivesAnEmptyTripList() {
+    let raw = "trip-1|day-1|1800000000"
+    #expect(TripDayActivityController.RunningRecord(raw: raw)?.dayId == "day-1")
+    #expect(TripDayActivityController.RunningRecord(raw: "broken") == nil)
+  }
 }

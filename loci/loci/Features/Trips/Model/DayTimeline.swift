@@ -58,15 +58,29 @@ nonisolated enum DayTimeline {
     }
   }
 
-  /// The server stores a trip day as midnight UTC of a calendar date. Read
-  /// the date back in UTC and place it at midnight in the phone's calendar,
-  /// or a traveller west of UTC would see every day a day early.
+  /// A trip day's date is a calendar date carried as a timestamp: web writes
+  /// midnight UTC, and the app's Calendar pin used to write local midnight.
+  /// Round to the nearest UTC midnight (right for any offset under 12 h),
+  /// read the date in UTC, and place it at midnight in the phone's calendar,
+  /// or a traveller east or west of UTC sees the day one day off.
   static func localMidnight(of day: Loci_Trip_TripDay, calendar: Calendar = .current) -> Date? {
     guard day.hasDate else { return nil }
+    let seconds = (day.date.date.timeIntervalSince1970 / 86_400).rounded() * 86_400
+    let parts = utcCalendar.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: seconds))
+    return calendar.date(from: DateComponents(year: parts.year, month: parts.month, day: parts.day))
+  }
+
+  /// What the app writes when it pins a trip: midnight UTC of the calendar
+  /// day that contains `date` in the phone's calendar, the shape web writes.
+  static func utcMidnight(ofDayContaining date: Date, calendar: Calendar = .current) -> Date? {
+    let parts = calendar.dateComponents([.year, .month, .day], from: date)
+    return utcCalendar.date(from: DateComponents(year: parts.year, month: parts.month, day: parts.day))
+  }
+
+  private static var utcCalendar: Calendar {
     var utc = Calendar(identifier: .gregorian)
     utc.timeZone = TimeZone(identifier: "UTC") ?? .current
-    let parts = utc.dateComponents([.year, .month, .day], from: day.date.date)
-    return calendar.date(from: DateComponents(year: parts.year, month: parts.month, day: parts.day))
+    return utc
   }
 
   /// The slot containing `at`, else the latest one that has started.

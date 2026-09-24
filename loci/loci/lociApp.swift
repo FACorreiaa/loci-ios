@@ -50,6 +50,12 @@ import SwiftUI
           isAuthenticated = false
           isCheckingAuth = false
         }
+        // Whatever ended the session (logout, a dead refresh token, account
+        // deletion): this phone keeps no one's trips.
+        Task {
+          await TripDayActivityController.shared.end()
+          await LocalCache.shared.clear()
+        }
       }.onOpenURL { url in
         // The Google SDK's redirect (the reversed client ID scheme) is its own;
         // everything else is a Loci deep link.
@@ -65,7 +71,10 @@ import SwiftUI
           case .background: SearchSessionController.shared.sceneDidEnterBackground()
           case .active:
             SearchSessionController.shared.sceneDidBecomeActive()
-            Task { await TripPrefetch.refreshTodayIfStale() }
+            Task {
+              await TripDayActivityController.shared.refreshOrAdopt()
+              await TripPrefetch.refreshTodayIfStale()
+            }
           default: break
           }
         }

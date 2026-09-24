@@ -40,4 +40,13 @@ struct TripPrefetchTests {
     #expect(TripPrefetch.nextBeginDate(trips: [trip(dayOn: try at(2026, 10, 20))], now: now, calendar: cal) == nil)
     #expect(TripPrefetch.nextBeginDate(trips: [], now: now, calendar: cal) == nil)
   }
+
+  @Test func lateOnDayOneItSchedulesTheEveningBeforeDayTwo() throws {
+    let now = try at(2026, 10, 8, 19)
+    var t = trip(dayOn: try at(2026, 10, 8))
+    var second = Loci_Trip_TripDay()
+    second.date = Google_Protobuf_Timestamp(date: try at(2026, 10, 9))
+    t.days.append(second)
+    #expect(TripPrefetch.nextBeginDate(trips: [t], now: now, calendar: cal) == (try at(2026, 10, 8, 22)))
+  }
 }

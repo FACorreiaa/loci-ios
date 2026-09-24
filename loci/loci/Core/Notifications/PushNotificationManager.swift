@@ -105,8 +105,12 @@ import UserNotifications
     if content.categoryIdentifier == TripDayActivityController.notificationCategory,
       let tripId = userInfo["tripId"] as? String, let dayId = userInfo["dayId"] as? String
     {
-      // A slot-end reminder: the plan moves on, and the editor opens on that day.
-      Task { await TripDayActivityController.shared.advance() }
+      // A slot-end reminder: the plan moves on to the stop it named, and the editor opens on that day.
+      let index = userInfo["index"] as? Int ?? 0
+      Task {
+        await TripDayActivityController.shared.refreshOrAdopt()
+        await TripDayActivityController.shared.advance(toReminder: index, tripId: tripId, dayId: dayId)
+      }
       AppRouter.shared.open(.trip(id: tripId))
       completionHandler()
       return

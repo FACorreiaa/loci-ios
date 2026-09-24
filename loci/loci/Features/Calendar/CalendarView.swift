@@ -241,8 +241,10 @@ public struct CalendarView: View {
     updated.days = trip.days.map { day in
       var copy = day
       let shifted = calendar.date(byAdding: .day, value: Int(day.dayNumber - 1), to: origin) ?? origin
+      // Midnight UTC of the chosen day, the shape web writes and DayTimeline reads.
+      let pinned = DayTimeline.utcMidnight(ofDayContaining: shifted, calendar: calendar) ?? shifted
       var ts = SwiftProtobuf.Google_Protobuf_Timestamp()
-      ts.seconds = Int64(shifted.timeIntervalSince1970)
+      ts.seconds = Int64(pinned.timeIntervalSince1970)
       copy.date = ts
       return copy
     }
