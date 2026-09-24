@@ -33,6 +33,7 @@ struct SettingsView: View {
       Section("App") {
         NavigationLink { NotificationSettingsView() } label: { Label("Notifications", systemImage: "bell.badge") }
         NewsTickerToggle()
+        ReviewPromptToggle()
       }
     }
     .listStyle(.insetGrouped)

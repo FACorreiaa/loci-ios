@@ -34,12 +34,10 @@ public struct ProfileView: View {
             Spacer()
             Text("1.0.0 (Beta)").foregroundColor(.secondary)
           }
-          Link(destination: URL(string: "https://lociai.fyi")!) {
-            HStack {
-              Text("Loci Web")
-              Spacer()
-              Image(systemName: "arrow.up.right").font(.caption).foregroundColor(.secondary)
-            }
+          ExternalLinkRow(title: "Loci Web", destination: URL(string: "https://lociai.fyi")!)
+          // Hidden until the app has an App Store ID (Info.plist `AppStoreID`).
+          if let reviewURL = AppConfig.shared.writeReviewURL {
+            ExternalLinkRow(title: "Rate Loci on the App Store", destination: reviewURL)
           }
         }.listRowBackground(Color.lociCard)
 
@@ -65,6 +63,22 @@ public struct ProfileView: View {
       await MainActor.run {
         isSigningOut = false
         onSignOut()
+      }
+    }
+  }
+}
+
+/// A row that leaves the app: title, then the outward arrow.
+struct ExternalLinkRow: View {
+  let title: String
+  let destination: URL
+
+  var body: some View {
+    Link(destination: destination) {
+      HStack {
+        Text(title)
+        Spacer()
+        Image(systemName: "arrow.up.right").font(.caption).foregroundColor(.secondary)
       }
     }
   }

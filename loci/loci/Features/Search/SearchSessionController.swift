@@ -189,6 +189,8 @@ import UIKit
     // completion — streamed, resumed or polled — passes through here once.
     if state.status == .completed { Analytics.capture(.itineraryFinished, ["city": state.cityName ?? ""]) }
     let isViewing = isForeground && viewingSessionId != nil && viewingSessionId == state.sessionId
+    // Watching a search land is the moment a rating ask is earned.
+    if state.status == .completed, isViewing { ReviewPrompter.shared.recordSuccess() }
     // Once this phone is registered for APNs the server announces the run
     // itself, killed app included; a local notification would be a second banner.
     if !envelope.notified, !isViewing, !PushRegistration.shared.isRegistered, let link = state.link {

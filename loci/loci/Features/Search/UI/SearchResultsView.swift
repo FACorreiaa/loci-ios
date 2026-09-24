@@ -1,4 +1,5 @@
 import LociConnectProto
+import StoreKit
 import SwiftUI
 
 /// The result page for one search session: web's `/itinerary`, `/hotels`,
@@ -15,7 +16,9 @@ struct SearchResultsView: View {
   let link: SessionLink
 
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.requestReview) private var requestReview
   private let controller = SearchSessionController.shared
+  private let reviews = ReviewPrompter.shared
   private let router = AppRouter.shared
   @State private var restored: SearchState?
   @State private var isRestoring = false
@@ -83,6 +86,7 @@ struct SearchResultsView: View {
     .interactivePopEnabled()
     .errorAlert($error)
     .museFlash($flash, status: state?.status, places: state?.places.count ?? 0)
+    .task(id: reviews.isPromptDue) { await askForReviewIfDue() }
     .task(id: link.sessionId) {
       await restoreIfNeeded()
       await thread.loadHistory(sessionId: link.sessionId)
@@ -102,6 +106,20 @@ struct SearchResultsView: View {
     }
     .onAppear { controller.viewingSessionId = link.sessionId }
     .onDisappear { if controller.viewingSessionId == link.sessionId { controller.viewingSessionId = nil } }
+  }
+
+  /// Ask for a rating once the finished-search flash has settled. Leaving the
+  /// page first drops the ask; the count stands, so the next success earns it again.
+  private func askForReviewIfDue() async {
+    guard reviews.isPromptDue else { return }
+    try? await Task.sleep(for: ReviewPrompter.settleDelay)
+    guard !Task.isCancelled else {
+      reviews.skipPrompt()
+      return
+    }
+    guard reviews.isPromptDue else { return }
+    reviews.didPrompt()
+    requestReview()
   }
 
   // MARK: - Pieces

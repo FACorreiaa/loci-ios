@@ -16,6 +16,13 @@ public nonisolated struct AppConfig: Sendable {
   public let postHogHost: String
   public let mapboxAPIKey: String
   public let connectBaseURL: String
+  /// Empty until the app is on the App Store; the Rate row hides while it is.
+  public let appStoreID: String
+
+  /// The App Store's write-a-review page, once there is an ID.
+  public var writeReviewURL: URL? {
+    appStoreID.isEmpty ? nil : URL(string: "https://apps.apple.com/app/id\(appStoreID)?action=write-review")
+  }
 
   public init(bundle: Bundle = .main) {
     self.googleClientID =
@@ -28,6 +35,8 @@ public nonisolated struct AppConfig: Sendable {
       (bundle.object(forInfoDictionaryKey: "PostHogProjectToken") as? String) ?? "phc_xtQKkiev2PEpGZhrLFAYR5cfPLVPuXTx9wXnMF99XmJE"
     self.postHogHost = (bundle.object(forInfoDictionaryKey: "PostHogHost") as? String) ?? "https://eu.i.posthog.com"
     self.mapboxAPIKey = (bundle.object(forInfoDictionaryKey: "MapboxAPIKey") as? String) ?? ""
+    self.appStoreID =
+      (bundle.object(forInfoDictionaryKey: "AppStoreID") as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
     let bundleURL = (bundle.object(forInfoDictionaryKey: "ConnectBaseURL") as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
 
