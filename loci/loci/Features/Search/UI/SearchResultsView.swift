@@ -14,6 +14,9 @@ import SwiftUI
 /// user bubble, the answer and its places are the agent bubble.
 struct SearchResultsView: View {
   let link: SessionLink
+  /// The prompt a Recents row carried. When the session cannot be restored,
+  /// "Run it again" starts it afresh (web re-runs from `?message=`).
+  var rerunMessage: String?
 
   @Environment(\.dismiss) private var dismiss
   @Environment(\.requestReview) private var requestReview
@@ -31,16 +34,26 @@ struct SearchResultsView: View {
   @State private var scroll = ScrollPosition()
   /// A message a chat push named, to bring into view once it is on the page.
   @State private var revealMessageId: String?
+  /// A re-run started from this page and not yet named by the server.
+  @State private var awaitingRerun = false
+  /// The session a re-run started; the page follows it from then on.
+  @State private var followedSessionId: String?
+
+  /// The session this page shows: the link's, or the one a re-run started.
+  private var sessionId: String { followedSessionId ?? link.sessionId }
+
+  /// The re-run between Start and the server naming its session.
+  private var isRerunPending: Bool { awaitingRerun && controller.state.sessionId == nil && controller.state.status != .idle }
 
   /// The live search when it is this session, otherwise what was restored.
   private var state: SearchState? {
-    controller.state.sessionId == link.sessionId ? controller.state : restored
+    controller.state.sessionId == sessionId || isRerunPending ? controller.state : restored
   }
 
   /// This page is showing the search that is streaming right now.
   private var isLive: Bool {
     guard let state else { return false }
-    return state.isActive && controller.state.sessionId == link.sessionId
+    return state.isActive && (controller.state.sessionId == sessionId || isRerunPending)
   }
 
   var body: some View {
@@ -50,8 +63,8 @@ struct SearchResultsView: View {
           if let state {
             SearchTranscript(state: state, caption: caption) { query in Task { await rerun(query) } }
             actions(state)
-            MuseThreadTail(thread: thread, sessionId: state.sessionId ?? link.sessionId)
-          } else if isRestoring {
+            MuseThreadTail(thread: thread, sessionId: state.sessionId ?? sessionId)
+          } else if isRestoring || awaitingRerun {
             ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
           } else {
             unavailable
@@ -87,25 +100,33 @@ struct SearchResultsView: View {
     .errorAlert($error)
     .museFlash($flash, status: state?.status, places: state?.places.count ?? 0)
     .task(id: reviews.isPromptDue) { await askForReviewIfDue() }
-    .task(id: link.sessionId) {
+    .task(id: sessionId) {
       await restoreIfNeeded()
-      await thread.loadHistory(sessionId: link.sessionId)
+      guard !sessionId.isEmpty else { return }
+      await thread.loadHistory(sessionId: sessionId)
       // Opened from a chat push (cold or warm start): the message is loaded now.
-      if let refresh = router.takeThreadRefresh(for: link.sessionId) { reveal(refresh) }
+      if let refresh = router.takeThreadRefresh(for: sessionId) { reveal(refresh) }
     }
     // A chat push for this page while it is on screen, or a tap on one that
     // re-selects it: fetch the thread again so the new message appears.
     .onChange(of: router.threadRefresh) { _, refresh in
-      guard refresh?.sessionId == link.sessionId, controller.viewingSessionId == link.sessionId,
-        let refresh = router.takeThreadRefresh(for: link.sessionId)
+      guard refresh?.sessionId == sessionId, controller.viewingSessionId == sessionId,
+        let refresh = router.takeThreadRefresh(for: sessionId)
       else { return }
       Task {
-        await thread.loadHistory(sessionId: link.sessionId)
+        await thread.loadHistory(sessionId: sessionId)
         reveal(refresh)
       }
     }
-    .onAppear { controller.viewingSessionId = link.sessionId }
-    .onDisappear { if controller.viewingSessionId == link.sessionId { controller.viewingSessionId = nil } }
+    // A re-run from "Search not found": follow the session the server names.
+    .onChange(of: controller.startedLink) { _, started in
+      guard awaitingRerun, let started else { return }
+      awaitingRerun = false
+      followedSessionId = started.sessionId
+      controller.viewingSessionId = started.sessionId
+    }
+    .onAppear { controller.viewingSessionId = sessionId }
+    .onDisappear { if controller.viewingSessionId == sessionId { controller.viewingSessionId = nil } }
   }
 
   /// Ask for a rating once the finished-search flash has settled. Leaving the
@@ -181,6 +202,12 @@ struct SearchResultsView: View {
       Label("Search not found", systemImage: "magnifyingglass")
     } description: {
       Text("This search finished on another device or has expired.")
+    } actions: {
+      if let message = rerunMessage, !message.isEmpty {
+        Button("Run it again") { Task { await runAgain(message) } }
+          .buttonStyle(.borderedProminent)
+          .tint(Color.lociForest)
+      }
     }
   }
 
@@ -216,7 +243,8 @@ struct SearchResultsView: View {
   }
 
   private func restoreIfNeeded() async {
-    guard controller.state.sessionId != link.sessionId, restored == nil else { return }
+    // A Recents row whose prompt kept no session has nothing to restore.
+    guard controller.state.sessionId != sessionId, restored == nil, !sessionId.isEmpty else { return }
     isRestoring = true
     restored = await controller.state(for: link)
     isRestoring = false
@@ -226,6 +254,18 @@ struct SearchResultsView: View {
     do {
       try await controller.start(query: query, cityName: state?.cityName ?? link.cityName)
     } catch { self.error = error.userMessage }
+  }
+
+  /// Start the row's prompt again as a new search; the page follows it once
+  /// the server names the session (`startedLink`).
+  private func runAgain(_ message: String) async {
+    awaitingRerun = true
+    do {
+      try await controller.start(query: message, cityName: link.cityName)
+    } catch {
+      awaitingRerun = false
+      self.error = error.userMessage
+    }
   }
 
   private func shareTitle(_ state: SearchState) -> String {

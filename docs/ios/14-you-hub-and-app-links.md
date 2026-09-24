@@ -22,7 +22,7 @@ result link keeps opening its session. It accepts `loci://<route>/…` and
 | `/lists/:id` | `.list(id:)` | Saved (Lists segment) | placeholder |
 | `/packs/:slug` | `.pack(slug:)` | Discover | placeholder |
 | `/trips/:id` | `.trip(id:)` | Calendar (Trips hang off it) | `TripEditorView(tripID:)` |
-| `/recents` | `.recents` | Profile | placeholder |
+| `/recents` | `.recents` | Profile | `RecentsView` (`15-recents.md`) |
 | `/contribute` | `.contribute` | Profile | placeholder |
 
 A missing id or extra segment is nil, so the link stays in Safari.

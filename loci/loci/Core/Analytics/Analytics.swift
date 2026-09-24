@@ -32,6 +32,13 @@ enum AnalyticsEvent: String {
     PostHogSDK.shared.capture(event.rawValue, properties: properties)
   }
 
+  /// A screen was shown (PostHog `$screen`; web gets `$pageview` for free).
+  /// Automatic screen capture is off, so each screen names itself.
+  static func screen(_ name: String, _ properties: [String: Any]? = nil) {
+    guard isActive else { return }
+    PostHogSDK.shared.screen(name, properties: properties)
+  }
+
   /// Attach later events to the server-issued user id, as web does on sign-in.
   static func identify(userId: String?, username: String? = nil) {
     guard isActive, let userId, !userId.isEmpty else { return }

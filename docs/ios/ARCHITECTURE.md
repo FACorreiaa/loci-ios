@@ -237,7 +237,9 @@ loci/loci
 │   ├── Discover/                    DiscoverView, HereBriefSection, InSeasonBand, SeasonalPicks
 │   ├── Main/UI/MainTabView.swift    the five tabs
 │   ├── Nearby/                      NearbyView, NearbyWalk, POIProximityMonitor
-│   ├── Profile/UI/                  ProfileView, NotificationSettingsView
+│   ├── Profile/UI/                  ProfileView, YouSection (the You hub), NotificationSettingsView
+│   ├── Recents/                     Model (ActivityEntry, DayBuckets, RecentCity, ActivityDestination),
+│   │                                Services (RecentsAPI + RecentsService), UI (RecentsView, RecentCityView)
 │   ├── Saved/UI/SavedView.swift
 │   ├── Search/                      SearchSessionController; Model (SearchState, SearchEnvelope, DayGrouping);
 │   │                                Services (ChatStreamClient, ResultsAPI, SearchNotifier); UI (composer, results page)
@@ -1313,7 +1315,7 @@ anything else, and `ResultsSideData.isOffline` keeps previews off the network:
 Cases: `inSeason`, `museChat`, `museChatStreaming`, `museChatThinking`,
 `museChatStage`, `museChatDetached`, `museChatCelebrating`, `museChatSnag`,
 `museChatListening`, `museChatPush`, `museChatPushBar`, `results`,
-`resultsDays`, `resultsKit`. To screenshot one on a booted simulator (or set
+`resultsDays`, `resultsKit`, and (parity pass 2) `youHub`, `recents`, `recentsCities`, `recentCity`. To screenshot one on a booted simulator (or set
 the argument in the scheme's Run action):
 
 ```text
@@ -1450,6 +1452,9 @@ All unit tests are Swift Testing (`import Testing`, `@Test`, `#expect`,
 | `loci/lociTests/ResultsParityTests.swift` | Day grouping (server days, chunks of four, extras, sequence), share text shape, Google Maps URL (coordinates, 8 waypoints, name fallback), calendar timing, Pro gate, reducer partial failure and `load_from_session`, list restore incl. pre-v5.22 fallback, image choice, meta line |
 | `loci/lociTests/MuseActivityTests.swift` | Every status → mood/copy case, flash rules (stop is not a snag, opening a finished search earns nothing), `stagePhrase`, a full stream walk-through |
 | `loci/lociTests/SessionLinkTests.swift` | Deep link parsing for every route, rejects `oauth2redirect` and incomplete links, URL/userInfo round trip, domain → destination map |
+| `loci/lociTests/RecentsBucketsTests.swift` | Mirrors web's `day-buckets.test.ts`: local-midnight boundaries, group order, undated rows, `relativeTime` steps |
+| `loci/lociTests/ActivityMappingTests.swift` | Proto → feed entry (kind, detail defaults), prompt-wrapper unwrapping, paging (`hasMore`, the 200 cap), chip counts and filters, badges, city `extractMessage`, activity level, city sort tiebreak |
+| `loci/lociTests/ActivityDestinationTests.swift` | Mirrors web's `activity-link.test.ts`: domain → page, message/session/city carried, nearby, kept trips, favourites by kind; saved-itinerary lookup |
 | `loci/lociTests/AppLinkTests.swift` | `AppLink` parsing for every route and its rejections, SessionLink parsed first, the tab that owns each link and `takeLink` clearing it once |
 | `loci/lociTests/ParityPayloadTests.swift` | Nearby sentence byte-for-byte, default weekend, `allPlaces` dedup |
 | `loci/lociTests/SettingsPayloadTests.swift` | Empty-string omission in profile updates, web defaults on a new travel profile, ids and full lists on update, Telegram deep link |

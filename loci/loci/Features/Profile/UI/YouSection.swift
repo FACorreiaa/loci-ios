@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// The signed-in pages web has and the tab bar does not: Profile is their hub.
-/// Each row pushes a placeholder until its phase lands (parity plan, pass 2).
+/// Each row pushes a placeholder until its phase lands (parity plan, pass 2);
+/// Recents is real since Phase 1.
 enum YouDestination: String, CaseIterable, Identifiable {
   case recents, travelHistory, lists, reviews, contribute
 
@@ -27,7 +28,12 @@ enum YouDestination: String, CaseIterable, Identifiable {
     }
   }
 
-  var screen: some View { ComingSoonView(title: title, systemImage: systemImage) }
+  @ViewBuilder var screen: some View {
+    switch self {
+    case .recents: RecentsView()
+    default: ComingSoonView(title: title, systemImage: systemImage)
+    }
+  }
 }
 
 /// Profile's "You" rows, above Settings.

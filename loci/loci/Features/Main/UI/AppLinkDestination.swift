@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The page an `AppLink` opens, pushed by the tab that owns it
-/// (`AppRouter.tab(for:)`). Trips are real; the rest are placeholders until
+/// (`AppRouter.tab(for:)`). Trips and Recents are real; the rest are placeholders until
 /// their phase of the parity plan lands (`docs/ios/14-you-hub-and-app-links.md`).
 struct AppLinkDestination: View {
   let link: AppLink
