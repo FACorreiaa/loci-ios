@@ -55,6 +55,12 @@ nonisolated struct SearchState: Equatable, Sendable {
 
   /// The server's `planned_days`; 0 when unknown.
   var plannedDays = 0
+
+  /// A multi-city search's route (chat.proto RoutePayload); nil for one city.
+  var route: Loci_Chat_RoutePayload?
+  /// Each city's own results, in route order. Empty for one city.
+  var stops: [StopResult] = []
+  var isMultiCity: Bool { stops.count >= 2 }
   /// COMPLETE said the result is not on the stream: fetch it with GetChatSession.
   var needsSessionFetch = false
 
@@ -125,6 +131,19 @@ nonisolated struct SearchState: Equatable, Sendable {
   }
 }
 
+/// One city of a multi-city search: the same state a single-city search
+/// builds, per city.
+nonisolated struct StopResult: Equatable, Sendable {
+  var index: Int
+  var cityName: String
+  var sessionId: String
+  /// Trip-wide day numbers spent here.
+  var dayNumbers: [Int]
+  var state = SearchState()
+  /// Set when this city failed; the others go on.
+  var error: String?
+}
+
 /// What applying an event asks the controller to do.
 nonisolated enum SearchEffect: Equatable, Sendable {
   /// The server named the session: navigate to its result page (web: onStart → getDomainRoute).
@@ -138,10 +157,13 @@ nonisolated extension SearchState {
   @discardableResult mutating func apply(_ event: Loci_Chat_StreamEvent) -> SearchEffect? {
     guard let payload = event.payload else { return nil }
     if !event.eventID.isEmpty {
-      let key = "\(event.eventID)|\(payload.caseName)"
+      let stop = event.hasStopIndex ? String(event.stopIndex) : "-"
+      let key = "\(event.eventID)|\(payload.caseName)|\(stop)"
       guard seen.insert(key).inserted else { return nil }
       lastEventId = event.eventID
     }
+
+    if applyMultiCity(event, payload) { return nil }
 
     switch payload {
     case .start(let start):
@@ -185,6 +207,7 @@ nonisolated extension SearchState {
       return .failed(message: error.userMessage, retryable: error.retryable)
     case .complete(let complete):
       if !complete.sessionID.isEmpty { sessionId = complete.sessionID }
+      failUnfinishedStops()
       if complete.hasResult, complete.result.hasContent, destination == .itinerary || itinerary == nil {
         adopt(complete.result)
       }
@@ -192,8 +215,7 @@ nonisolated extension SearchState {
       status = .completed
       return .completed
     case .route:
-      // Multi-city route (proto #26). Ignored until iOS renders multi-city trips.
-      break
+      break  // handled above
     }
     return nil
   }
@@ -206,6 +228,65 @@ nonisolated extension SearchState {
     if !result.restaurants.isEmpty { restaurants = result.restaurants }
     if !result.activities.isEmpty { activities = result.activities }
     absorb(city: result.hasGeneralCityData ? result.generalCityData : nil)
+  }
+
+  /// A multi-city event: the ROUTE, or one city's event, which builds that
+  /// city's state. A city's error is that city's; the search goes on. Returns
+  /// false for anything else, which applies to the search as it always did.
+  private mutating func applyMultiCity(_ event: Loci_Chat_StreamEvent, _ payload: Loci_Chat_StreamEvent.OneOf_Payload) -> Bool {
+    if case .route(let route) = payload {
+      absorb(route: route)
+      return true
+    }
+    guard event.hasStopIndex, let i = stops.firstIndex(where: { $0.index == Int(event.stopIndex) }) else { return false }
+    if case .error(let error) = payload {
+      stops[i].error = error.userMessage.isEmpty ? "This city could not be planned." : error.userMessage
+      return true
+    }
+    var inner = event
+    inner.clearStopIndex()
+    inner.eventID = ""  // already de-duplicated by the search
+    stops[i].state.apply(inner)
+    // The first city with a result stands in for the flat fields, so every
+    // existing view — and Save and Share — has something even if an earlier
+    // city failed.
+    if let first = stops.first(where: { $0.error == nil && $0.state.hasResult }), first.index == stops[i].index {
+      adoptFirstStop(first.state)
+    }
+    return true
+  }
+
+  /// A city still planning when the search completes never will: its error
+  /// may have been lost with its own deadline.
+  private mutating func failUnfinishedStops() {
+    for i in stops.indices where stops[i].error == nil && !stops[i].state.hasResult {
+      stops[i].error = "We couldn't plan \(stops[i].cityName) this time."
+    }
+  }
+
+  /// A ROUTE builds the cities; the one carrying the trip id keeps what each already has.
+  private mutating func absorb(route: Loci_Chat_RoutePayload) {
+    self.route = route
+    stops = route.stops.map { ref in
+      var stop = stops.first { $0.index == Int(ref.index) }
+        ?? StopResult(index: Int(ref.index), cityName: ref.cityName, sessionId: ref.sessionID, dayNumbers: ref.dayNumbers.map(Int.init))
+      stop.cityName = ref.cityName
+      stop.sessionId = ref.sessionID
+      stop.dayNumbers = ref.dayNumbers.map(Int.init)
+      stop.state.cityName = ref.cityName
+      stop.state.sessionId = ref.sessionID
+      return stop
+    }
+  }
+
+  private mutating func adoptFirstStop(_ first: SearchState) {
+    if let itinerary = first.itinerary { self.itinerary = itinerary }
+    if !first.generalPOIs.isEmpty { generalPOIs = first.generalPOIs }
+    if !first.hotels.isEmpty { hotels = first.hotels }
+    if !first.restaurants.isEmpty { restaurants = first.restaurants }
+    if !first.activities.isEmpty { activities = first.activities }
+    if let city = first.cityData { cityData = city }
+    if first.plannedDays > 0 { plannedDays = first.plannedDays }
   }
 
   private mutating func absorb(city: Loci_City_GeneralCityData?) {

@@ -268,7 +268,7 @@ struct SearchTranscript: View {
         Text(caption).lociCoordStyle().padding(.horizontal, 4).padding(.top, 4)
       }
       if hasAgentTurn {
-        MuseBubble(role: .agent) { ResultsPage(state: state, onRerun: onRerun) }.transition(arrival)
+        MuseBubble(role: .agent) { MultiCityResults(state: state, onRerun: onRerun) }.transition(arrival)
       }
     }
     .animation(reduceMotion ? LociTheme.reducedFade : LociTheme.resultArrive, value: hasAgentTurn)

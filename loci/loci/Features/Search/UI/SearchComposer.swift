@@ -34,6 +34,7 @@ struct SearchComposer: View {
   @State private var confirmReplace = false
   @State private var showProfiles = false
   @State private var dictation = DictationController()
+  @State private var showStopBuilder = false
   @FocusState private var isFocused: Bool
 
   private var isStreaming: Bool { controller.state.isActive }
@@ -42,6 +43,11 @@ struct SearchComposer: View {
 
   var body: some View {
     HStack(alignment: .bottom, spacing: 8) {
+      if style == .standard, !isStreaming, !isDictating {
+        Button("Several cities", systemImage: "point.topleft.down.to.point.bottomright.curvepath") { showStopBuilder = true }
+          .labelStyle(.iconOnly).frame(width: LociTheme.minTapTarget, height: LociTheme.minTapTarget)
+          .foregroundStyle(Color.lociForest)
+      }
       TextField(placeholder, text: $text, axis: .vertical)
         .font(style == .muse ? .museBody : .lociBody())
         .lineLimit(1...4)
@@ -98,6 +104,9 @@ struct SearchComposer: View {
     .sheet(isPresented: $showProfiles) { NavigationStack { TravelProfilesView() } }
     .onChange(of: isStreaming) { _, streaming in if streaming { dictation.cancel() } }
     .onDisappear { dictation.cancel() }
+    .sheet(isPresented: $showStopBuilder) {
+      StopBuilderSheet { stops, suggestOrder in start(stops: stops, suggestOrder: suggestOrder) }
+    }
     .errorAlert($error)
   }
 
@@ -151,8 +160,9 @@ struct SearchComposer: View {
     if isStreaming { confirmReplace = true } else { start() }
   }
 
-  private func start() {
-    let query = text
+  private func start(stops: [StopInput] = [], suggestOrder: Bool = false) {
+    let typed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    let query = stops.count >= 2 && typed.isEmpty ? "trip" : text
     awaitingStart = true
     Task {
       do {
@@ -161,8 +171,10 @@ struct SearchComposer: View {
           cityName: cityName,
           latitude: latitude,
           longitude: longitude,
-          sessionId: sessionId,
-          useDefaultProfile: useDefaultProfile
+          sessionId: stops.count >= 2 ? nil : sessionId,
+          useDefaultProfile: useDefaultProfile,
+          stops: stops,
+          suggestOrder: suggestOrder
         )
         text = ""
       } catch SearchSessionController.StartError.noDefaultProfile {

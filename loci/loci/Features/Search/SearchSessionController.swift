@@ -18,8 +18,10 @@ import UIKit
 @MainActor @Observable final class SearchSessionController {
   static let shared = SearchSessionController()
   static let reconcileTaskID = "com.fernandocorreia.loci.search-reconcile"
-  /// The server gives a generation five minutes (chat_process_stream.go worker deadline).
-  static let generationDeadline: TimeInterval = 5 * 60
+  /// How long a run may take before polling gives up: the run store's
+  /// staleness window (runs.StaleAfter, 10 min). A single city is done well
+  /// before; a multi-city trip can take up to nine minutes.
+  static let generationDeadline: TimeInterval = 10 * 60
 
   enum StartError: LocalizedError {
     case noDefaultProfile
@@ -64,7 +66,9 @@ import UIKit
     longitude: Double? = nil,
     profileId: String? = nil,
     sessionId: String? = nil,
-    useDefaultProfile: Bool = true
+    useDefaultProfile: Bool = true,
+    stops: [StopInput] = [],
+    suggestOrder: Bool = false
   ) async throws {
     let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return }
@@ -88,7 +92,9 @@ import UIKit
       longitude: longitude,
       startedAt: Date(),
       finished: false,
-      notified: false
+      notified: false,
+      stops: stops.count >= 2 ? stops : nil,
+      suggestOrder: stops.count >= 2 ? suggestOrder : nil
     )
     self.envelope = envelope
     store.save(envelope)
@@ -143,6 +149,7 @@ import UIKit
       envelope.lastEventId = state.lastEventId ?? envelope.lastEventId
       envelope.domain = state.domain ?? envelope.domain
       envelope.cityName = state.cityName ?? envelope.cityName
+      if case .route = event.payload, let route = state.route { envelope.routeData = try? route.serializedData() }
       self.envelope = envelope
       store.save(envelope)
     }
@@ -359,7 +366,7 @@ import UIKit
     return (response.profiles.first(where: \.isDefault) ?? response.profiles.first)?.id
   }
 
-  private static func placeholder(from envelope: SearchEnvelope) -> SearchState {
+  static func placeholder(from envelope: SearchEnvelope) -> SearchState {
     var state = SearchState()
     state.sessionId = envelope.sessionId
     state.query = envelope.query
@@ -367,6 +374,12 @@ import UIKit
     state.domain = envelope.domain
     state.destination = SearchDestination(domain: envelope.domain ?? "")
     state.lastEventId = envelope.lastEventId
+    // A multi-city search resumes after its ROUTE; the envelope kept it, so
+    // the cities' events land on their cities rather than on each other.
+    if let data = envelope.routeData, let route = try? Loci_Chat_RoutePayload(serializedBytes: data) {
+      state.restoreCities(route: route) { _ in nil }
+      for i in state.stops.indices { state.stops[i].error = nil }
+    }
     return state
   }
 
@@ -382,6 +395,13 @@ import UIKit
       request.userLocation.latitude = latitude
       request.userLocation.longitude = longitude
     }
+    for stop in envelope.stops ?? [] {
+      var input = Loci_Chat_TripStopInput()
+      input.cityName = stop.cityName
+      if let nights = stop.nights { input.nights = Int32(nights) }
+      request.stops.append(input)
+    }
+    request.suggestOrder = envelope.suggestOrder ?? false
     if resuming, let token = envelope.lastEventId { request.resumeToken = token }
     return request
   }

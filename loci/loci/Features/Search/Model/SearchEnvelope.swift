@@ -18,6 +18,19 @@ nonisolated struct SearchEnvelope: Codable, Equatable, Sendable {
   var startedAt: Date
   var finished: Bool
   var notified: Bool
+  /// A multi-city search from the stop builder, in the traveller's order.
+  var stops: [StopInput]?
+  /// Let the server reorder `stops` into a sensible route.
+  var suggestOrder: Bool?
+  /// A multi-city search's route (serialized RoutePayload), kept so a resume
+  /// after it still knows the cities.
+  var routeData: Data?
+}
+
+/// One city of a multi-city search, as the stop builder hands it over.
+nonisolated struct StopInput: Codable, Equatable, Hashable, Sendable {
+  var cityName: String
+  var nights: Int?
 }
 
 /// Files in Application Support: the active search's envelope, and the last
@@ -34,6 +47,9 @@ nonisolated struct SearchStore: Sendable {
   private var envelopeURL: URL { directory.appending(path: "active-search.json") }
 
   private func resultURL(_ sessionId: String) -> URL { directory.appending(path: "result-\(sessionId).bin") }
+
+  /// A multi-city search's route, beside its first city's result (same session id).
+  private func routeURL(_ sessionId: String) -> URL { directory.appending(path: "route-\(sessionId).bin") }
 
   func loadEnvelope() -> SearchEnvelope? {
     guard let data = try? Data(contentsOf: envelopeURL) else { return nil }
@@ -65,6 +81,14 @@ nonisolated struct SearchStore: Sendable {
     snapshot.message = state.text
     try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     try? snapshot.serializedData().write(to: resultURL(sessionId), options: .atomic)
+
+    // A multi-city search keeps each city as its own result (each city has
+    // its own session) and the route that ties them together.
+    guard state.isMultiCity, let route = state.route else { return }
+    for stop in state.stops where stop.error == nil && stop.state.hasResult && stop.sessionId != sessionId {
+      saveResult(stop.state)
+    }
+    try? route.serializedData().write(to: routeURL(sessionId), options: .atomic)
   }
 
   /// Rebuild a finished search from disk, if this device ran it.
@@ -72,11 +96,35 @@ nonisolated struct SearchStore: Sendable {
     guard let data = try? Data(contentsOf: resultURL(link.sessionId)),
       let snapshot = try? Loci_Chat_StreamEvent(serializedBytes: data)
     else { return nil }
-    return SearchState.restored(link: link, result: snapshot.complete.result, text: snapshot.message)
+    var state = SearchState.restored(link: link, result: snapshot.complete.result, text: snapshot.message)
+    if let routeData = try? Data(contentsOf: routeURL(link.sessionId)),
+      let route = try? Loci_Chat_RoutePayload(serializedBytes: routeData)
+    {
+      state.restoreCities(route: route) { ref in
+        // The first city's result is this file; the others have their own.
+        let cityLink = SessionLink(destination: link.destination, sessionId: ref.sessionID, cityName: ref.cityName, domain: link.domain)
+        return ref.sessionID == link.sessionId ? SearchState.restored(link: cityLink, result: snapshot.complete.result) : loadResult(for: cityLink)
+      }
+    }
+    return state
   }
 }
 
 nonisolated extension SearchState {
+  /// A finished multi-city search's cities, each rebuilt from its own saved result.
+  mutating func restoreCities(route: Loci_Chat_RoutePayload, result: (Loci_Chat_StopRef) -> SearchState?) {
+    self.route = route
+    stops = route.stops.map { ref in
+      var stop = StopResult(index: Int(ref.index), cityName: ref.cityName, sessionId: ref.sessionID, dayNumbers: ref.dayNumbers.map(Int.init))
+      if let restored = result(ref) {
+        stop.state = restored
+      } else {
+        stop.error = "This city's plan isn't saved on this phone."
+      }
+      return stop
+    }
+  }
+
   /// A finished search rebuilt from a saved or server-side `AiCityResponse`.
   static func restored(link: SessionLink, result: Loci_Chat_AiCityResponse, text: String = "") -> SearchState {
     var state = SearchState()
