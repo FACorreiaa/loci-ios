@@ -1042,6 +1042,24 @@ public nonisolated struct NearbyWalkAttributes: ActivityAttributes {
 the three Dynamic Island regions from that state. Known gap: never run on a
 real phone (no pedometer in the simulator).
 
+Tapping a place previews a walking route (`MKDirections`, `.walking`); **Go**
+starts the walk if needed and follows it (slice 15). `WalkNavigator` is owned
+by `NearbyWalk`, not a singleton, and is fed by the walk's `liveUpdates` loop,
+so there is still one location session. The geometry is pure and lives in
+`Core/Navigation/WalkingRoute.swift`: snap to the line, trim, off route at
+40 m on 2 fixes (reroute at most every 10 s), arrival at 25 m. While
+following, `WalkerFigure` replaces `UserAnnotation` and the camera rides at
+400 m / pitch 60 until the person pans:
+
+```swift
+// loci/loci/Features/Nearby/Services/NearbyWalk.swift
+          if let location = update.location {
+            self.location = location
+            self.coordinate = location.coordinate
+            self.navigator.ingest(location)
+          }
+```
+
 ### Ask Loci and the Muse chat
 
 Mirrors `/chat`. RPCs: `GetChatSessions{pagination{1, 25}}`, `StreamChat`.

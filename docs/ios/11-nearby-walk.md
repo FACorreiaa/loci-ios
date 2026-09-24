@@ -28,3 +28,4 @@ A walk on a real phone: step counts, a geofence firing, the Live Activity on the
 - Every permission is asked on Start, not at launch. Motion & Fitness is the only new prompt; Live Activities need none.
 - Reduce Motion is respected by the existing map and sheet; the walk adds no motion of its own.
 - HealthKit would add an entitlement (and a seed-signing round) for no gain in this pass; it's the right tool only if walks should be written to Health as workouts.
+- Directions to a tapped place (route line, walker figure, follow camera) build on this walk: see slice 15.

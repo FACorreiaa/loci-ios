@@ -12,9 +12,13 @@ import Observation
   static let shared = NearbyWalk()
 
   let tracker = WalkTracker()
+  /// Directions to one place, fed by this walk's location updates.
+  let navigator = WalkNavigator()
   private(set) var isActive = false
   private(set) var startedAt: Date?
   private(set) var coordinate: CLLocationCoordinate2D?
+  /// The latest fix, with the course and speed the walker figure needs.
+  private(set) var location: CLLocation?
   private(set) var places: [Loci_Poi_POIDetailedInfo] = []
 
   private let proximity = POIProximityMonitor()
@@ -43,11 +47,23 @@ import Observation
       do {
         for try await update in CLLocationUpdate.liveUpdates() {
           guard let self else { return }
-          if let location = update.location { self.coordinate = location.coordinate }
+          if let location = update.location {
+            self.location = location
+            self.coordinate = location.coordinate
+            self.navigator.ingest(location)
+          }
           self.refreshActivity()
         }
       } catch {}
     }
+  }
+
+  /// Go on the route card: start the walk if it is not running, then follow
+  /// the previewed route.
+  func navigate(places: [Loci_Poi_POIDetailedInfo], radiusKm: Int) async {
+    if !isActive { await start(places: places, radiusKm: radiusKm) }
+    navigator.start()
+    refreshActivity(force: true)
   }
 
   /// New results arrived while walking: fence the new places.
@@ -63,6 +79,8 @@ import Observation
     isActive = false
     locationTask?.cancel()
     locationTask = nil
+    location = nil
+    navigator.end()
     tracker.stop()
     await proximity.disarm()
     if let activity {
@@ -81,7 +99,10 @@ import Observation
       distanceMeters: tracker.distanceMeters,
       placesNearby: places.count,
       nearestName: nearest?.name,
-      nearestMeters: nearest?.meters
+      nearestMeters: nearest?.meters,
+      destinationName: navigator.isNavigating ? navigator.destination?.name : nil,
+      destinationMeters: navigator.isNavigating ? navigator.remainingMeters : nil,
+      etaSeconds: navigator.isNavigating ? navigator.eta : nil
     )
   }
 
