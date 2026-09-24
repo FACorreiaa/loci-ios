@@ -33,9 +33,11 @@ struct SearchComposer: View {
   @State private var needsProfile = false
   @State private var confirmReplace = false
   @State private var showProfiles = false
+  @State private var dictation = DictationController()
   @FocusState private var isFocused: Bool
 
   private var isStreaming: Bool { controller.state.isActive }
+  private var isDictating: Bool { dictation.state != .idle }
   private var fieldRadius: CGFloat { style == .muse ? LociTheme.Muse.bubbleRadius : LociTheme.cornerRadius }
 
   var body: some View {
@@ -46,6 +48,7 @@ struct SearchComposer: View {
         .submitLabel(.send)
         .onSubmit(send)
         .focused($isFocused)
+        .disabled(isDictating)
         .padding(.horizontal, 14).padding(.vertical, 10)
         .background(
           style == .muse ? Color.musePill : Color.lociCard,
@@ -56,6 +59,10 @@ struct SearchComposer: View {
             .stroke(style == .muse ? Color.clear : Color.lociBorder)
         )
 
+      if !isStreaming, !dictation.isUnavailable {
+        micButton
+      }
+
       if isStreaming, awaitingStart || controller.startedLink != nil {
         Button("Stop", systemImage: "stop.fill") { controller.stop() }
           .labelStyle(.iconOnly).frame(width: LociTheme.minTapTarget, height: LociTheme.minTapTarget)
@@ -64,7 +71,7 @@ struct SearchComposer: View {
         Button("Send", systemImage: "arrow.up") { send() }
           .labelStyle(.iconOnly).frame(width: LociTheme.minTapTarget, height: LociTheme.minTapTarget)
           .background(Color.lociForest, in: Circle()).foregroundStyle(Color.lociPaper)
-          .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+          .disabled(isDictating || text.trimmingCharacters(in: .whitespaces).isEmpty)
       }
     }
     .onChange(of: focusRequest) { isFocused = true }
@@ -89,7 +96,50 @@ struct SearchComposer: View {
       Text("Searches use your default travel profile. Add one in Settings › Travel profiles.")
     }
     .sheet(isPresented: $showProfiles) { NavigationStack { TravelProfilesView() } }
+    .onChange(of: isStreaming) { _, streaming in if streaming { dictation.cancel() } }
+    .onDisappear { dictation.cancel() }
     .errorAlert($error)
+  }
+
+  @ViewBuilder private var micButton: some View {
+    Button(action: dictate) {
+      switch dictation.state {
+      case .idle:
+        Image(systemName: "mic")
+      case .recording:
+        Image(systemName: "mic.fill")
+          .foregroundStyle(Color.lociCoral)
+          .symbolEffect(.pulse, options: .repeating)
+      case .transcribing:
+        ProgressView()
+      }
+    }
+    .frame(width: LociTheme.minTapTarget, height: LociTheme.minTapTarget)
+    .contentShape(Rectangle())
+    .foregroundStyle(Color.lociForest)
+    .disabled(dictation.state == .transcribing)
+    .accessibilityLabel(micLabel)
+  }
+
+  private var micLabel: String {
+    switch dictation.state {
+    case .idle: "Dictate"
+    case .recording: "Stop recording"
+    case .transcribing: "Transcribing"
+    }
+  }
+
+  /// First tap records; the task it starts ends with the transcript. A second
+  /// tap only stops the recording, so it has nothing to add.
+  private func dictate() {
+    Task {
+      if let transcript = await dictation.toggle() {
+        text = appendTranscript(text, transcript)
+      } else if let message = dictation.error {
+        dictation.error = nil
+        error = message
+      }
+    }
   }
 
   private func send() {
