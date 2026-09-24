@@ -129,6 +129,10 @@ struct TripEditorView: View {
       HStack {
         Circle().fill(LociTheme.dayColor(Int(day.dayNumber))).frame(width: 10, height: 10)
         Text("Day \(day.dayNumber)" + (day.cityName.isEmpty || day.cityName == trip.cityName ? "" : " · \(day.cityName)"))
+        if DayTimeline.today(in: trip)?.id == day.id {
+          Spacer()
+          TodayControls(trip: trip, day: day).textCase(nil)
+        }
         if day.hasDate { Spacer(); Text(day.date.date, style: .date) }
       }
     }

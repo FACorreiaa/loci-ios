@@ -98,9 +98,19 @@ import UserNotifications
     didReceive response: UNNotificationResponse,
     withCompletionHandler completionHandler: @escaping () -> Void
   ) {
-    let userInfo = response.notification.request.content.userInfo
+    let content = response.notification.request.content
+    let userInfo = content.userInfo
     self.lastNotificationPayload = userInfo
     NotificationCenter.default.post(name: .pushNotificationDidReceiveResponse, object: userInfo)
+    if content.categoryIdentifier == TripDayActivityController.notificationCategory,
+      let tripId = userInfo["tripId"] as? String, let dayId = userInfo["dayId"] as? String
+    {
+      // A slot-end reminder: the plan moves on, and the editor opens on that day.
+      Task { await TripDayActivityController.shared.advance() }
+      AppRouter.shared.open(.trip(id: tripId))
+      completionHandler()
+      return
+    }
     switch PushRoute.tap(userInfo: userInfo) {
     case .nothing: break
     case .open(let link): AppRouter.shared.open(link)

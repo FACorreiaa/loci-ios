@@ -13,6 +13,9 @@ public struct TripsView: View {
 
   public var body: some View {
     List {
+      if let today = todayTrip {
+        Section { TodayBand(trip: today.trip, day: today.day) }.listRowBackground(Color.clear).listRowInsets(EdgeInsets())
+      }
       if let loaded, loaded.staleSince != nil {
         Section { CacheChip(loaded: loaded) }.listRowBackground(Color.clear)
       }
@@ -55,6 +58,15 @@ public struct TripsView: View {
     if let value = loaded?.value { trips = value.trips } else if case .missing(let reason) = loaded { error = reason.userMessage }
     if case .fresh = loaded { TripPrefetch.scheduleIfNeeded(trips: trips) }
     isLoading = false
+    await TripDayActivityController.shared.adoptIfRunning(trips: trips)
+  }
+
+  /// The first cached trip with a non-travel day dated today.
+  private var todayTrip: (trip: Loci_Trip_TripDraft, day: Loci_Trip_TripDay)? {
+    for trip in trips {
+      if let day = DayTimeline.today(in: trip) { return (trip, day) }
+    }
+    return nil
   }
 }
 
