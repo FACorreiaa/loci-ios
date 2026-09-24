@@ -207,11 +207,7 @@ nonisolated extension SearchState {
       return .failed(message: error.userMessage, retryable: error.retryable)
     case .complete(let complete):
       if !complete.sessionID.isEmpty { sessionId = complete.sessionID }
-      // A city still planning when the search completes never will: its
-      // error may have been lost with its own deadline.
-      for i in stops.indices where stops[i].error == nil && !stops[i].state.hasResult {
-        stops[i].error = "We couldn't plan \(stops[i].cityName) this time."
-      }
+      failUnfinishedStops()
       if complete.hasResult, complete.result.hasContent, destination == .itinerary || itinerary == nil {
         adopt(complete.result)
       }
@@ -258,6 +254,14 @@ nonisolated extension SearchState {
       adoptFirstStop(first.state)
     }
     return true
+  }
+
+  /// A city still planning when the search completes never will: its error
+  /// may have been lost with its own deadline.
+  private mutating func failUnfinishedStops() {
+    for i in stops.indices where stops[i].error == nil && !stops[i].state.hasResult {
+      stops[i].error = "We couldn't plan \(stops[i].cityName) this time."
+    }
   }
 
   /// A ROUTE builds the cities; the one carrying the trip id keeps what each already has.
