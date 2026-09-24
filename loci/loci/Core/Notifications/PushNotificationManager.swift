@@ -102,7 +102,7 @@ import UserNotifications
     self.lastNotificationPayload = userInfo
     NotificationCenter.default.post(name: .pushNotificationDidReceiveResponse, object: userInfo)
     switch PushRoute.tap(userInfo: userInfo) {
-    case .none: break
+    case .nothing: break
     case .open(let link): AppRouter.shared.open(link)
     case let .openThread(link, refresh): AppRouter.shared.open(link, refresh: refresh)
     }

@@ -83,8 +83,8 @@ nonisolated enum PushRoute: Equatable {
     case suppressAndRefresh(ThreadRefresh)
   }
 
-  /// Not a session push: nothing to open.
-  case none
+  /// Not a session push: nothing to open. Not `none`, which reads as `Optional.none`.
+  case nothing
   /// Open the session's page (the search-finished push, a deep link payload).
   case open(SessionLink)
   /// Open the session's page and show the new message on it.
@@ -94,7 +94,7 @@ nonisolated enum PushRoute: Equatable {
   static func tap(userInfo: [AnyHashable: Any]) -> PushRoute {
     if let push = ChatPush(userInfo: userInfo) { return .openThread(push.link, push.refresh) }
     if let link = SessionLink(userInfo: userInfo) { return .open(link) }
-    return .none
+    return .nothing
   }
 
   /// A push arriving while the app is in front. The page for this session
