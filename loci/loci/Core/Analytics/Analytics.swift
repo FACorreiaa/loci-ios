@@ -18,6 +18,9 @@ enum AnalyticsEvent: String {
   case packViewed = "pack_viewed"
   /// A pack was opened as the caller's own trip ({slug}). Web has no equivalent yet.
   case packClaimed = "pack_claimed"
+  /// A review was posted or edited (`rating`, `is_edit`); web sends the same
+  /// name from its reviews page. Metric: contributions per active user.
+  case reviewSubmitted = "review_submitted"
 }
 
 @MainActor enum Analytics {
