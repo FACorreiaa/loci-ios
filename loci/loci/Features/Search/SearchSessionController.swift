@@ -185,7 +185,9 @@ import UIKit
     // A partial result is still a result: web keeps it and shows the error on the rail.
     if state.status == .completed || state.hasResult { store.saveResult(state) }
     let isViewing = isForeground && viewingSessionId != nil && viewingSessionId == state.sessionId
-    if !envelope.notified, !isViewing, let link = state.link {
+    // Once this phone is registered for APNs the server announces the run
+    // itself, killed app included; a local notification would be a second banner.
+    if !envelope.notified, !isViewing, !PushRegistration.shared.isRegistered, let link = state.link {
       envelope.notified = true
       await notifier.post(link: link, succeeded: state.status == .completed, query: state.query)
     }

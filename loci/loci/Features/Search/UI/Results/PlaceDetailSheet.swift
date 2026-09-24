@@ -38,6 +38,9 @@ struct PlaceDetailView: View {
 
   @Environment(\.openURL) private var openURL
   @State private var facts: Loci_Place_PlaceFacts?
+  /// Apple's street-level imagery; nil where there is no coverage, and then
+  /// the section is simply absent.
+  @State private var lookAround: MKLookAroundScene?
   @State private var saved: Bool
   @State private var saving = false
   @State private var error: String?
@@ -68,6 +71,12 @@ struct PlaceDetailView: View {
           GroundedBadge(stop: stop)
         }
         stats
+        if let lookAround {
+          LookAroundPreview(initialScene: lookAround)
+            .frame(height: 200)
+            .clipShape(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
+            .accessibilityLabel("Look Around at \(stop.name)")
+        }
         if !stop.blurb.isEmpty {
           section("About") { Text(stop.blurb).font(.lociBody(15)).foregroundStyle(Color.lociInk) }
         }
@@ -83,7 +92,11 @@ struct PlaceDetailView: View {
     .background(Color.lociPaper.ignoresSafeArea())
     .safeAreaInset(edge: .bottom) { footer }
     .errorAlert($error)
-    .task(id: stop.id) { await loadFacts() }
+    .task(id: stop.id) {
+      async let scene: Void = loadLookAround()
+      await loadFacts()
+      await scene
+    }
   }
 
   // MARK: - Pieces
@@ -179,6 +192,17 @@ struct PlaceDetailView: View {
     // Facts hang off a stored POI; a name-keyed saved place has none to ask about.
     guard SavedPlace.isStoredID(stop.id), !ResultsSideData.isOffline else { return }
     facts = try? await ResultsAPI.placeFacts(poiID: stop.id)
+  }
+
+  private func loadLookAround() async {
+    guard GoogleMapsRoute.hasCoordinate(stop) else { return }
+    lookAround = await Self.lookAroundScene(at: CLLocationCoordinate2D(latitude: stop.latitude, longitude: stop.longitude))
+  }
+
+  /// Off the main actor: the request and its scene aren't Sendable, so both
+  /// live here and only the finished scene is handed back.
+  @concurrent private static func lookAroundScene(at coordinate: CLLocationCoordinate2D) async -> sending MKLookAroundScene? {
+    try? await MKLookAroundSceneRequest(coordinate: coordinate).scene
   }
 
   private func save() async {

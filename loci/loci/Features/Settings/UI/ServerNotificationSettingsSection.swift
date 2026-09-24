@@ -2,8 +2,8 @@ import LociConnectProto
 import SwiftUI
 
 /// The account's notification preferences (web: settings tab "notifications").
-/// UserService.GetNotificationSettings / UpdateNotificationSettings{recommendations, tripReminders}.
-/// These are stored server-side; nothing on the server sends them yet.
+/// UserService.GetNotificationSettings / UpdateNotificationSettings{recommendations, tripReminders, searchFinished}.
+/// Search finished is the one the server acts on: it gates the push (web and APNs) for a run that ends.
 struct ServerNotificationSettingsSection: View {
   @State private var settings: Loci_User_NotificationSettings?
   @State private var error: String?
@@ -13,13 +13,14 @@ struct ServerNotificationSettingsSection: View {
       if let settings {
         Toggle("Recommendations", isOn: binding(settings.recommendations) { $0.recommendations = $1 })
         Toggle("Trip reminders", isOn: binding(settings.tripReminders) { $0.tripReminders = $1 })
+        Toggle("Search finished", isOn: binding(settings.searchFinished) { $0.searchFinished = $1 })
       } else {
         ProgressView()
       }
     } header: {
       Text("Your account")
     } footer: {
-      Text("Saved to your account, so they apply on the web too. Search-finished alerts are always on while this iPhone allows notifications.")
+      Text("Saved to your account, so they apply on the web too. Search finished is the push you get when a search you left running ends.")
     }
     .listRowBackground(Color.lociCard)
     .errorAlert($error)
@@ -40,6 +41,7 @@ struct ServerNotificationSettingsSection: View {
         var request = Loci_User_UpdateNotificationSettingsRequest()
         request.recommendations = settings.recommendations
         request.tripReminders = settings.tripReminders
+        request.searchFinished = settings.searchFinished
         apply(&request, newValue)
         let sent = request
         Task {

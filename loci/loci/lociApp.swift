@@ -40,6 +40,8 @@ import SwiftUI
           isAuthenticated = true
           isCheckingAuth = false
         }
+        // The APNs token often arrives before the first sign-in; register it now.
+        Task { await PushRegistration.shared.registerIfNeeded() }
       }.onReceive(NotificationCenter.default.publisher(for: .authSessionDidInvalidate)) { _ in
         withAnimation {
           isAuthenticated = false
@@ -51,6 +53,10 @@ import SwiftUI
         if GIDSignIn.sharedInstance.handle(url) { return }
         AppRouter.shared.open(url)
       }
+        // A https://lociai.fyi result link tapped anywhere on the phone (Universal Links).
+        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+          if let url = activity.webpageURL { AppRouter.shared.open(url) }
+        }
         .onChange(of: scenePhase) { _, phase in
           switch phase {
           case .background: SearchSessionController.shared.sceneDidEnterBackground()

@@ -58,8 +58,8 @@ import UserNotifications
     let token = deviceTokenData.map { String(format: "%02.2hhx", $0) }.joined()
     self.deviceToken = token
     UserDefaults.standard.set(token, forKey: tokenStorageKey)
-    print("[APNS] Registered device token: \(token)")
     NotificationCenter.default.post(name: .pushNotificationDeviceTokenDidUpdate, object: token)
+    Task { await PushRegistration.shared.registerIfNeeded() }
   }
 
   /// Called by AppDelegate when APNS registration fails.
@@ -78,7 +78,14 @@ import UserNotifications
     willPresent notification: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
-    self.lastNotificationPayload = notification.request.content.userInfo
+    let userInfo = notification.request.content.userInfo
+    self.lastNotificationPayload = userInfo
+    // The page for this search is already on screen: web's RunWatcher shows
+    // no toast for the run you are looking at, and neither does the banner.
+    if let link = SessionLink(userInfo: userInfo), SearchSessionController.shared.viewingSessionId == link.sessionId {
+      completionHandler([])
+      return
+    }
     completionHandler([.banner, .badge, .sound])
   }
 

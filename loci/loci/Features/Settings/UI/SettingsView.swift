@@ -22,6 +22,7 @@ struct SettingsView: View {
       Section("Personalisation") {
         NavigationLink { PersonalizationSettingsView() } label: { Label("Taste and privacy", systemImage: "sparkles") }
         NavigationLink { MemoryView() } label: { Label("What Loci remembers", systemImage: "brain") }
+        NavigationLink { StandingTasksView() } label: { Label("Standing tasks", systemImage: "clock.arrow.circlepath") }
       }
 
       Section("Connections") {

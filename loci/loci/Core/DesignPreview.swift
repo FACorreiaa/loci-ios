@@ -1,4 +1,5 @@
 import LociConnectProto
+import SwiftProtobuf
 import SwiftUI
 
 /// Screens shown on their own when the app is launched with
@@ -26,11 +27,23 @@ enum DesignPreview: String {
   case museChatPush
   /// The same push with the bar showing: the control for the swipe-back check.
   case museChatPushBar
+  /// A finished answer followed by a proactive message with its caption, and a standing-task confirmation.
+  case museProactive
+  /// A standing request turned into a card: title, schedule, spec, Confirm / Not now.
+  case museStandingCard
+  /// The card after CreateWatch failed with ResourceExhausted.
+  case museStandingCardLimit
+  /// Ask Loci's conversation list with a proactive message on the newest thread.
+  case museSessions
+  /// Settings › Standing tasks with three tasks.
+  case standingTasks
   /// A finished Rome itinerary: header, map hero, two days, "Show the rest", extras, Trip Kit.
   case results
   /// The same page scrolled to the days, and to the Trip Kit.
   case resultsDays
   case resultsKit
+  /// The same itinerary's full map: pitched 3D, flown to Day 1's first stop.
+  case resultsFullMap
   /// A saved place pushed from Saved, opened on its snapshot: name-keyed, so
   /// there is nothing on the server to fill it in.
   case savedPlace
@@ -58,11 +71,29 @@ enum DesignPreview: String {
     case .museChatSnag:
       MuseChatPreview(state: .museSampleThinking.with { $0.status = .failed("The search failed. Try again in a moment.") }, flash: .snag)
     case .museChatListening: MuseChatPreview(state: .museSampleCompleted, isListening: true)
+    case .museProactive:
+      MuseChatPreview(state: .museSampleCompleted, thread: .preview(messages: MuseMessage.previewProactive), scrollTo: MuseChatPreview.threadEnd)
+    case .museStandingCard:
+      MuseChatPreview(
+        state: .museSampleCompleted,
+        thread: .preview(request: MuseMessage.previewRequest, card: .proposal(.preview)),
+        scrollTo: MuseChatPreview.threadEnd
+      )
+    case .museStandingCardLimit:
+      MuseChatPreview(
+        state: .museSampleCompleted,
+        thread: .preview(request: MuseMessage.previewRequest, card: .failed(.tooMany, proposal: .preview)),
+        scrollTo: MuseChatPreview.threadEnd
+      )
+    case .museSessions: NavigationStack { MuseSessionsPreview() }
+    case .standingTasks:
+      NavigationStack { StandingTasksView(store: StandingTasksStore(service: PreviewStandingTaskService(), watches: Loci_Chat_Watch.previewList)) }
     case .museChatPush: MuseChatPushPreview()
     case .museChatPushBar: MuseChatPushPreview(hidesBar: false)
     case .results: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places")
     case .resultsDays: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places", scrollTo: ResultsPage.Anchor.days)
     case .resultsKit: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places", scrollTo: ResultsPage.Anchor.kit)
+    case .resultsFullMap: FullMapPreview(state: .resultsSample)
     case .savedPlace: NavigationStack { SavedPlaceDetailView(item: .savedPlaceSample) }
     }
   }
@@ -97,7 +128,10 @@ private struct InSeasonPreview: View {
 /// The Muse chat screen assembled from the real components with sample data,
 /// so it can be screenshotted without signing in.
 private struct MuseChatPreview: View {
+  static let threadEnd = "thread-end"
+
   let state: SearchState
+  var thread: MuseThread?
   /// Held for the screenshot instead of timing out.
   var flash: MuseActivity.Flash?
   var isListening = false
@@ -107,14 +141,20 @@ private struct MuseChatPreview: View {
   var body: some View {
     ScrollViewReader { proxy in
       ScrollView {
-        SearchTranscript(state: state, caption: caption)
-          .padding(.horizontal, LociTheme.defaultPadding)
-          .padding(.vertical, 12)
+        VStack(alignment: .leading, spacing: 12) {
+          SearchTranscript(state: state, caption: caption)
+          if let thread {
+            MuseThreadTail(thread: thread, sessionId: "preview")
+            Color.clear.frame(height: 1).id(Self.threadEnd)
+          }
+        }
+        .padding(.horizontal, LociTheme.defaultPadding)
+        .padding(.vertical, 12)
       }
       .task {
         guard let scrollTo else { return }
         try? await Task.sleep(for: .seconds(1))
-        proxy.scrollTo(scrollTo, anchor: .top)
+        proxy.scrollTo(scrollTo, anchor: scrollTo == Self.threadEnd ? .bottom : .top)
       }
     }
     .background(Color.museCanvas.ignoresSafeArea())
@@ -124,6 +164,47 @@ private struct MuseChatPreview: View {
     .safeAreaInset(edge: .bottom, spacing: 0) {
       PreviewComposer().padding(.horizontal, LociTheme.defaultPadding).padding(.vertical, 10).background(Color.museCanvas)
     }
+  }
+}
+
+/// FullMapView fed the way ResultsPage feeds it, with its own selection.
+private struct FullMapPreview: View {
+  let state: SearchState
+  @State private var selectedID: String?
+
+  var body: some View {
+    let groups = state.dayGroups
+    let sequence = DayGrouping.sequence(groups)
+    let showsDays = state.destination == .itinerary
+    FullMapView(
+      data: ResultsMapData(groups: groups, extras: state.extras, sequence: sequence, showsDays: showsDays, alerts: []),
+      groups: groups,
+      sequence: sequence,
+      destination: state.destination,
+      showsDays: showsDays,
+      title: state.cityName ?? "Rome",
+      selectedID: $selectedID
+    )
+  }
+}
+
+/// Ask Loci's list rows with sample sessions: the newest carries a proactive message.
+private struct MuseSessionsPreview: View {
+  var body: some View {
+    List {
+      Section("Recent") {
+        ForEach(Loci_Chat_ChatSession.previewList, id: \.id) { session in
+          NavigationLink(value: session.id) { SessionRow(session: session) }
+        }
+      }
+      .listRowBackground(Color.museAgentBubble)
+    }
+    .listStyle(.insetGrouped)
+    .scrollContentBackground(.hidden)
+    .background(Color.museCanvas.ignoresSafeArea())
+    .safeAreaInset(edge: .top, spacing: 0) { MuseChatHeader(activity: .ready) }
+    .toolbarVisibility(.hidden, for: .navigationBar)
+    .navigationDestination(for: String.self) { Text($0) }
   }
 }
 
@@ -293,6 +374,122 @@ extension SearchState {
     response.pointsOfInterest = response.itineraryResponse.pointsOfInterest + [extra]
     state.adopt(response)
     return state
+  }
+}
+
+// MARK: - Standing-task samples
+
+/// Answers every call from fixed samples; the design previews never reach the network.
+nonisolated struct PreviewStandingTaskService: StandingTaskService {
+  func propose(text: String, timezone: String) async throws(WatchError) -> Loci_Chat_WatchProposal { .preview }
+  func create(sessionId: String, proposal: Loci_Chat_WatchProposal) async throws(WatchError) -> Loci_Chat_CreateWatchResponse {
+    var response = Loci_Chat_CreateWatchResponse()
+    response.watch.id = "preview-watch"
+    return response
+  }
+  func list(sessionId: String?) async throws(WatchError) -> [Loci_Chat_Watch] { Loci_Chat_Watch.previewList }
+  func delete(id: String) async throws(WatchError) {}
+  func history(sessionId: String) async throws(WatchError) -> [Loci_Chat_ConversationMessage] { [] }
+}
+
+extension Loci_Chat_WatchProposal {
+  nonisolated static var preview: Loci_Chat_WatchProposal {
+    var proposal = Loci_Chat_WatchProposal()
+    proposal.title = "Rain in Lisbon tomorrow"
+    proposal.scheduleHuman = "Every day at 08:00"
+    proposal.intervalMinutes = 1440
+    proposal.spec = "Check tomorrow's forecast for Lisbon and tell me if rain is likely, with an indoor swap for the plan if it is."
+    return proposal
+  }
+}
+
+extension MuseMessage {
+  static let previewRequest = "Every morning at 8, tell me if it'll rain in Lisbon tomorrow"
+
+  static var previewProactive: [MuseMessage] {
+    [
+      MuseMessage(
+        id: "preview-confirm",
+        role: .agent,
+        text: "Got it — I'll watch the Lisbon forecast every morning at 08:00 and ping you when rain is likely.",
+        origin: .proactive,
+        sourceLabel: "Standing task"
+      ),
+      MuseMessage(
+        id: "preview-run",
+        role: .agent,
+        text: "Showers are likely in Lisbon tomorrow from about 14:00. Swap the afternoon at Belém for the **Oceanário**, which is all indoors.",
+        origin: .proactive,
+        sourceLabel: "Standing task"
+      ),
+    ]
+  }
+}
+
+extension Loci_Chat_Watch {
+  nonisolated static var previewList: [Loci_Chat_Watch] {
+    let now = Date()
+    func watch(_ id: String, _ title: String, _ schedule: String, _ spec: String, nextIn hours: Double, enabled: Bool = true) -> Loci_Chat_Watch {
+      var watch = Loci_Chat_Watch()
+      watch.id = id
+      watch.title = title
+      watch.scheduleHuman = schedule
+      watch.spec = spec
+      watch.enabled = enabled
+      watch.nextRunAt = .init(date: now.addingTimeInterval(hours * 3600))
+      return watch
+    }
+    return [
+      watch("w1", "Rain in Lisbon tomorrow", "Every day at 08:00", "Tell me if rain is likely in Lisbon tomorrow, with an indoor swap.", nextIn: 5),
+      watch(
+        "w2",
+        "Late-night ramen near Shinjuku",
+        "Every Friday at 18:00",
+        "Find ramen places open after midnight within 10 minutes of my hotel.",
+        nextIn: 50
+      ),
+      watch(
+        "w3",
+        "Porto festival dates",
+        "Every week on Monday at 09:00",
+        "Check whether São João 2027 dates and street closures are announced.",
+        nextIn: 110
+      ),
+    ]
+  }
+}
+
+extension Loci_Chat_ChatSession {
+  nonisolated static var previewList: [Loci_Chat_ChatSession] {
+    func message(_ role: Loci_Chat_MessageRole, _ text: String, origin: Loci_Chat_MessageOrigin = .reply, label: String = "") -> Loci_Chat_ConversationMessage {
+      var message = Loci_Chat_ConversationMessage()
+      message.id = UUID().uuidString
+      message.role = role
+      message.content = text
+      message.origin = origin
+      message.sourceLabel = label
+      return message
+    }
+    var lisbon = Loci_Chat_ChatSession()
+    lisbon.id = "s1"
+    lisbon.cityName = "Lisbon"
+    lisbon.updatedAt = .init(date: Date().addingTimeInterval(-3600))
+    lisbon.conversationHistory = [
+      message(.user, "3 days in Lisbon with kids, nothing too hilly"),
+      message(.assistant, "Here is a gentle plan."),
+      message(
+        .assistant,
+        "Showers are likely in Lisbon tomorrow from about 14:00. Swap Belém for the Oceanário.",
+        origin: .proactive,
+        label: "Standing task"
+      ),
+    ]
+    var rome = Loci_Chat_ChatSession()
+    rome.id = "s2"
+    rome.cityName = "Rome"
+    rome.updatedAt = .init(date: Date().addingTimeInterval(-86_400 * 2))
+    rome.conversationHistory = [message(.user, "3 days in Rome, first time, lots of walking"), message(.assistant, "Rome on foot.")]
+    return [lisbon, rome]
   }
 }
 

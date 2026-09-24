@@ -29,7 +29,7 @@ Done when a device build can sign in, search, stream, map, edit a trip and resum
 - Sign in with Apple token validation.
 
 ## Phase 2 — iOS-native superpowers
-1. APNs search-complete + Universal Links (associated domain on lociai.fyi) — finishes the notification story.
+1. ~~APNs search-complete + Universal Links (associated domain on lociai.fyi)~~ — done in `13-push-and-universal-links.md` (Phase 2A: proto v5.25.0, api #77, client #70, infra #190).
 2. Offline: SwiftData cache for trips, stops and saved places; `BGAppRefreshTask` for weather, FX and alerts before a trip day.
 3. Live Activities / Dynamic Island for an active trip day: current stop, time left, next stop, "closes in 45m".
 4. Widgets: next stop, destination GoScore, trip countdown.
