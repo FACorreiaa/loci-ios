@@ -46,10 +46,25 @@ public nonisolated struct SessionLink: Sendable, Equatable, Hashable {
   /// Parse `loci://itinerary?sessionId=…` (the host is the web route's first path
   /// segment). Returns nil for anything else, including `loci://oauth2redirect/…`,
   /// which belongs to ASWebAuthenticationSession.
+  /// Hosts whose result links open in the app (Universal Links, `applinks:` in loci.entitlements).
+  public static let webHosts: Set<String> = ["lociai.fyi", "www.lociai.fyi"]
+
+  /// `loci://itinerary?sessionId=…` (notifications, OAuth-era deep links) or
+  /// `https://lociai.fyi/itinerary?sessionId=…` (a shared web link). Web's
+  /// `/nearme` has no page of its own here; its session opens like an itinerary.
   public init?(url: URL) {
-    guard url.scheme == "loci", let host = url.host(), let destination = SearchDestination(rawValue: host) else {
-      return nil
+    let destination: SearchDestination?
+    switch url.scheme?.lowercased() {
+    case "loci":
+      destination = url.host().flatMap(SearchDestination.init(rawValue:))
+    case "https":
+      guard let host = url.host()?.lowercased(), Self.webHosts.contains(host) else { return nil }
+      let route = url.pathComponents.dropFirst().first ?? ""
+      destination = route == "nearme" ? .itinerary : SearchDestination(rawValue: route)
+    default:
+      destination = nil
     }
+    guard let destination else { return nil }
     let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
     func value(_ name: String) -> String? { items.first { $0.name == name }?.value.flatMap { $0.isEmpty ? nil : $0 } }
     guard let sessionId = value(Key.sessionId) else { return nil }

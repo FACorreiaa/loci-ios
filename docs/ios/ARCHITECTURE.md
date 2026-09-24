@@ -1598,12 +1598,10 @@ reconcile is the mechanism item 2 needs for offline refresh.
 
 **What the server still owes, and what iOS has not adopted.**
 
-- APNs send on COMPLETE/ERROR and device-token registration. The proto now
-  carries `RegisterPushDevice` and `GetRunStatus` (`../loci-connect-proto`
-  commit `9e9af73`, "Contracts for run status, push devices and the
-  search-finished setting"), but the app calls neither: `PushNotificationManager`
-  stores the APNs token in `UserDefaults` and posts a `NotificationCenter`
-  event nobody consumes, and `SearchSessionController` still polls
+- APNs is done (Phase 2A, `13-push-and-universal-links.md`):
+  `PushRegistration` registers the token with `RegisterPushDevice`, the
+  server sends over APNs (api #77), and a registered phone no longer posts
+  the local notification. Still open: `SearchSessionController` polls
   `GetChatSession` rather than `GetRunStatus`.
 - `EditTripCTA` needs `navigation` (a trip id) in `CompletePayload`; the Swift
   message today has `sessionID`, `result`, `loadFromSession` and `message`
