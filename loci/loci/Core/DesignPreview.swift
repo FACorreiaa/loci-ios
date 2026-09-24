@@ -49,6 +49,9 @@ enum DesignPreview: String {
   /// A saved place pushed from Saved, opened on its snapshot: name-keyed, so
   /// there is nothing on the server to fill it in.
   case savedPlace
+  /// Profile's About rows with the App Store rating link (as if an ID were
+  /// set), and Settings' App section with the rating switch.
+  case ratingRows
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -99,6 +102,7 @@ enum DesignPreview: String {
     case .resultsKit: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places", scrollTo: ResultsPage.Anchor.kit)
     case .resultsFullMap: FullMapPreview(state: .resultsSample)
     case .savedPlace: NavigationStack { SavedPlaceDetailView(item: .savedPlaceSample) }
+    case .ratingRows: NavigationStack { RatingRowsPreview() }
     }
   }
 }
@@ -126,6 +130,25 @@ private struct InSeasonPreview: View {
       text = value
       seed = ""
     }
+  }
+}
+
+/// The rows the rating prompt adds, with a sample App Store ID so the Rate
+/// row shows. The news switch is left out: it needs the server.
+private struct RatingRowsPreview: View {
+  var body: some View {
+    List {
+      Section("About") {
+        ExternalLinkRow(title: "Loci Web", destination: URL(string: "https://lociai.fyi")!)
+        ExternalLinkRow(title: "Rate Loci on the App Store", destination: URL(string: "https://apps.apple.com/app/id0000000000?action=write-review")!)
+      }
+      .listRowBackground(Color.lociCard)
+      Section("App") {
+        Label("Notifications", systemImage: "bell.badge")
+        ReviewPromptToggle()
+      }
+    }
+    .settingsStyle("Settings")
   }
 }
 
