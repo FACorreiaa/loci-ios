@@ -93,3 +93,30 @@ struct MultiCitySearchStateTests {
     #expect(state.hotels.first?.name == "Inn")
   }
 }
+
+@Suite("Multi-city request")
+struct MultiCityRequestTests {
+  func envelope() -> SearchEnvelope {
+    SearchEnvelope(
+      sessionId: nil, requestId: "r", profileId: nil, lastEventId: nil, query: "trip",
+      cityName: nil, domain: nil, latitude: nil, longitude: nil, startedAt: .now, finished: false, notified: false
+    )
+  }
+
+  @MainActor @Test func stopsGoIntoTheRequest() {
+    var env = envelope()
+    env.stops = [StopInput(cityName: "Lisbon", nights: 3), StopInput(cityName: "Porto", nights: nil)]
+    env.suggestOrder = true
+    let request = SearchSessionController.request(from: env, resuming: false)
+    #expect(request.stops.map(\.cityName) == ["Lisbon", "Porto"])
+    #expect(request.stops[0].nights == 3)
+    #expect(!request.stops[1].hasNights)
+    #expect(request.suggestOrder)
+  }
+
+  @Test func oldEnvelopesStillDecode() throws {
+    let json = #"{"requestId":"r","query":"q","startedAt":0,"finished":false,"notified":false}"#
+    let env = try JSONDecoder().decode(SearchEnvelope.self, from: Data(json.utf8))
+    #expect(env.stops == nil)
+  }
+}

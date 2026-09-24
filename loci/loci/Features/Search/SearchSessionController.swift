@@ -64,7 +64,9 @@ import UIKit
     longitude: Double? = nil,
     profileId: String? = nil,
     sessionId: String? = nil,
-    useDefaultProfile: Bool = true
+    useDefaultProfile: Bool = true,
+    stops: [StopInput] = [],
+    suggestOrder: Bool = false
   ) async throws {
     let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return }
@@ -88,7 +90,9 @@ import UIKit
       longitude: longitude,
       startedAt: Date(),
       finished: false,
-      notified: false
+      notified: false,
+      stops: stops.count >= 2 ? stops : nil,
+      suggestOrder: stops.count >= 2 ? suggestOrder : nil
     )
     self.envelope = envelope
     store.save(envelope)
@@ -382,6 +386,13 @@ import UIKit
       request.userLocation.latitude = latitude
       request.userLocation.longitude = longitude
     }
+    for stop in envelope.stops ?? [] {
+      var input = Loci_Chat_TripStopInput()
+      input.cityName = stop.cityName
+      if let nights = stop.nights { input.nights = Int32(nights) }
+      request.stops.append(input)
+    }
+    request.suggestOrder = envelope.suggestOrder ?? false
     if resuming, let token = envelope.lastEventId { request.resumeToken = token }
     return request
   }

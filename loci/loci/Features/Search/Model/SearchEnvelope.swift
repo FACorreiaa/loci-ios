@@ -18,6 +18,16 @@ nonisolated struct SearchEnvelope: Codable, Equatable, Sendable {
   var startedAt: Date
   var finished: Bool
   var notified: Bool
+  /// A multi-city search from the stop builder, in the traveller's order.
+  var stops: [StopInput]? = nil
+  /// Let the server reorder `stops` into a sensible route.
+  var suggestOrder: Bool? = nil
+}
+
+/// One city of a multi-city search, as the stop builder hands it over.
+nonisolated struct StopInput: Codable, Equatable, Hashable, Sendable {
+  var cityName: String
+  var nights: Int?
 }
 
 /// Files in Application Support: the active search's envelope, and the last
