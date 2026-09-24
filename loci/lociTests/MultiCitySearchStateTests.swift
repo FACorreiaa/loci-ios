@@ -41,6 +41,19 @@ enum MultiEvents {
     return event
   }
 
+  static func itinerary(stop: Int32, city: String, _ names: [String], id: String) -> Loci_Chat_StreamEvent {
+    var event = Loci_Chat_StreamEvent()
+    event.eventID = id
+    event.stopIndex = stop
+    event.itinerary.cityResponse.generalCityData.city = city
+    event.itinerary.cityResponse.itineraryResponse.pointsOfInterest = names.map { name in
+      var poi = Loci_Poi_POIDetailedInfo()
+      poi.name = name
+      return poi
+    }
+    return event
+  }
+
   static func error(stop: Int32, _ message: String, id: String) -> Loci_Chat_StreamEvent {
     var event = Loci_Chat_StreamEvent()
     event.eventID = id
@@ -153,5 +166,32 @@ struct MultiCityFormatTests {
     #expect(MultiCityFormat.leg(leg) == "Drive · ≈30 min · 40 km")
     let stop = StopResult(index: 0, cityName: "Lisbon", sessionId: "s", dayNumbers: [1, 2])
     #expect(MultiCityFormat.chip(stop) == "Lisbon · 2n")
+  }
+}
+
+@Suite("Multi-city snapshot")
+struct MultiCitySnapshotTests {
+  @Test func aMultiCitySearchComesBackWhole() throws {
+    let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    let store = SearchStore(directory: dir)
+    var state = SearchState()
+    state.apply(Events.start("s0", domain: .itinerary))
+    state.apply(
+      MultiEvents.route(
+        [RouteCity(name: "Lisbon", session: "s0", days: [1]), RouteCity(name: "Porto", session: "s1", days: [2])],
+        tripID: "t1"
+      )
+    )
+    state.apply(MultiEvents.itinerary(stop: 0, city: "Lisbon", ["Belém"], id: "i0"))
+    state.apply(MultiEvents.itinerary(stop: 1, city: "Porto", ["Ribeira"], id: "i1"))
+    state.status = .completed
+    store.saveResult(state)
+
+    let link = SessionLink(destination: .itinerary, sessionId: "s0", cityName: nil, domain: "itinerary")
+    let back = try #require(store.loadResult(for: link))
+    #expect(back.stops.map(\.cityName) == ["Lisbon", "Porto"])
+    #expect(back.stops[1].state.itinerary?.itineraryResponse.pointsOfInterest.first?.name == "Ribeira")
+    #expect(back.stops[0].state.itinerary?.itineraryResponse.pointsOfInterest.first?.name == "Belém")
+    #expect(back.route?.tripID == "t1")
   }
 }
