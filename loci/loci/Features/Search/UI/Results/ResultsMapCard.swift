@@ -90,6 +90,7 @@ struct ResultsMapContent: MapContent {
     ForEach(data.routes, id: \.day) { route in
       MapPolyline(coordinates: route.coordinates)
         .stroke(ResultsMapData.color(day: route.day), style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [6, 5]))
+        .mapOverlayLevel(level: .aboveLabels)  // not hidden behind 3D buildings
     }
     ForEach(data.halos, id: \.title) { halo in
       MapCircle(center: halo.coordinate, radius: 400)
@@ -194,14 +195,49 @@ struct FullMapView: View {
   @State private var camera: MapCameraPosition = .automatic
   @State private var showList = true
   @State private var detail: Loci_Poi_POIDetailedInfo?
+  @State private var isPitched = true
+  @State private var satellite = false
+  @State private var lookAround: MKLookAroundScene?
+  @State private var showLookAround = false
 
   var body: some View {
     NavigationStack {
       Map(position: $camera, selection: $selectedID) {
         ResultsMapContent(data: data, selectedID: selectedID)
       }
-      .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
+      .mapStyle(
+        isPitched && satellite
+          ? .hybrid(elevation: .realistic, pointsOfInterest: .excludingAll)
+          : .standard(elevation: .realistic, pointsOfInterest: .excludingAll)
+      )
       .mapControls { MapCompass(); MapPitchToggle(); MapScaleView() }
+      .onMapCameraChange(frequency: .onEnd) { isPitched = $0.camera.pitch > 10 }
+      .overlay(alignment: .topLeading) {
+        VStack(alignment: .leading, spacing: 8) {
+          if isPitched {
+            Picker("Map style", selection: $satellite) {
+              Text("Map").tag(false)
+              Text("Satellite").tag(true)
+            }
+            .pickerStyle(.segmented).fixedSize()
+            .padding(3).background(.thinMaterial, in: Capsule())
+          }
+          if lookAround != nil {
+            Button { showLookAround = true } label: {
+              Label("Look Around", systemImage: "binoculars.fill")
+                .font(.lociCaption(13)).foregroundStyle(Color.lociInk)
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(.thinMaterial, in: Capsule())
+            }
+          }
+        }
+        .padding(LociTheme.defaultPadding)
+      }
+      .task(id: focusedPin?.id) {
+        lookAround = nil
+        guard let pin = focusedPin else { return }
+        lookAround = await PlaceDetailSheet.lookAroundScene(at: pin.coordinate)
+      }
       .ignoresSafeArea(edges: .bottom)
       .navigationTitle(title)
       .navigationBarTitleDisplayMode(.inline)
@@ -225,8 +261,15 @@ struct FullMapView: View {
           .presentationBackgroundInteraction(.enabled(upThrough: .medium))
           .interactiveDismissDisabled()
           .sheet(item: $detail) { stop in PlaceDetailSheet(stop: stop, destination: destination, cityName: title) }
+          // Presented from the list sheet: the map underneath is already presenting it.
+          .lookAroundViewer(isPresented: $showLookAround, initialScene: lookAround)
       }
     }
+  }
+
+  /// The stop the camera is on: the selection, else where the flyover starts.
+  private var focusedPin: ResultsMapData.Pin? {
+    data.pins.first { $0.id == selectedID } ?? data.flyoverStart
   }
 }
 
