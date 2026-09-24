@@ -53,6 +53,7 @@ public struct TripsView: View {
       try await rpc("Could not load your trips.", sent) { await TripAPI.client.listTrips(request: $0, headers: [:]) }
     }
     if let value = loaded?.value { trips = value.trips } else if case .missing(let reason) = loaded { error = reason.userMessage }
+    if case .fresh = loaded { TripPrefetch.scheduleIfNeeded(trips: trips) }
     isLoading = false
   }
 }

@@ -8,6 +8,7 @@ public final class AppDelegate: NSObject, UIApplicationDelegate {
     Analytics.start()
     PushNotificationManager.shared.configure()
     SearchSessionController.registerBackgroundTask()
+    TripPrefetch.register()
     return true
   }
 

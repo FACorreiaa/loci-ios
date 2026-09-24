@@ -63,7 +63,9 @@ import SwiftUI
         .onChange(of: scenePhase) { _, phase in
           switch phase {
           case .background: SearchSessionController.shared.sceneDidEnterBackground()
-          case .active: SearchSessionController.shared.sceneDidBecomeActive()
+          case .active:
+            SearchSessionController.shared.sceneDidBecomeActive()
+            Task { await TripPrefetch.refreshTodayIfStale() }
           default: break
           }
         }
