@@ -12,8 +12,10 @@
 		0DC776F2305DBE860029F87E /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776F1305DBE860029F87E /* GoogleSignIn */; };
 		0DC776F5305DBE860029F87E /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776F4305DBE860029F87E /* PostHog */; };
 		14314FDF44DCB0760A62D268 /* NearbyWalkAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC7483382DCDDCF36790C44 /* NearbyWalkAttributes.swift */; };
+		318F9B058AC5DB86FA523A82 /* TripDayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDCDC1C62E359B5888C1D5C1 /* TripDayAttributes.swift */; };
 		50572CA008FED317A5104806 /* NearbyWalkLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE42D50A7E3826BD5FA47F13 /* NearbyWalkLiveActivity.swift */; };
 		C72D3152FC1BE9A7745BFFAF /* NearbyWalkWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2685B34C7CC0A36E8298F99 /* NearbyWalkWidgetBundle.swift */; };
+		CE0CB13594C08FC87A5B5FB8 /* TripDayLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C47392BD4366A6494C771A7 /* TripDayLiveActivity.swift */; };
 		FDFD1BBF53B00464BE0EA46F /* NearbyWalkWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9FDE55B8878D3A2ADFF78A2F /* NearbyWalkWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -56,6 +58,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0C47392BD4366A6494C771A7 /* TripDayLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TripDayLiveActivity.swift; sourceTree = "<group>"; };
 		0DC776A9305DBE860029F87E /* loci.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = loci.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0DC776B8305DBE860029F87E /* lociTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = lociTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0DC776C2305DBE860029F87E /* lociUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = lociUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -65,6 +68,7 @@
 		9FDE55B8878D3A2ADFF78A2F /* NearbyWalkWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NearbyWalkWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2685B34C7CC0A36E8298F99 /* NearbyWalkWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NearbyWalkWidgetBundle.swift; sourceTree = "<group>"; };
 		CE42D50A7E3826BD5FA47F13 /* NearbyWalkLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NearbyWalkLiveActivity.swift; sourceTree = "<group>"; };
+		EDCDC1C62E359B5888C1D5C1 /* TripDayAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TripDayAttributes.swift; path = loci/Shared/TripDayAttributes.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -137,6 +141,7 @@
 				2D93C9B1795953E9F5946140 /* Frameworks */,
 				508FA22A4A1B0C1446B053E5 /* NearbyWalkWidget */,
 				5AC7483382DCDDCF36790C44 /* NearbyWalkAttributes.swift */,
+				EDCDC1C62E359B5888C1D5C1 /* TripDayAttributes.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -165,6 +170,7 @@
 				A2685B34C7CC0A36E8298F99 /* NearbyWalkWidgetBundle.swift */,
 				CE42D50A7E3826BD5FA47F13 /* NearbyWalkLiveActivity.swift */,
 				3034AC953E062C1A6B18581D /* Info.plist */,
+				0C47392BD4366A6494C771A7 /* TripDayLiveActivity.swift */,
 			);
 			name = NearbyWalkWidget;
 			path = NearbyWalkWidget;
@@ -379,6 +385,8 @@
 				C72D3152FC1BE9A7745BFFAF /* NearbyWalkWidgetBundle.swift in Sources */,
 				50572CA008FED317A5104806 /* NearbyWalkLiveActivity.swift in Sources */,
 				14314FDF44DCB0760A62D268 /* NearbyWalkAttributes.swift in Sources */,
+				318F9B058AC5DB86FA523A82 /* TripDayAttributes.swift in Sources */,
+				CE0CB13594C08FC87A5B5FB8 /* TripDayLiveActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

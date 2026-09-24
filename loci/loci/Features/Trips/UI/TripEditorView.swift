@@ -10,6 +10,7 @@ struct TripEditorView: View {
   let tripID: String
 
   @State private var trip: Loci_Trip_TripDraft?
+  @State private var loaded: Loaded<Loci_Trip_TripDraft>?
   @State private var isEditing = false
   @State private var renaming: Loci_Trip_TripStop?
   @State private var renameText = ""
@@ -47,8 +48,9 @@ struct TripEditorView: View {
     }
     .settingsStyle(trip?.title ?? "Trip")
     .environment(\.editMode, .constant(isEditing ? .active : .inactive))
+    .onChange(of: canEdit) { _, ok in if !ok { isEditing = false } }
     .toolbar {
-      ToolbarItem(placement: .primaryAction) { Button(isEditing ? "Done" : "Edit") { isEditing.toggle() } }
+      ToolbarItem(placement: .primaryAction) { Button(isEditing ? "Done" : "Edit") { isEditing.toggle() }.disabled(!canEdit) }
       ToolbarItem(placement: .secondaryAction) {
         if let shareURL {
           ShareLink(item: shareURL) { Label("Share link", systemImage: "square.and.arrow.up") }
@@ -80,6 +82,10 @@ struct TripEditorView: View {
 
   private func constraintsSection(_ trip: Loci_Trip_TripDraft) -> some View {
     Section("Pace") {
+      if let loaded, loaded.staleSince != nil {
+        CacheChip(loaded: loaded)
+        if !canEdit { Text("Connect to edit").lociCoordStyle(10) }
+      }
       Picker("Pace", selection: Binding(get: { trip.constraints.pace }, set: { pace in Task { await setPace(pace) } })) {
         Text("Relaxed").tag(Loci_Trip_TripPace.relaxed)
         Text("Moderate").tag(Loci_Trip_TripPace.moderate)
@@ -95,15 +101,20 @@ struct TripEditorView: View {
         StopRow(stop: stop, color: LociTheme.dayColor(Int(day.dayNumber)), isEditing: isEditing) { minutes in
           Task { await setDuration(stop, minutes: minutes) }
         }
+        .moveDisabled(!canEdit)
         .swipeActions(edge: .trailing) {
-          Button("Remove", role: .destructive) { Task { await remove(stop) } }
-          Button("Replace") { picking = .replace(stopID: stop.id) }.tint(.lociCoral)
+          if canEdit {
+            Button("Remove", role: .destructive) { Task { await remove(stop) } }
+            Button("Replace") { picking = .replace(stopID: stop.id) }.tint(.lociCoral)
+          }
         }
         .swipeActions(edge: .leading) {
-          Button("Rename") {
-            renameText = stop.name
-            renaming = stop
-          }.tint(.lociForest)
+          if canEdit {
+            Button("Rename") {
+              renameText = stop.name
+              renaming = stop
+            }.tint(.lociForest)
+          }
         }
       }
       .onMove { from, to in
@@ -118,6 +129,10 @@ struct TripEditorView: View {
       HStack {
         Circle().fill(LociTheme.dayColor(Int(day.dayNumber))).frame(width: 10, height: 10)
         Text("Day \(day.dayNumber)" + (day.cityName.isEmpty || day.cityName == trip.cityName ? "" : " · \(day.cityName)"))
+        if DayTimeline.today(in: trip)?.id == day.id {
+          Spacer()
+          TodayControls(trip: trip, day: day).textCase(nil)
+        }
         if day.hasDate { Spacer(); Text(day.date.date, style: .date) }
       }
     }
@@ -158,19 +173,37 @@ struct TripEditorView: View {
 
   // MARK: - RPCs
 
+  /// The phone's copy first, then the server. Offline keeps the copy, read-only.
   private func load() async {
     var request = Loci_Trip_GetTripRequest()
     request.tripID = tripID
-    await apply("Could not load the trip.", request) { await TripAPI.client.getTrip(request: $0, headers: [:]) }
+    let sent = request
+    loaded = await cacheThrough(Loci_Trip_TripDraft.self, kind: .trip, id: tripID, onCached: { trip = $0.value }) {
+      try await rpc("Could not load the trip.", sent) { await TripAPI.client.getTrip(request: $0, headers: [:]) }
+    }
+    if let value = loaded?.value { trip = value } else if case .missing(let reason) = loaded { error = reason.userMessage }
   }
 
-  /// Run an edit and adopt the trip the server returns.
+  /// Edits need the server; a copy the server has not confirmed is read-only.
+  private var canEdit: Bool {
+    switch loaded {
+    case .fresh, nil: true
+    case .stale, .missing: false
+    }
+  }
+
+  /// Run an edit and adopt the trip the server returns; the copy follows it.
   private func apply<Input: Sendable>(
     _ fallback: String,
     _ request: Input,
     _ call: @escaping @Sendable (Input) async -> ResponseMessage<Loci_Trip_TripDraft>
   ) async {
-    do { trip = try await rpc(fallback, request, call) } catch { self.error = error.userMessage }
+    do {
+      let draft = try await rpc(fallback, request, call)
+      trip = draft
+      loaded = .fresh(draft)
+      try? await LocalCache.shared.put(draft, kind: .trip, id: tripID)
+    } catch { self.error = error.userMessage }
   }
 
   private func reorder(_ day: Loci_Trip_TripDay, ids: [String]) async {

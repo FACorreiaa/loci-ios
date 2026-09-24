@@ -44,6 +44,8 @@ enum DesignPreview: String {
   /// The same page scrolled to the days, and to the Trip Kit.
   case resultsDays
   case resultsKit
+  /// The Trips list's Today band for a three-stop Rome day.
+  case tripDay
   /// The same itinerary's full map: pitched 3D, flown to Day 1's first stop.
   case resultsFullMap
   /// A saved place pushed from Saved, opened on its snapshot: name-keyed, so
@@ -102,6 +104,7 @@ enum DesignPreview: String {
     case .results: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places")
     case .resultsDays: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places", scrollTo: ResultsPage.Anchor.days)
     case .resultsKit: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places", scrollTo: ResultsPage.Anchor.kit)
+    case .tripDay: TripDayPreview()
     case .resultsFullMap: FullMapPreview(state: .resultsSample)
     case .savedPlace: NavigationStack { SavedPlaceDetailView(item: .savedPlaceSample) }
     case .ratingRows: NavigationStack { RatingRowsPreview() }
@@ -275,6 +278,65 @@ private struct PreviewComposer: View {
         .frame(width: LociTheme.minTapTarget, height: LociTheme.minTapTarget)
         .background(Color.lociForest, in: Circle()).foregroundStyle(Color.lociPaper)
     }
+  }
+}
+
+/// The Today band with a trip whose first day is today, so the controls show.
+private struct TripDayPreview: View {
+  var body: some View {
+    let trip = Loci_Trip_TripDraft.previewRome
+    NavigationStack {
+      ScrollView {
+        VStack(alignment: .leading, spacing: 16) {
+          Text("My trips").font(.lociDisplay(28)).foregroundStyle(Color.lociInk)
+          if let day = DayTimeline.today(in: trip) { TodayBand(trip: trip, day: day) }
+        }
+        .padding(LociTheme.defaultPadding)
+      }
+      .background(Color.lociPaper.ignoresSafeArea())
+    }
+  }
+}
+
+extension Loci_Trip_TripDraft {
+  /// Three stops in Rome, dated today at midnight in the current calendar.
+  static var previewRome: Loci_Trip_TripDraft {
+    var trip = Loci_Trip_TripDraft()
+    trip.id = "preview-rome"
+    trip.cityName = "Rome"
+    trip.title = "Rome on foot"
+    var day = Loci_Trip_TripDay()
+    day.id = "preview-day-1"
+    day.dayNumber = 1
+    day.cityName = "Rome"
+    day.cityLat = 41.9028
+    day.cityLon = 12.4964
+    var utc = Calendar(identifier: .gregorian)
+    utc.timeZone = TimeZone(identifier: "UTC") ?? .current
+    let parts = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+    if let midnight = utc.date(from: DateComponents(year: parts.year, month: parts.month, day: parts.day)) {
+      day.date = Google_Protobuf_Timestamp(date: midnight)
+    }
+    struct Seed {
+      let name: String
+      let lat: Double
+      let lon: Double
+    }
+    let seeds = [
+      Seed(name: "Colosseum", lat: 41.8902, lon: 12.4922), Seed(name: "Roman Forum", lat: 41.8925, lon: 12.4853),
+      Seed(name: "Pantheon", lat: 41.8986, lon: 12.4769),
+    ]
+    day.stops = seeds.enumerated().map { offset, seed in
+      var stop = Loci_Trip_TripStop()
+      stop.id = "preview-stop-\(offset)"
+      stop.name = seed.name
+      stop.poi.name = seed.name
+      stop.poi.latitude = seed.lat
+      stop.poi.longitude = seed.lon
+      return stop
+    }
+    trip.days = [day]
+    return trip
   }
 }
 

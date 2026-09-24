@@ -10,6 +10,7 @@ struct SavedView: View {
   @State private var segment = Segment.places
   @State private var favorites: [Loci_Favorites_V1_FavoriteItem] = []
   @State private var itineraries: [Loci_Itinerary_UserSavedItinerary] = []
+  @State private var loadedFavorites: Loaded<Loci_Favorites_V1_GetFavoritesResponse>?
   @State private var isLoading = true
   @State private var error: String?
   @State private var linked: AppLink?
@@ -106,32 +107,43 @@ struct SavedView: View {
     linked = link
   }
 
+  /// The phone's copies first, then the server; offline keeps them and says so.
   private func load() async {
+    isLoading = favorites.isEmpty && itineraries.isEmpty
     async let places = loadFavorites()
     async let saved = loadItineraries()
-    do {
-      favorites = try await places
-      itineraries = try await saved
-    } catch { self.error = error.userMessage }
+    let (loadedPlaces, loadedSaved) = await (places, saved)
+    loadedFavorites = loadedPlaces
+    if let value = loadedPlaces.value { favorites = value.favorites }
+    if let value = loadedSaved.value { itineraries = value.itineraries }
+    if case .missing(let reason) = loadedPlaces, case .missing = loadedSaved { error = reason.userMessage }
     isLoading = false
   }
 
   /// web: lib/api/favorites.ts — userId is required non-empty by validation and ignored by the server.
-  private func loadFavorites() async throws -> [Loci_Favorites_V1_FavoriteItem] {
+  private func loadFavorites() async -> Loaded<Loci_Favorites_V1_GetFavoritesResponse> {
     var request = Loci_Favorites_V1_GetFavoritesRequest()
     request.userID = AuthSessionManager.shared.currentUserID ?? "me"
     request.limit = 1000
-    return try await rpc("Could not load saved places.", request) { await SavedAPI.favorites.getFavorites(request: $0, headers: [:]) }.favorites
+    let sent = request
+    return await cacheThrough(
+      Loci_Favorites_V1_GetFavoritesResponse.self, kind: .saved, id: "favorites", onCached: { favorites = $0.value.favorites }
+    ) {
+      try await rpc("Could not load saved places.", sent) { await SavedAPI.favorites.getFavorites(request: $0, headers: [:]) }
+    }
   }
 
   /// web: lib/api/itineraries.ts — page_size is capped at 100 by validation.
-  private func loadItineraries() async throws -> [Loci_Itinerary_UserSavedItinerary] {
+  private func loadItineraries() async -> Loaded<Loci_Itinerary_GetUserItinerariesResponse> {
     var request = Loci_Itinerary_GetUserItinerariesRequest()
     request.pagination.page = 1
     request.pagination.pageSize = 100
-    return try await rpc("Could not load saved itineraries.", request) {
-      await SavedAPI.itineraries.getUserItineraries(request: $0, headers: [:])
-    }.itineraries
+    let sent = request
+    return await cacheThrough(
+      Loci_Itinerary_GetUserItinerariesResponse.self, kind: .saved, id: "itineraries", onCached: { itineraries = $0.value.itineraries }
+    ) {
+      try await rpc("Could not load saved itineraries.", sent) { await SavedAPI.itineraries.getUserItineraries(request: $0, headers: [:]) }
+    }
   }
 
   private func remove(_ item: Loci_Favorites_V1_FavoriteItem) async {

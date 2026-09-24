@@ -12,9 +12,9 @@ import Observation
   private(set) var plan: String?
   private(set) var planChecked = false
   private(set) var contextChecked = false
+  /// How the forecast was obtained, for the cache chip.
+  private(set) var contextLoaded: Loaded<Loci_Localcontext_LocalContext>?
 
-  private static var contextCache: [String: Loci_Localcontext_LocalContext] = [:]
-  private static var fxCache: [String: [Loci_Localcontext_FxRate]] = [:]
   private static var cachedPlan: String?
 
   /// Offline pages (the design preview) never touch the network.
@@ -22,26 +22,20 @@ import Observation
 
   var isPro: Bool { ProGate.isPro(plan: plan) }
 
+  /// The phone's copy of the forecast and rates first, then the server.
   func loadContext(latitude: Double, longitude: Double) async {
-    let key = String(format: "%.3f,%.3f", latitude, longitude)
-    if let cached = Self.contextCache[key] {
-      localContext = cached
-      fxRates = Self.fxCache[key] ?? []
-      contextChecked = true
-      return
-    }
     guard !Self.isOffline else { contextChecked = true; return }
-    async let context = try? ResultsAPI.localContext(latitude: latitude, longitude: longitude)
-    async let fx = try? ResultsAPI.fxRates(latitude: latitude, longitude: longitude)
+    let key = LocalCache.key(latitude: latitude, longitude: longitude)
+    async let context = cacheThrough(Loci_Localcontext_LocalContext.self, kind: .localContext, id: key, onCached: { self.localContext = $0.value }) {
+      try await ResultsAPI.localContext(latitude: latitude, longitude: longitude)
+    }
+    async let fx = cacheThrough(Loci_Localcontext_GetFxRatesResponse.self, kind: .fx, id: key, onCached: { self.fxRates = $0.value.rates }) {
+      try await ResultsAPI.fxRates(latitude: latitude, longitude: longitude)
+    }
     let (loadedContext, loadedFx) = await (context, fx)
-    if let loadedContext {
-      localContext = loadedContext
-      Self.contextCache[key] = loadedContext
-    }
-    if let loadedFx {
-      fxRates = loadedFx.rates
-      Self.fxCache[key] = loadedFx.rates
-    }
+    if let value = loadedContext.value { localContext = value }
+    if let value = loadedFx.value { fxRates = value.rates }
+    contextLoaded = loadedContext
     contextChecked = true
   }
 

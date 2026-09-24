@@ -45,6 +45,7 @@ struct ResultsPage: View {
       if let message = state.failureMessage { FailureRail(message: message, canRetry: !state.query.isEmpty) { onRerun(state.query) } }
       ResultsHeader(city: state.cityData, fallbackCityName: state.cityName)
       LocalContextStrip(context: side.localContext, fxRates: side.fxRates)
+      CacheChip(loaded: side.contextLoaded)
       if state.status != .failed(state.failureMessage ?? "") || state.hasResult {
         StatusRail(state: state)
       }

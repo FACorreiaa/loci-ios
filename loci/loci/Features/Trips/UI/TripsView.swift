@@ -5,6 +5,7 @@ import SwiftUI
 /// Trips (web: /trips). TripService.ListTrips; rows open the editor (/trips/:id).
 public struct TripsView: View {
   @State private var trips: [Loci_Trip_TripDraft] = []
+  @State private var loaded: Loaded<Loci_Trip_ListTripsResponse>?
   @State private var isLoading = true
   @State private var error: String?
 
@@ -12,6 +13,12 @@ public struct TripsView: View {
 
   public var body: some View {
     List {
+      if let today = todayTrip {
+        Section { TodayBand(trip: today.trip, day: today.day) }.listRowBackground(Color.clear).listRowInsets(EdgeInsets())
+      }
+      if let loaded, loaded.staleSince != nil {
+        Section { CacheChip(loaded: loaded) }.listRowBackground(Color.clear)
+      }
       ForEach(trips, id: \.id) { trip in
         NavigationLink(value: trip.id) {
           VStack(alignment: .leading, spacing: 3) {
@@ -38,14 +45,28 @@ public struct TripsView: View {
     .task { await load() }
   }
 
+  /// The phone's copy first, then the server; offline keeps the copy and says so.
   private func load() async {
+    isLoading = trips.isEmpty
     var request = Loci_Trip_ListTripsRequest()
     request.pagination.page = 1
     request.pagination.pageSize = 50
-    do {
-      trips = try await rpc("Could not load your trips.", request) { await TripAPI.client.listTrips(request: $0, headers: [:]) }.trips
-    } catch { self.error = error.userMessage }
+    let sent = request
+    loaded = await cacheThrough(Loci_Trip_ListTripsResponse.self, kind: .trips, id: "all", onCached: { trips = $0.value.trips }) {
+      try await rpc("Could not load your trips.", sent) { await TripAPI.client.listTrips(request: $0, headers: [:]) }
+    }
+    if let value = loaded?.value { trips = value.trips } else if case .missing(let reason) = loaded { error = reason.userMessage }
+    if case .fresh = loaded { TripPrefetch.scheduleIfNeeded(trips: trips) }
     isLoading = false
+    await TripDayActivityController.shared.adoptIfRunning(trips: trips)
+  }
+
+  /// The first cached trip with a non-travel day dated today.
+  private var todayTrip: (trip: Loci_Trip_TripDraft, day: Loci_Trip_TripDay)? {
+    for trip in trips {
+      if let day = DayTimeline.today(in: trip) { return (trip, day) }
+    }
+    return nil
   }
 }
 

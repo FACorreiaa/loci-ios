@@ -73,6 +73,9 @@ import LociConnectProto
   public func logout() async {
     // Forget this phone's push token before the session that could ask is gone (web: AuthContext).
     await PushRegistration.shared.unregister()
+    // A signed-out phone keeps no one's trips: end the day's activity and drop the cache.
+    await TripDayActivityController.shared.end()
+    await LocalCache.shared.clear()
     if let rToken = try? await sessionManager.getRefreshToken(), !rToken.isEmpty {
       var req = Loci_Auth_LogoutRequest()
       req.refreshToken = rToken
