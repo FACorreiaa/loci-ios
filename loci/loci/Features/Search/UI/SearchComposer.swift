@@ -19,6 +19,9 @@ struct SearchComposer: View {
   var focusRequest = 0
   /// Told when the field gains or loses the cursor: the Muse header's "is listening".
   var onFocusChange: (Bool) -> Void = { _ in }
+  /// Offered the text before it becomes a search; returning true takes it
+  /// (a standing request goes to the standing-task card instead).
+  var intercept: ((String) -> Bool)?
   let onStarted: (SessionLink) -> Void
 
   enum Style { case standard, muse }
@@ -91,6 +94,10 @@ struct SearchComposer: View {
 
   private func send() {
     guard !text.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+    if let intercept, intercept(text) {
+      text = ""
+      return
+    }
     if isStreaming { confirmReplace = true } else { start() }
   }
 
