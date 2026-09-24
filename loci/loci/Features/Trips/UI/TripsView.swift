@@ -69,8 +69,3 @@ public struct TripsView: View {
     return nil
   }
 }
-
-/// The trip client, shared by the list, the editor and Compare's save.
-nonisolated enum TripAPI {
-  static let client = Loci_Trip_TripServiceClient(client: ConnectTransport.shared.protocolClient)
-}

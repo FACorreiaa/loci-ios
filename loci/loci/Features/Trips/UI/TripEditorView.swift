@@ -3,9 +3,16 @@ import LociConnectProto
 import SwiftProtobuf
 import SwiftUI
 
-/// The trip editor (web: /trips/:id). Every edit is one TripService RPC that
+/// The trip page (web: /trips/:id). Every edit is one TripService RPC that
 /// returns the new TripDraft, whose `version` is the next `baseVersion`, so a
-/// stale edit from another device is refused by the server rather than merged.
+/// stale edit from another device is refused by the server rather than merged;
+/// the refusal raises "This trip changed on another device" and a reload.
+///
+/// The page is split into its web components: `TripHero`,
+/// `TripPreferencesSection`, the days, `TripExportSection` and
+/// `TripChecklistsSection`. The trip is read cache-through (`LocalCache`,
+/// kind `.trip`): the phone's copy draws at once, GetTrip replaces it, and a
+/// copy the server could not confirm is shown read-only with the cache chip.
 struct TripEditorView: View {
   let tripID: String
 
@@ -16,10 +23,29 @@ struct TripEditorView: View {
   @State private var renameText = ""
   @State private var picking: PickerTarget?
   @State private var shareURL: URL?
-  @State private var exportedFile: URL?
-  @State private var packing: Loci_Trip_SuggestPackingResponse?
-  @State private var calendarStatus: String?
   @State private var error: String?
+  @State private var hasConflict = false
+  @State private var side = ResultsSideData()
+  @State private var checklist: TripChecklistStore
+  @State private var preferenceQueue: Task<Void, Never>?
+
+  /// Design previews pass a trip and a checklist and never touch the network.
+  private let isOffline: Bool
+  private let expandsPreferences: Bool
+
+  init(
+    tripID: String,
+    trip: Loci_Trip_TripDraft? = nil,
+    checklist: TripChecklistStore? = nil,
+    isOffline: Bool = false,
+    expandsPreferences: Bool = false
+  ) {
+    self.tripID = tripID
+    self.isOffline = isOffline
+    self.expandsPreferences = expandsPreferences
+    _trip = State(initialValue: trip)
+    _checklist = State(initialValue: checklist ?? TripChecklistStore(tripID: tripID))
+  }
 
   enum PickerTarget: Identifiable {
     case add(dayID: String)
@@ -37,10 +63,24 @@ struct TripEditorView: View {
     Group {
       if let trip {
         List {
-          constraintsSection(trip)
+          Section {
+            TripHero(trip: trip)
+              .listRowInsets(EdgeInsets())
+              .listRowBackground(Color.clear)
+          }
+          if let loaded, loaded.staleSince != nil {
+            Section {
+              CacheChip(loaded: loaded)
+              if !canEdit { Text("Connect to edit").lociCoordStyle(10) }
+            }
+            .listRowBackground(Color.clear)
+          }
+          TripPreferencesSection(constraints: trip.constraints, startsExpanded: expandsPreferences) { setPreference($0) }
+            .disabled(!canEdit)
           ForEach(trip.days, id: \.id) { day in daySection(day, trip: trip) }
           if !trip.legs.isEmpty { legsSection(trip.legs) }
-          toolsSection(trip)
+          TripExportSection(trip: trip, isPro: side.isPro)
+          TripChecklistsSection(store: checklist)
         }
       } else {
         ProgressView()
@@ -64,6 +104,11 @@ struct TripEditorView: View {
       Button("Cancel", role: .cancel) {}
       Button("Save") { if let stop = renaming { Task { await rename(stop, to: renameText) } } }
     }
+    .alert("This trip changed on another device", isPresented: $hasConflict) {
+      Button("Reload") { Task { await reload() } }
+    } message: {
+      Text("Your last change wasn't saved. Reload to see the latest version, then try again.")
+    }
     .sheet(item: $picking) { target in
       PlacePicker(cityName: trip?.cityName ?? "") { poi in
         Task {
@@ -79,21 +124,6 @@ struct TripEditorView: View {
   }
 
   // MARK: - Sections
-
-  private func constraintsSection(_ trip: Loci_Trip_TripDraft) -> some View {
-    Section("Pace") {
-      if let loaded, loaded.staleSince != nil {
-        CacheChip(loaded: loaded)
-        if !canEdit { Text("Connect to edit").lociCoordStyle(10) }
-      }
-      Picker("Pace", selection: Binding(get: { trip.constraints.pace }, set: { pace in Task { await setPace(pace) } })) {
-        Text("Relaxed").tag(Loci_Trip_TripPace.relaxed)
-        Text("Moderate").tag(Loci_Trip_TripPace.moderate)
-        Text("Packed").tag(Loci_Trip_TripPace.packed)
-      }
-      .pickerStyle(.segmented)
-    }
-  }
 
   private func daySection(_ day: Loci_Trip_TripDay, trip: Loci_Trip_TripDraft) -> some View {
     Section {
@@ -133,7 +163,7 @@ struct TripEditorView: View {
           Spacer()
           TodayControls(trip: trip, day: day).textCase(nil)
         }
-        if day.hasDate { Spacer(); Text(day.date.date, style: .date) }
+        if let date = DayTimeline.localMidnight(of: day) { Spacer(); Text(date, style: .date) }
       }
     }
   }
@@ -149,32 +179,20 @@ struct TripEditorView: View {
     }
   }
 
-  private func toolsSection(_ trip: Loci_Trip_TripDraft) -> some View {
-    Section("Take it with you") {
-      Button("Add to Apple Calendar", systemImage: "calendar.badge.plus") { Task { await addToCalendar(trip) } }
-      if let calendarStatus { Text(calendarStatus).font(.lociCaption()).foregroundStyle(Color.lociMutedInk) }
-      Menu {
-        Button("Calendar file (.ics)") { Task { await export(.ics) } }
-        Button("PDF") { Task { await export(.pdf) } }
-        Button("Markdown") { Task { await export(.markdown) } }
-      } label: {
-        Label("Export", systemImage: "arrow.down.doc")
-      }
-      if let exportedFile { ShareLink(item: exportedFile) { Label("Share the export", systemImage: "square.and.arrow.up") } }
-      Button("What to pack", systemImage: "backpack") { Task { await suggestPacking() } }
-      if let packing {
-        ForEach(packing.suggestions, id: \.text) { item in
-          Label(item.text, systemImage: item.essential ? "checkmark.seal" : "circle").font(.lociCaption())
-        }
-        if packing.weatherIsEstimated { Text("Based on typical weather, not a forecast.").font(.lociCaption()).foregroundStyle(Color.lociMutedInk) }
-      }
-    }
+  // MARK: - Loading
+
+  /// The phone's copy first, then the server, the plan and the checklists
+  /// together. Offline keeps the copy, read-only.
+  private func load() async {
+    guard !isOffline else { return }
+    async let plan: Void = side.loadPlan()
+    async let lists: Void = checklist.load()
+    await reload()
+    _ = await (plan, lists)
   }
 
-  // MARK: - RPCs
-
-  /// The phone's copy first, then the server. Offline keeps the copy, read-only.
-  private func load() async {
+  /// GetTrip through the cache; also what the conflict alert's Reload runs.
+  private func reload() async {
     var request = Loci_Trip_GetTripRequest()
     request.tripID = tripID
     let sent = request
@@ -192,18 +210,53 @@ struct TripEditorView: View {
     }
   }
 
-  /// Run an edit and adopt the trip the server returns; the copy follows it.
+  /// Take the server's trip as the new truth; the copy follows it.
+  private func adopt(_ next: Loci_Trip_TripDraft) async {
+    trip = next
+    loaded = .fresh(next)
+    guard !isOffline else { return }
+    try? await LocalCache.shared.put(next, kind: .trip, id: tripID)
+  }
+
+  // MARK: - Edits
+
+  /// Run an edit and adopt the trip the server returns; a stale `baseVersion`
+  /// raises the conflict alert instead of a generic error.
   private func apply<Input: Sendable>(
     _ fallback: String,
     _ request: Input,
     _ call: @escaping @Sendable (Input) async -> ResponseMessage<Loci_Trip_TripDraft>
   ) async {
     do {
-      let draft = try await rpc(fallback, request, call)
-      trip = draft
-      loaded = .fresh(draft)
-      try? await LocalCache.shared.put(draft, kind: .trip, id: tripID)
-    } catch { self.error = error.userMessage }
+      let next = try await TripAPI.call(fallback, request, call)
+      await adopt(next)
+    } catch {
+      if error.isVersionConflict {
+        hasConflict = true
+      } else if !error.isCancelled {
+        self.error = error.message
+      }
+    }
+  }
+
+  /// Preference edits run one after another: each needs the `version` the
+  /// previous one returned, or the second would be refused as a conflict.
+  private func setPreference(_ patch: PreferencePatch) {
+    let previous = preferenceQueue
+    preferenceQueue = Task {
+      await previous?.value
+      await sendPreference(patch)
+    }
+  }
+
+  private func sendPreference(_ patch: PreferencePatch) async {
+    guard let trip else { return }
+    var request = Loci_Trip_SetConstraintRequest()
+    request.tripID = trip.id
+    request.constraints = TripFormat.merged(trip.constraints, with: patch)
+    request.baseVersion = trip.version
+    guard request.constraints != trip.constraints else { return }
+    await apply("Could not save the trip preferences.", request) { await TripAPI.client.setConstraint(request: $0, headers: [:]) }
   }
 
   private func reorder(_ day: Loci_Trip_TripDay, ids: [String]) async {
@@ -237,16 +290,6 @@ struct TripEditorView: View {
     await apply("Could not change the duration.", request) { await TripAPI.client.editStopDuration(request: $0, headers: [:]) }
   }
 
-  private func setPace(_ pace: Loci_Trip_TripPace) async {
-    guard let trip else { return }
-    var request = Loci_Trip_SetConstraintRequest()
-    request.tripID = trip.id
-    request.constraints = trip.constraints
-    request.constraints.pace = pace
-    request.baseVersion = trip.version
-    await apply("Could not change the pace.", request) { await TripAPI.client.setConstraint(request: $0, headers: [:]) }
-  }
-
   /// web: routes/trips/[id].tsx addStop
   private func add(_ poi: Loci_Poi_POIDetailedInfo, toDay dayID: String) async {
     guard let trip, let day = trip.days.first(where: { $0.id == dayID }) else { return }
@@ -268,7 +311,7 @@ struct TripEditorView: View {
     await apply("Could not replace the place.", request) { await TripAPI.client.replaceStop(request: $0, headers: [:]) }
   }
 
-  private static func stop(from poi: Loci_Poi_POIDetailedInfo, orderIndex: Int) -> Loci_Trip_TripStop {
+  static func stop(from poi: Loci_Poi_POIDetailedInfo, orderIndex: Int) -> Loci_Trip_TripStop {
     var stop = Loci_Trip_TripStop()
     stop.id = UUID().uuidString.lowercased()
     stop.poiID = poi.id
@@ -288,128 +331,14 @@ struct TripEditorView: View {
     await apply("Could not remove the stop.", request) { await TripAPI.client.removeStop(request: $0, headers: [:]) }
   }
 
+  /// web: routes/trips/[id].tsx share, which also sends share_link_created.
   private func share() async {
-    var request = Loci_Trip_ShareTripRequest()
-    request.tripID = tripID
-    request.isPublic = true
     do {
-      let response = try await rpc("Could not create a share link.", request) { await TripAPI.client.shareTrip(request: $0, headers: [:]) }
+      let response = try await TripAPI.share(tripID: tripID)
       shareURL = URL(string: response.shareURL)
-    } catch { self.error = error.userMessage }
-  }
-
-  private func export(_ format: Loci_Trip_ExportFormat) async {
-    var request = Loci_Trip_ExportTripRequest()
-    request.tripID = tripID
-    request.format = format
-    do {
-      let response = try await rpc("Could not export the trip.", request) { await TripAPI.client.exportTrip(request: $0, headers: [:]) }
-      let name = response.filename.isEmpty ? "trip.\(format == .ics ? "ics" : format == .pdf ? "pdf" : "md")" : response.filename
-      let url = FileManager.default.temporaryDirectory.appending(path: name)
-      try response.data.write(to: url, options: .atomic)
-      exportedFile = url
-    } catch { self.error = error.userMessage }
-  }
-
-  private func suggestPacking() async {
-    var request = Loci_Trip_SuggestPackingRequest()
-    request.tripID = tripID
-    do {
-      packing = try await rpc("Could not suggest packing.", request) { await TripAPI.client.suggestPacking(request: $0, headers: [:]) }
-    } catch { self.error = error.userMessage }
-  }
-
-  private func addToCalendar(_ trip: Loci_Trip_TripDraft) async {
-    do {
-      guard try await AppleCalendar.shared.requestAccess() else {
-        calendarStatus = "Calendar access is off in Settings."
-        return
-      }
-      try AppleCalendar.shared.writeTrip(trip)
-      calendarStatus = "Added to the Loci calendar on this iPhone."
-    } catch { self.error = error.userMessage }
-  }
-}
-
-struct StopRow: View {
-  let stop: Loci_Trip_TripStop
-  let color: Color
-  let isEditing: Bool
-  let onDuration: (Int) -> Void
-
-  var body: some View {
-    HStack(alignment: .top, spacing: 12) {
-      Text("\(stop.orderIndex + 1)").lociCoordStyle(11).frame(width: 20)
-      VStack(alignment: .leading, spacing: 3) {
-        Text(stop.name).font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
-        if !stop.notes.isEmpty { Text(stop.notes).font(.lociCaption()).foregroundStyle(Color.lociMutedInk).lineLimit(2) }
-        if isEditing {
-          Stepper(
-            "\(stop.hasDurationMinutes ? Int(stop.durationMinutes) : 60) min",
-            value: Binding(get: { stop.hasDurationMinutes ? Int(stop.durationMinutes) : 60 }, set: onDuration),
-            in: 15...480,
-            step: 15
-          ).font(.lociCaption())
-        } else if stop.hasDurationMinutes {
-          Text("\(stop.durationMinutes) min").lociCoordStyle(10)
-        }
-      }
+      Analytics.capture(.shareLinkCreated, ["content_type": "trip"])
+    } catch {
+      if !error.isCancelled { self.error = error.message }
     }
-    .listRowBackground(Color.lociCard)
-  }
-}
-
-/// Search canonical places in the trip's city (web: PlacePicker →
-/// PoiService.SearchPOI{query, cityName, searchType: "semantic"}).
-struct PlacePicker: View {
-  let cityName: String
-  let onSelect: (Loci_Poi_POIDetailedInfo) -> Void
-
-  @Environment(\.dismiss) private var dismiss
-  @State private var query = ""
-  @State private var results: [Loci_Poi_POIDetailedInfo] = []
-  @State private var isSearching = false
-  @State private var error: String?
-
-  var body: some View {
-    NavigationStack {
-      List {
-        ForEach(results, id: \.stableID) { poi in
-          Button {
-            onSelect(poi)
-            dismiss()
-          } label: {
-            VStack(alignment: .leading, spacing: 2) {
-              Text(poi.name).foregroundStyle(Color.lociInk)
-              if !poi.category.isEmpty { Text(poi.category).lociCoordStyle(10) }
-            }
-          }
-        }
-      }
-      .overlay { if isSearching { ProgressView() } }
-      .searchable(text: $query, prompt: cityName.isEmpty ? "Search places" : "Search places in \(cityName)")
-      .onSubmit(of: .search) { Task { await search() } }
-      .navigationTitle("Add a place").navigationBarTitleDisplayMode(.inline)
-      .toolbar { Button("Cancel") { dismiss() } }
-      .errorAlert($error)
-    }
-  }
-
-  private func search() async {
-    let text = query.trimmingCharacters(in: .whitespaces)
-    guard !text.isEmpty else { return }
-    isSearching = true
-    defer { isSearching = false }
-    var request = Loci_Poi_SearchPOIRequest()
-    request.query = text
-    request.cityName = cityName
-    request.searchType = "semantic"
-    do {
-      results = Array(
-        try await rpc("Search failed.", request) {
-          await Loci_Poi_PoiserviceClient(client: ConnectTransport.shared.protocolClient).searchPoi(request: $0, headers: [:])
-        }.pois.prefix(6)
-      )
-    } catch { self.error = error.userMessage }
   }
 }

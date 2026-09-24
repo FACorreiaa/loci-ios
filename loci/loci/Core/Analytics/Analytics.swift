@@ -21,6 +21,10 @@ enum AnalyticsEvent: String {
   /// A review was posted or edited (`rating`, `is_edit`); web sends the same
   /// name from its reviews page. Metric: contributions per active user.
   case reviewSubmitted = "review_submitted"
+  /// A trip export reached the share sheet. Properties: format (ics|pdf|markdown), day_count.
+  case tripExported = "trip_exported"
+  /// ShareTrip returned a public link. Properties: content_type ("trip").
+  case shareLinkCreated = "share_link_created"
 }
 
 @MainActor enum Analytics {
