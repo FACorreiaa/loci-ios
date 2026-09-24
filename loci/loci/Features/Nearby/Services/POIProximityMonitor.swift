@@ -12,6 +12,16 @@ import UserNotifications
   nonisolated static let maxConditions = 20
   nonisolated static let radiusMeters: CLLocationDistance = 60
 
+  /// Each CLMonitor name keeps its own conditions, so the Near me walk and a
+  /// trip day do not clear each other's fences.
+  private let name: String
+  /// Called with the place's `stableID` on arrival, besides the notification.
+  var onArrive: ((String) -> Void)?
+
+  init(name: String = "loci-nearby-walk") {
+    self.name = name
+  }
+
   private var monitor: CLMonitor?
   private var eventsTask: Task<Void, Never>?
   private var names: [String: String] = [:]
@@ -19,7 +29,7 @@ import UserNotifications
 
   /// Fence the `maxConditions` places nearest to `origin`.
   func arm(places: [Loci_Poi_POIDetailedInfo], from origin: CLLocationCoordinate2D?) async {
-    if monitor == nil { monitor = await CLMonitor("loci-nearby-walk") }
+    if monitor == nil { monitor = await CLMonitor(name) }
     guard let monitor else { return }
     let chosen = Self.select(places: places, from: origin)
 
@@ -71,6 +81,7 @@ import UserNotifications
   }
 
   private func arrived(at identifier: String) async {
+    onArrive?(identifier)
     guard notified.insert(identifier).inserted, let name = names[identifier] else { return }
     let content = UNMutableNotificationContent()
     content.title = "You're near \(name)"
