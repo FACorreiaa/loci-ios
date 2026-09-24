@@ -11,12 +11,12 @@
 # what makes a Release fail with "Provisioning profile doesn't include the
 # X capability"; after this, dispatch seed-signing so match regenerates the
 # profiles, then rerun the release. Reads ASC_KEY_ID / ASC_ISSUER_ID /
-# ASC_KEY_P8 (base64) from loci/fastlane/.env.
+# ASC_KEY_P8 (base64) from loci/fastlane/.env, or the file LOCI_FASTLANE_ENV names.
 
 require "base64"
 require "spaceship"
 
-ENV_FILE = File.expand_path("../loci/fastlane/.env", __dir__)
+ENV_FILE = ENV.fetch("LOCI_FASTLANE_ENV", File.expand_path("../loci/fastlane/.env", __dir__))
 BUNDLE_IDS = %w[com.fernandocorreia.loci com.fernandocorreia.loci.beta].freeze
 
 def load_env(path)
@@ -39,13 +39,18 @@ Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(
 )
 
 BUNDLE_IDS.each do |identifier|
-  bundle = Spaceship::ConnectAPI::BundleId.find(identifier)
+  bundle = Spaceship::ConnectAPI::BundleId.find(identifier, includes: "bundleIdCapabilities")
   abort "#{identifier}: not found" unless bundle
-  existing = bundle.bundle_id_capabilities.map(&:capability_type)
+  existing = (bundle.bundle_id_capabilities || []).map(&:capability_type)
   if existing.include?(type)
     puts "#{identifier}: #{capability} already on"
     next
   end
-  bundle.create_capability(type, settings: settings)
-  puts "#{identifier}: #{capability} enabled"
+  begin
+    bundle.create_capability(type, settings: settings)
+    puts "#{identifier}: #{capability} enabled"
+  rescue Spaceship::UnexpectedResponse => e
+    raise unless e.message.include?("already")
+    puts "#{identifier}: #{capability} already on"
+  end
 end
