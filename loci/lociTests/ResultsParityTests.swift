@@ -1,7 +1,7 @@
 import Foundation
+import LociConnectProto
 import MapKit
 import SwiftUI
-import LociConnectProto
 import Testing
 
 @testable import loci
@@ -77,7 +77,9 @@ struct ResultsParityTests {
   }
 
   @MainActor @Test func flyoverStartsAtDayOnesFirstPin() {
-    let data = mapData([stop("B", day: 2, lat: 41.9, lon: 12.47), stop("A", day: 1, lat: 41.89, lon: 12.49), stop("C", day: 1, lat: 41.88, lon: 12.48)])
+    let data = mapData([
+      stop("B", day: 2, lat: 41.9, lon: 12.47), stop("A", day: 1, lat: 41.89, lon: 12.49), stop("C", day: 1, lat: 41.88, lon: 12.48),
+    ])
     #expect(data.flyoverStart?.name == "A")
   }
 
