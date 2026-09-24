@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The page an `AppLink` opens, pushed by the tab that owns it
-/// (`AppRouter.tab(for:)`). Trips and Recents are real; the rest are placeholders until
+/// (`AppRouter.tab(for:)`). Trips, Recents and Lists are real; the rest are placeholders until
 /// their phase of the parity plan lands (`docs/ios/14-you-hub-and-app-links.md`).
 struct AppLinkDestination: View {
   let link: AppLink
@@ -9,7 +9,7 @@ struct AppLinkDestination: View {
   var body: some View {
     switch link {
     case .trip(let id): TripEditorView(tripID: id)
-    case .list: ComingSoonView(title: "List", systemImage: YouDestination.lists.systemImage)
+    case .list(let id): ListDetailView(listID: id)
     case .pack: ComingSoonView(title: "City Pack", systemImage: ComingSoonView.packSymbol)
     case .recents: YouDestination.recents.screen
     case .contribute: YouDestination.contribute.screen
@@ -33,7 +33,7 @@ struct ComingSoonView: View {
   }
 }
 
-/// The placeholder on its own, for a screen that shows it inside itself (Saved's Lists segment).
+/// The placeholder on its own, for a screen that shows it inside itself.
 struct ComingSoonPlaceholder: View {
   let title: String
   let systemImage: String

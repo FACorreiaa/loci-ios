@@ -235,6 +235,8 @@ loci/loci
 │   ├── Chat/                        MuseActivity, MuseChatHeader (+ bubbles, ring, scrim), AssistantView
 │   ├── Compare/UI/CompareView.swift
 │   ├── Discover/                    DiscoverView, HereBriefSection, InSeasonBand, SeasonalPicks
+│   ├── Lists/                       Model (LociList, ListPayload, EntitlementLimit), Services (ListsAPI + ListsService),
+│   │                                UI (ListsView/ListsRows, ListDetailView, AddToListSheet, ListsStore)
 │   ├── Main/UI/MainTabView.swift    the five tabs
 │   ├── Nearby/                      NearbyView, NearbyWalk, POIProximityMonitor
 │   ├── Profile/UI/                  ProfileView, YouSection (the You hub), NotificationSettingsView
@@ -1455,6 +1457,7 @@ All unit tests are Swift Testing (`import Testing`, `@Test`, `#expect`,
 | `loci/lociTests/RecentsBucketsTests.swift` | Mirrors web's `day-buckets.test.ts`: local-midnight boundaries, group order, undated rows, `relativeTime` steps |
 | `loci/lociTests/ActivityMappingTests.swift` | Proto → feed entry (kind, detail defaults), prompt-wrapper unwrapping, paging (`hasMore`, the 200 cap), chip counts and filters, badges, city `extractMessage`, activity level, city sort tiebreak |
 | `loci/lociTests/ActivityDestinationTests.swift` | Mirrors web's `activity-link.test.ts`: domain → page, message/session/city carried, nearby, kept trips, favourites by kind; saved-itinerary lookup |
+| `loci/lociTests/ListPayloadTests.swift` | Every ListService request builder (trim, real city ids only, domain → content type, name-keyed places refused, trace passed, description capped), web's entitlement classifier (header, message fallback, PermissionDenied only, copy with no purchase pitch), tab filter and counts, store create/limit/delete and create-then-add |
 | `loci/lociTests/AppLinkTests.swift` | `AppLink` parsing for every route and its rejections, SessionLink parsed first, the tab that owns each link and `takeLink` clearing it once |
 | `loci/lociTests/ParityPayloadTests.swift` | Nearby sentence byte-for-byte, default weekend, `allPlaces` dedup |
 | `loci/lociTests/SettingsPayloadTests.swift` | Empty-string omission in profile updates, web defaults on a new travel profile, ids and full lists on update, Telegram deep link |

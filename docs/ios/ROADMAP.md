@@ -44,8 +44,8 @@ Web's signed-in pages that have no iOS screen. Five tabs stay; Profile becomes t
 | # | Phase | Note | PR |
 |---|---|---|---|
 | 0 | You hub, Saved Lists segment, City Packs entry, `AppLink` deep links | `14-you-hub-and-app-links.md` | #28 |
-| 1 | Recents (feed, cities, day buckets) | `15-recents.md` | this PR |
-| 2 | Lists (list detail, add to list, entitlement sheet) | | |
+| 1 | Recents (feed, cities, day buckets) | `15-recents.md` | #30 |
+| 2 | Lists (list detail, add to list, entitlement sheet); blocked on server gaps, see the note | `16-lists.md` | this PR |
 | 3 | Trip extras: server-synced checklists (proto + api), preferences, export, add to trip | | |
 | 4 | City Packs (browse, detail, claim; no purchase on iOS) | | |
 | 5 | Reviews, place-centric (server check first) | | |
