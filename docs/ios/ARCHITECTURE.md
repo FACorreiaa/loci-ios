@@ -259,7 +259,7 @@ process-wide singletons. There is no dependency-injection container.
 | `ConnectTransport.shared` | `Core/Network/ConnectTransport.swift` | The one authenticated `ProtocolClient` every generated client wraps |
 | `AuthTokenProvider.shared` | `Core/Network/AuthTokenProvider.swift` | Access-token reads and the single-flight refresh (an `actor`) |
 | `AuthSessionManager.shared` | `Features/Auth/Services/AuthSessionManager.swift` | Keychain writes, `currentUserID`, the sign-in/sign-out notifications |
-| `AppRouter.shared` | `Core/Routing/AppRouter.swift` | Selected tab, the pending `SessionLink` from a deep link or notification tap |
+| `AppRouter.shared` | `Core/Routing/AppRouter.swift` | Selected tab, the pending `SessionLink` from a deep link or notification tap, and the pending `AppLink` (`/lists`, `/packs`, `/trips`, `/recents`, `/contribute`) its owning tab takes (`14-you-hub-and-app-links.md`) |
 | `SearchSessionController.shared` | `Features/Search/SearchSessionController.swift` | The one running search, its envelope and its result copy |
 | `PushNotificationManager.shared` | `Core/Notifications/PushNotificationManager.swift` | `UNUserNotificationCenterDelegate`, authorisation, APNs device token |
 | `NearbyWalk.shared` | `Features/Nearby/Services/NearbyWalk.swift` | The active walk and its Live Activity |
@@ -1450,6 +1450,7 @@ All unit tests are Swift Testing (`import Testing`, `@Test`, `#expect`,
 | `loci/lociTests/ResultsParityTests.swift` | Day grouping (server days, chunks of four, extras, sequence), share text shape, Google Maps URL (coordinates, 8 waypoints, name fallback), calendar timing, Pro gate, reducer partial failure and `load_from_session`, list restore incl. pre-v5.22 fallback, image choice, meta line |
 | `loci/lociTests/MuseActivityTests.swift` | Every status → mood/copy case, flash rules (stop is not a snag, opening a finished search earns nothing), `stagePhrase`, a full stream walk-through |
 | `loci/lociTests/SessionLinkTests.swift` | Deep link parsing for every route, rejects `oauth2redirect` and incomplete links, URL/userInfo round trip, domain → destination map |
+| `loci/lociTests/AppLinkTests.swift` | `AppLink` parsing for every route and its rejections, SessionLink parsed first, the tab that owns each link and `takeLink` clearing it once |
 | `loci/lociTests/ParityPayloadTests.swift` | Nearby sentence byte-for-byte, default weekend, `allPlaces` dedup |
 | `loci/lociTests/SettingsPayloadTests.swift` | Empty-string omission in profile updates, web defaults on a new travel profile, ids and full lists on update, Telegram deep link |
 | `loci/lociTests/InSeasonTests.swift` | Mirrors web's `in-season.test.ts`: merge order, cap, no repeated ids, loop duration, marquee threshold, flags |
