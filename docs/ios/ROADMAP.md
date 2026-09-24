@@ -30,8 +30,8 @@ Done when a device build can sign in, search, stream, map, edit a trip and resum
 
 ## Phase 2 — iOS-native superpowers
 1. ~~APNs search-complete + Universal Links (associated domain on lociai.fyi)~~ — done in `13-push-and-universal-links.md` (Phase 2A: proto v5.25.0, api #77, client #70, infra #190).
-2. Offline: SwiftData cache for trips, stops and saved places; `BGAppRefreshTask` for weather, FX and alerts before a trip day.
-3. Live Activities / Dynamic Island for an active trip day: current stop, time left, next stop, "closes in 45m".
+2. ~~Offline: cache for trips, stops and saved places; `BGAppRefreshTask` for weather, FX and alerts before a trip day.~~ — done in `14-offline-trip-day.md` (Phase 2B; serialized protos on disk, not SwiftData; read-only).
+3. ~~Live Activities / Dynamic Island for an active trip day: current stop, time left, next stop.~~ — done in `14-offline-trip-day.md` (Phase 2B; schedule-driven, you start it; "closes in 45m" needs opening hours on the stop and is not there yet).
 4. Widgets: next stop, destination GoScore, trip countdown.
 5. Voice: mic → `SpeechService.Transcribe` → user confirms the text → StreamChat.
 6. StoreKit 2 / Pro, if not already done.

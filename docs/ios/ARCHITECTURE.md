@@ -1594,8 +1594,14 @@ granted and denied.
 
 **Phase 2 items that already exist.** The Near me walk with `CMPedometer`,
 `CLMonitor` fences and the Live Activity (`NearbyWalkWidget`) is roadmap
-items 3 and 8 in their smallest form. The `BGAppRefreshTask` used for search
-reconcile is the mechanism item 2 needs for offline refresh.
+item 8 in its smallest form. Items 2 and 3 shipped as Phase 2B
+(`14-offline-trip-day.md`): `Core/Cache/LocalCache.swift` keeps serialized
+protos on disk and `cacheThrough` (`Core/Cache/Loaded.swift`) makes the
+Trips, editor, Saved and forecast loaders render the copy first and keep it
+offline; `TripPrefetch` refreshes the next trip day in the background;
+`Features/Trips/Model/DayTimeline.swift` turns a day into timed slots and
+`TripDayActivityController` runs them as a Live Activity drawn by
+`NearbyWalkWidget/TripDayLiveActivity.swift`.
 
 **What the server still owes, and what iOS has not adopted.**
 
@@ -1647,6 +1653,11 @@ Read in this order; each line says what to look for.
    retry.
 10. `loci/loci/Features/Search/UI/SearchResultsView.swift` then
     `Results/ResultsPage.swift`: live vs restored state, and the page order.
+11a. `loci/loci/Core/Cache/LocalCache.swift` and `Core/Cache/Loaded.swift`: the
+    disposable proto cache and the one loading dance every offline page uses.
+11b. `loci/loci/Features/Trips/Model/DayTimeline.swift` then
+    `Features/Trips/Services/TripDayActivityController.swift`: a day as
+    slots, and how the schedule, Next and a geofence share one index.
 11. `loci/loci/Features/Search/Model/DayGrouping.swift`: the pure rules ported
     from web (`trip-kit.ts`, `share.ts`, `subscription.ts`).
 12. `loci/loci/Features/Chat/MuseActivity.swift` and `UI/MuseChatHeader.swift`:
