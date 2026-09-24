@@ -21,11 +21,16 @@ public enum LociTheme {
   public static let reducedFade = Animation.easeOut(duration: 0.2)
 
   /// Map day colours, in order (day 1 first). Cycle past day 8.
-  public static let dayColors: [Color] = [0x294D3C, 0x5A7A55, 0xC76B4A, 0x8A6E2F, 0x3D5A4A, 0xA85A3A, 0x6B8F71, 0xD4845C].map { Color(hex: $0) }
+  /// Web's `LOCI_DAY_COLORS` (loci-client/src/lib/theme-colors.ts), same order
+  /// and the same indexing: the server's 1-based day picks `dayColors[day % 8]`,
+  /// so Day 1 is pine teal on both, and a one-day list (day 0) is coral.
+  public static let dayColors: [Color] = [0xE2664A, 0x2F7D6E, 0xB07A2A, 0x7A5CA8, 0x4A7CB0, 0x8C6248, 0x5E8C3A, 0xA34F72].map { Color(hex: $0) }
   public static let clusterColor = Color(hex: 0x294D3C)
-  public static let ungroupedColor = Color(hex: 0x6B7C72)
+  public static let ungroupedColor = Color(hex: 0x6E7A82)
 
-  public static func dayColor(_ day: Int) -> Color { dayColors[max(day - 1, 0) % dayColors.count] }
+  public static func dayColor(_ day: Int) -> Color { dayColors[max(day, 0) % dayColors.count] }
+  /// Web's `colorForMapDay(0)`: the pins and stamps of a list that has no days.
+  public static var listColor: Color { dayColor(0) }
   /// Text on a day-coloured stamp or pin: the light paper in both schemes, since the stamps stay dark.
   public static let stampInk = Color(hex: 0xF5F0E6)
 
