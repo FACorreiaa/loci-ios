@@ -22,6 +22,9 @@ nonisolated struct SearchEnvelope: Codable, Equatable, Sendable {
   var stops: [StopInput]?
   /// Let the server reorder `stops` into a sensible route.
   var suggestOrder: Bool?
+  /// A multi-city search's route (serialized RoutePayload), kept so a resume
+  /// after it still knows the cities.
+  var routeData: Data?
 }
 
 /// One city of a multi-city search, as the stop builder hands it over.

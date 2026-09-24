@@ -207,6 +207,11 @@ nonisolated extension SearchState {
       return .failed(message: error.userMessage, retryable: error.retryable)
     case .complete(let complete):
       if !complete.sessionID.isEmpty { sessionId = complete.sessionID }
+      // A city still planning when the search completes never will: its
+      // error may have been lost with its own deadline.
+      for i in stops.indices where stops[i].error == nil && !stops[i].state.hasResult {
+        stops[i].error = "We couldn't plan \(stops[i].cityName) this time."
+      }
       if complete.hasResult, complete.result.hasContent, destination == .itinerary || itinerary == nil {
         adopt(complete.result)
       }
@@ -246,8 +251,12 @@ nonisolated extension SearchState {
     inner.clearStopIndex()
     inner.eventID = ""  // already de-duplicated by the search
     stops[i].state.apply(inner)
-    // The first city stands in for the flat fields, so every existing view has something.
-    if i == 0 { adoptFirstStop(stops[0].state) }
+    // The first city with a result stands in for the flat fields, so every
+    // existing view — and Save and Share — has something even if an earlier
+    // city failed.
+    if let first = stops.first(where: { $0.error == nil && $0.state.hasResult }), first.index == stops[i].index {
+      adoptFirstStop(first.state)
+    }
     return true
   }
 

@@ -35,13 +35,17 @@ nonisolated struct ChatStreamClient: Sendable {
     }
   }
 
+  /// What this app can render, sent on every stream. Without "multi-city" the
+  /// server keeps free text naming several cities to one (chat_handler.go featuresHeader).
+  nonisolated static let features: [String: [String]] = ["Loci-Features": ["multi-city"]]
+
   private enum Outcome { case finished, unauthenticatedBeforeFirstEvent }
 
   private func run(
     _ request: Loci_Chat_ChatRequest,
     into continuation: AsyncThrowingStream<Loci_Chat_StreamEvent, Error>.Continuation
   ) async throws -> Outcome {
-    let stream = client.streamChat(headers: [:])
+    let stream = client.streamChat(headers: Self.features)
     try stream.send(request)
     var sawEvent = false
     return try await withTaskCancellationHandler {

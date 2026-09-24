@@ -1,5 +1,6 @@
 import Foundation
 import LociConnectProto
+import SwiftProtobuf
 import Testing
 
 @testable import loci
@@ -193,5 +194,64 @@ struct MultiCitySnapshotTests {
     #expect(back.stops[1].state.itinerary?.itineraryResponse.pointsOfInterest.first?.name == "Ribeira")
     #expect(back.stops[0].state.itinerary?.itineraryResponse.pointsOfInterest.first?.name == "Belém")
     #expect(back.route?.tripID == "t1")
+  }
+}
+
+@Suite("Multi-city review fixes")
+struct MultiCityReviewFixTests {
+  let lisbonPorto = [RouteCity(name: "Lisbon", session: "s0", days: [1]), RouteCity(name: "Porto", session: "s1", days: [2])]
+
+  /// Review #2: a city still planning when the search completes never will.
+  @Test func unfinishedCitiesFailOnComplete() {
+    var state = SearchState()
+    state.apply(Events.start("s0", domain: .itinerary))
+    state.apply(MultiEvents.route(lisbonPorto))
+    state.apply(MultiEvents.itinerary(stop: 0, city: "Lisbon", ["Belém"], id: "i0"))
+    state.apply(Events.complete("s0", id: "c0"))
+    #expect(state.stops[0].error == nil)
+    #expect(state.stops[1].error != nil)
+  }
+
+  /// Review #9: the first city failing must not hide Save and Share.
+  @Test func aLaterCityStandsInWhenTheFirstFailed() {
+    var state = SearchState()
+    state.apply(Events.start("s0", domain: .itinerary))
+    state.apply(MultiEvents.route(lisbonPorto))
+    state.apply(MultiEvents.error(stop: 0, "Lisbon failed", id: "x0"))
+    state.apply(MultiEvents.itinerary(stop: 1, city: "Porto", ["Ribeira"], id: "i1"))
+    #expect(state.hasResult)
+  }
+
+  /// Review #5: a relaunch mid-run resumes after the ROUTE; the envelope keeps it.
+  @MainActor @Test func aResumedSearchKnowsItsCities() throws {
+    var state = SearchState()
+    state.apply(MultiEvents.route(lisbonPorto))
+    var env = SearchEnvelope(
+      sessionId: "s0",
+      requestId: "r",
+      profileId: nil,
+      lastEventId: "r0",
+      query: "trip",
+      cityName: nil,
+      domain: "itinerary",
+      latitude: nil,
+      longitude: nil,
+      startedAt: .now,
+      finished: false,
+      notified: false
+    )
+    env.routeData = try state.route?.serializedData()
+    let resumed = SearchSessionController.placeholder(from: env)
+    #expect(resumed.isMultiCity)
+    #expect(resumed.stops.map(\.cityName) == ["Lisbon", "Porto"])
+  }
+
+  @Test func theServerHearsWeRenderMultiCity() {
+    #expect(ChatStreamClient.features["Loci-Features"]?.contains("multi-city") == true)
+  }
+
+  @MainActor @Test func waitsForALongRun() {
+    // The server keeps a multi-city run going for up to nine minutes.
+    #expect(SearchSessionController.generationDeadline >= 9 * 60)
   }
 }
