@@ -33,7 +33,9 @@ struct ChatPushTests {
   /// The search-finished push: thread-id "search", no category.
   static func searchFinished(sessionId: String = "s1") -> [AnyHashable: Any] {
     [
-      "aps": ["alert": ["title": "Your itinerary for Porto is ready", "body": "Tap to see it."], "sound": "default", "thread-id": "search"] as [String: Any],
+      "aps": [
+        "alert": ["title": "Your itinerary for Porto is ready", "body": "Tap to see it."], "sound": "default", "thread-id": "search",
+      ] as [String: Any],
       "sessionId": sessionId,
       "cityName": "Porto",
       "domain": "itinerary",
@@ -46,7 +48,9 @@ struct ChatPushTests {
 
   @Test func parsesTheServerPayload() throws {
     let push = try #require(ChatPush(userInfo: Self.standingTask()))
-    #expect(push.link == SessionLink(destination: .itinerary, sessionId: "3f0c9a1e-7b1d-4c8a-9d52-1a2b3c4d5e6f", cityName: "Lisbon", domain: "itinerary"))
+    #expect(
+      push.link == SessionLink(destination: .itinerary, sessionId: "3f0c9a1e-7b1d-4c8a-9d52-1a2b3c4d5e6f", cityName: "Lisbon", domain: "itinerary")
+    )
     #expect(push.messageId == "9a8b7c6d-0000-4000-8000-000000000001")
     #expect(push.sourceLabel == "Standing task")
     #expect(push.refresh == ThreadRefresh(sessionId: push.link.sessionId, messageId: push.messageId))
@@ -134,8 +138,8 @@ struct ChatPushTests {
   }
 
   @Test func tappingSomethingElseDoesNothing() {
-    #expect(PushRoute.tap(userInfo: ["poi": "Sé"]) == .none)
-    #expect(PushRoute.tap(userInfo: [:]) == .none)
+    #expect(PushRoute.tap(userInfo: ["poi": "Sé"]) == .nothing)
+    #expect(PushRoute.tap(userInfo: [:]) == .nothing)
   }
 
   // MARK: - Foreground
