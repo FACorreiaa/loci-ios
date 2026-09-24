@@ -105,13 +105,13 @@ struct DiscoverView: View {
     }
   }
 
-  /// City Packs (web: /packs): ready-made itineraries. A placeholder until Phase 4.
+  /// City Packs (web: /packs): ready-made itineraries (`18-city-packs.md`).
   private var packsEntry: some View {
     NavigationLink {
-      ComingSoonView(title: "City Packs", systemImage: ComingSoonView.packSymbol)
+      PacksView()
     } label: {
       HStack(spacing: 12) {
-        Image(systemName: ComingSoonView.packSymbol).font(.title3).foregroundStyle(Color.lociForest).accessibilityHidden(true)
+        Image(systemName: PacksView.symbol).font(.title3).foregroundStyle(Color.lociForest).accessibilityHidden(true)
         VStack(alignment: .leading, spacing: 2) {
           Text("City Packs").font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
           Text("Ready-made trips, day by day").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)

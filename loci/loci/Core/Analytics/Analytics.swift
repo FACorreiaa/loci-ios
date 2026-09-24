@@ -14,6 +14,10 @@ enum AnalyticsEvent: String {
   /// A place went into a list (`surface: "list"`, `content_type`), as web's
   /// useAddToListMutation sends it. Metric: saves per active user.
   case poiSaved = "poi_saved"
+  /// A City Pack's page loaded ({slug}). Web has no equivalent yet.
+  case packViewed = "pack_viewed"
+  /// A pack was opened as the caller's own trip ({slug}). Web has no equivalent yet.
+  case packClaimed = "pack_claimed"
 }
 
 @MainActor enum Analytics {
