@@ -38,6 +38,21 @@ Done when a device build can sign in, search, stream, map, edit a trip and resum
 7. System integrations: Apple Maps "Navigate", Wallet `.pkpass`, Handoff.
 8. Place Intelligence / Field Kit: proximity prompts near a POI (hours right? noisy now?), badges if the proto supports it.
 
+## Phase 1.5 — Parity pass 2 (Recents, Lists, Packs, Reviews, Contribute, Globe, trip extras)
+Web's signed-in pages that have no iOS screen. Five tabs stay; Profile becomes the "You" hub, Packs enter from Discover, Lists is also a Saved segment. One PR per phase.
+
+| # | Phase | Note | PR |
+|---|---|---|---|
+| 0 | You hub, Saved Lists segment, City Packs entry, `AppLink` deep links | `14-you-hub-and-app-links.md` | this PR |
+| 1 | Recents (feed, cities, day buckets) | | |
+| 2 | Lists (list detail, add to list, entitlement sheet) | | |
+| 3 | Trip extras: server-synced checklists (proto + api), preferences, export, add to trip | | |
+| 4 | City Packs (browse, detail, claim; no purchase on iOS) | | |
+| 5 | Reviews, place-centric (server check first) | | |
+| 6 | Contribute (claims, opening hours, pending and missing places) | | |
+| 7 | Globe / Where you've been | | |
+| 8 | Web fixes, incl. AASA paths for the Phase 0 links | | |
+
 ## Phase 3 — Ecosystem (after Phase 2 is in daily use)
 - watchOS: today's checklist, haptic "approaching next stop", complications.
 - Siri / App Intents: "What's next on my Loci itinerary?", "Ask Loci for a quiet coffee nearby."

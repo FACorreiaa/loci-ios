@@ -52,6 +52,8 @@ enum DesignPreview: String {
   /// Profile's About rows with the App Store rating link (as if an ID were
   /// set), and Settings' App section with the rating switch.
   case ratingRows
+  /// Profile with its "You" hub rows above Settings (signed out, so the name reads "Traveler").
+  case youHub
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -103,6 +105,7 @@ enum DesignPreview: String {
     case .resultsFullMap: FullMapPreview(state: .resultsSample)
     case .savedPlace: NavigationStack { SavedPlaceDetailView(item: .savedPlaceSample) }
     case .ratingRows: NavigationStack { RatingRowsPreview() }
+    case .youHub: ProfileView()
     }
   }
 }

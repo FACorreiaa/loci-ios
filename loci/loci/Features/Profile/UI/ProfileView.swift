@@ -2,6 +2,8 @@ import SwiftUI
 
 public struct ProfileView: View {
   @State private var isSigningOut: Bool = false
+  @State private var linked: AppLink?
+  private let router = AppRouter.shared
   public var onSignOut: () -> Void = {}
 
   public init(onSignOut: @escaping () -> Void = {}) { self.onSignOut = onSignOut }
@@ -19,6 +21,8 @@ public struct ProfileView: View {
             }
           }.padding(.vertical, 8)
         }.listRowBackground(Color.lociCard)
+
+        YouSection()
 
         Section {
           NavigationLink {
@@ -53,7 +57,15 @@ public struct ProfileView: View {
           }
         }.listRowBackground(Color.lociCard)
       }.listStyle(.insetGrouped).scrollContentBackground(.hidden).background(Color.lociPaper.ignoresSafeArea()).navigationTitle("Profile")
+        .navigationDestination(item: $linked) { AppLinkDestination(link: $0) }
+        .onAppear(perform: openPending)
+        .onChange(of: router.pendingLink) { openPending() }
     }
+  }
+
+  /// `/recents` and `/contribute` links land here (`AppRouter.tab(for:)`).
+  private func openPending() {
+    if let link = router.takeLink(for: .profile) { linked = link }
   }
 
   private func signOut() {

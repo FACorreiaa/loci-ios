@@ -5,13 +5,15 @@ import SwiftUI
 /// Saved (web: /saved; /favorites and /bookmarks redirect here). Places from
 /// FavoritesService.GetFavorites, itineraries from ItineraryService.GetUserItineraries.
 struct SavedView: View {
-  enum Segment: String, CaseIterable { case places = "Places", itineraries = "Itineraries" }
+  enum Segment: String, CaseIterable { case places = "Places", itineraries = "Itineraries", lists = "Lists" }
 
   @State private var segment = Segment.places
   @State private var favorites: [Loci_Favorites_V1_FavoriteItem] = []
   @State private var itineraries: [Loci_Itinerary_UserSavedItinerary] = []
   @State private var isLoading = true
   @State private var error: String?
+  @State private var linked: AppLink?
+  private let router = AppRouter.shared
 
   var body: some View {
     NavigationStack {
@@ -59,6 +61,8 @@ struct SavedView: View {
             .listRowBackground(Color.lociCard)
             .swipeActions { Button("Delete", role: .destructive) { Task { await delete(itinerary) } } }
           }
+        case .lists:
+          EmptyView()
         }
       }
       .listStyle(.insetGrouped)
@@ -69,6 +73,8 @@ struct SavedView: View {
           ContentUnavailableView("No saved places", systemImage: "heart", description: Text("Save a place from any result and it lands here."))
         } else if !isLoading, segment == .itineraries, itineraries.isEmpty {
           ContentUnavailableView("No saved itineraries", systemImage: "bookmark", description: Text("Save an itinerary from its page."))
+        } else if segment == .lists {
+          ComingSoonPlaceholder(title: YouDestination.lists.title, systemImage: YouDestination.lists.systemImage)
         }
       }
       .navigationTitle("Saved")
@@ -84,10 +90,20 @@ struct SavedView: View {
           }
         }
       }
+      .navigationDestination(item: $linked) { AppLinkDestination(link: $0) }
       .refreshable { await load() }
       .errorAlert($error)
       .task { await load() }
+      .onAppear(perform: openPending)
+      .onChange(of: router.pendingLink) { openPending() }
     }
+  }
+
+  /// A `/lists/:id` link: the Lists segment, with the list pushed on top.
+  private func openPending() {
+    guard let link = router.takeLink(for: .saved) else { return }
+    segment = .lists
+    linked = link
   }
 
   private func load() async {

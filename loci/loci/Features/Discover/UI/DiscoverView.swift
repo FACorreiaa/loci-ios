@@ -27,6 +27,8 @@ struct DiscoverView: View {
   @State private var composerSeed = ""
   @State private var error: String?
   @State private var here = HereBriefModel()
+  @State private var linked: AppLink?
+  private let router = AppRouter.shared
 
   var body: some View {
     NavigationStack(path: $path) {
@@ -61,7 +63,15 @@ struct DiscoverView: View {
         await brief
       }
       .errorAlert($error)
+      .navigationDestination(item: $linked) { AppLinkDestination(link: $0) }
+      .onAppear(perform: openPending)
+      .onChange(of: router.pendingLink) { openPending() }
     }
+  }
+
+  /// A `/packs/:slug` link pushes the pack over Discover.
+  private func openPending() {
+    if let link = router.takeLink(for: .discover) { linked = link }
   }
 
   // MARK: - Sections
@@ -91,7 +101,27 @@ struct DiscoverView: View {
       .font(.lociCaption(13))
       .buttonStyle(.bordered)
       .tint(.lociForest)
+      packsEntry
     }
+  }
+
+  /// City Packs (web: /packs): ready-made itineraries. A placeholder until Phase 4.
+  private var packsEntry: some View {
+    NavigationLink {
+      ComingSoonView(title: "City Packs", systemImage: ComingSoonView.packSymbol)
+    } label: {
+      HStack(spacing: 12) {
+        Image(systemName: ComingSoonView.packSymbol).font(.title3).foregroundStyle(Color.lociForest).accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 2) {
+          Text("City Packs").font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
+          Text("Ready-made trips, day by day").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+        }
+        Spacer()
+        Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Color.lociMutedInk).accessibilityHidden(true)
+      }
+      .lociCard(padding: 12)
+    }
+    .buttonStyle(.plain)
   }
 
   private var examplesSection: some View {

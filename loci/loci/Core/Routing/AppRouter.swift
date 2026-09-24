@@ -101,6 +101,44 @@ public nonisolated struct SessionLink: Sendable, Equatable, Hashable {
   }
 }
 
+/// A signed-in page to open from a link: web's `/lists/:id`, `/packs/:slug`,
+/// `/trips/:id`, `/recents` and `/contribute`. Parsed after `SessionLink`, so a
+/// result link keeps its meaning. The AASA entries for the https form ship
+/// with the web side (plan Phase 8); until then only `loci://` reaches the app.
+public nonisolated enum AppLink: Sendable, Equatable, Hashable {
+  case list(id: String)
+  case pack(slug: String)
+  case trip(id: String)
+  case recents
+  case contribute
+
+  /// `loci://lists/abc` (the host is the route, as in `SessionLink`) or
+  /// `https://lociai.fyi/lists/abc`. Anything with a missing id or extra
+  /// segments is nil, so the link stays in Safari.
+  public init?(url: URL) {
+    var segments: [String]
+    switch url.scheme?.lowercased() {
+    case "loci":
+      guard let host = url.host(), !host.isEmpty else { return nil }
+      segments = [host] + url.pathComponents.dropFirst()
+    case "https":
+      guard let host = url.host()?.lowercased(), SessionLink.webHosts.contains(host) else { return nil }
+      segments = Array(url.pathComponents.dropFirst())
+    default:
+      return nil
+    }
+    segments.removeAll { $0.isEmpty }
+    switch (segments.first?.lowercased(), segments.count) {
+    case ("lists", 2): self = .list(id: segments[1])
+    case ("packs", 2): self = .pack(slug: segments[1])
+    case ("trips", 2): self = .trip(id: segments[1])
+    case ("recents", 1): self = .recents
+    case ("contribute", 1): self = .contribute
+    default: return nil
+    }
+  }
+}
+
 /// App-wide navigation requests that arrive from outside a view: deep links and
 /// notification taps. Views observe `pendingSession` and clear it once shown.
 @MainActor @Observable public final class AppRouter {
@@ -110,6 +148,8 @@ public nonisolated struct SessionLink: Sendable, Equatable, Hashable {
 
   public var selectedTab: Tab = .discover
   public var pendingSession: SessionLink?
+  /// A page from an `AppLink`, taken by the tab `tab(for:)` names (`takeLink`).
+  public var pendingLink: AppLink?
   /// A thread to fetch again, set by a chat push. The page showing that session
   /// takes it (`takeThreadRefresh`), whether it was already open or opens now.
   var threadRefresh: ThreadRefresh?
@@ -119,9 +159,35 @@ public nonisolated struct SessionLink: Sendable, Equatable, Hashable {
 
   /// Returns true when the URL was a Loci route; false lets other handlers see it.
   @discardableResult public func open(_ url: URL) -> Bool {
-    guard let link = SessionLink(url: url) else { return false }
+    if let link = SessionLink(url: url) {
+      open(link)
+      return true
+    }
+    guard let link = AppLink(url: url) else { return false }
     open(link)
     return true
+  }
+
+  public func open(_ link: AppLink) {
+    selectedTab = Self.tab(for: link)
+    pendingLink = link
+  }
+
+  /// The tab that owns a page. Trips hang off Calendar; the You hub is Profile.
+  static func tab(for link: AppLink) -> Tab {
+    switch link {
+    case .list: .saved
+    case .pack: .discover
+    case .trip: .calendar
+    case .recents, .contribute: .profile
+    }
+  }
+
+  /// The pending link when `tab` owns it, cleared so it opens once.
+  func takeLink(for tab: Tab) -> AppLink? {
+    guard let link = pendingLink, Self.tab(for: link) == tab else { return nil }
+    pendingLink = nil
+    return link
   }
 
   public func startNewChat() {

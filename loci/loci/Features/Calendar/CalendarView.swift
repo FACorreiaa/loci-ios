@@ -12,6 +12,8 @@ public struct CalendarView: View {
   @State private var pinning: Loci_Trip_TripDraft?
   @State private var pinStart = Date()
   @State private var appleTitles: [String] = []
+  @State private var linked: AppLink?
+  private let router = AppRouter.shared
 
   private let client: Loci_Trip_TripServiceClient
 
@@ -71,7 +73,15 @@ public struct CalendarView: View {
       }.sheet(item: $pinning) { trip in
         pinSheet(trip)
       }
+      .navigationDestination(item: $linked) { AppLinkDestination(link: $0) }
+      .onAppear(perform: openPending)
+      .onChange(of: router.pendingLink) { openPending() }
     }
+  }
+
+  /// A `/trips/:id` link opens the trip editor over the calendar.
+  private func openPending() {
+    if let link = router.takeLink(for: .calendar) { linked = link }
   }
 
   private var monthHeader: some View {
