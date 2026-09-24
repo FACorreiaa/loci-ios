@@ -21,10 +21,22 @@ struct SessionLinkTests {
     "loci://oauth2redirect/google?code=x",
     "loci://itinerary?cityName=Lisbon",
     "loci://itinerary?sessionId=",
-    "https://lociai.fyi/itinerary?sessionId=abc",
+    "https://example.com/itinerary?sessionId=abc",
+    "https://lociai.fyi/pricing",
+    "https://lociai.fyi/itinerary",
   ])
   func ignoresOAuthRedirectAndIncompleteLinks(_ string: String) throws {
     #expect(SessionLink(url: try #require(URL(string: string))) == nil)
+  }
+
+  @Test func parsesUniversalLinks() throws {
+    let url = try #require(URL(string: "https://lociai.fyi/hotels?sessionId=abc&cityName=Rome&domain=hotels"))
+    #expect(SessionLink(url: url) == SessionLink(destination: .hotels, sessionId: "abc", cityName: "Rome", domain: "hotels"))
+    let www = try #require(URL(string: "https://www.lociai.fyi/itinerary?sessionId=abc"))
+    #expect(SessionLink(url: www)?.destination == .itinerary)
+    let nearme = try #require(URL(string: "https://lociai.fyi/nearme?sessionId=n1&cityName=nearme"))
+    #expect(SessionLink(url: nearme)?.destination == .itinerary)
+    #expect(SessionLink(url: nearme)?.sessionId == "n1")
   }
 
   @Test func roundTripsThroughURLAndUserInfo() throws {
