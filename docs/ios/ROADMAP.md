@@ -47,7 +47,7 @@ Web's signed-in pages that have no iOS screen. Five tabs stay; Profile becomes t
 | 1 | Recents (feed, cities, day buckets) | `15-recents.md` | #30 |
 | 2 | Lists (list detail, add to list, entitlement sheet); blocked on server gaps, see the note | `16-lists.md` | this PR |
 | 3 | Trip extras: server-synced checklists (proto + api), preferences, export, add to trip | | |
-| 4 | City Packs (browse, detail, claim; no purchase on iOS) | | |
+| 4 | City Packs (browse, detail, claim; no purchase on iOS) | `18-city-packs.md` | this PR |
 | 5 | Reviews, place-centric (server check first) | | |
 | 6 | Contribute (claims, opening hours, pending and missing places) | | |
 | 7 | Globe / Where you've been | | |

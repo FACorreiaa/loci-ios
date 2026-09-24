@@ -239,6 +239,8 @@ loci/loci
 │   │                                UI (ListsView/ListsRows, ListDetailView, AddToListSheet, ListsStore)
 │   ├── Main/UI/MainTabView.swift    the five tabs
 │   ├── Nearby/                      NearbyView, NearbyWalk, POIProximityMonitor
+│   ├── Packs/                       Model (PackTheme, PackDetail), Services (PacksAPI + PacksService),
+│   │                                UI (PacksView, PackDetailView); no checkout on iOS (`18-city-packs.md`)
 │   ├── Profile/UI/                  ProfileView, YouSection (the You hub), NotificationSettingsView
 │   ├── Recents/                     Model (ActivityEntry, DayBuckets, RecentCity, ActivityDestination),
 │   │                                Services (RecentsAPI + RecentsService), UI (RecentsView, RecentCityView)
@@ -1317,7 +1319,7 @@ anything else, and `ResultsSideData.isOffline` keeps previews off the network:
 Cases: `inSeason`, `museChat`, `museChatStreaming`, `museChatThinking`,
 `museChatStage`, `museChatDetached`, `museChatCelebrating`, `museChatSnag`,
 `museChatListening`, `museChatPush`, `museChatPushBar`, `results`,
-`resultsDays`, `resultsKit`, and (parity pass 2) `youHub`, `recents`, `recentsCities`, `recentCity`. To screenshot one on a booted simulator (or set
+`resultsDays`, `resultsKit`, and (parity pass 2) `youHub`, `recents`, `recentsCities`, `recentCity`, `packs`, `packDetail`, `packLocked`. To screenshot one on a booted simulator (or set
 the argument in the scheme's Run action):
 
 ```text
@@ -1458,6 +1460,7 @@ All unit tests are Swift Testing (`import Testing`, `@Test`, `#expect`,
 | `loci/lociTests/ActivityMappingTests.swift` | Proto → feed entry (kind, detail defaults), prompt-wrapper unwrapping, paging (`hasMore`, the 200 cap), chip counts and filters, badges, city `extractMessage`, activity level, city sort tiebreak |
 | `loci/lociTests/ActivityDestinationTests.swift` | Mirrors web's `activity-link.test.ts`: domain → page, message/session/city carried, nearby, kept trips, favourites by kind; saved-itinerary lookup |
 | `loci/lociTests/ListPayloadTests.swift` | Every ListService request builder (trim, real city ids only, domain → content type, name-keyed places refused, trace passed, description capped), web's entitlement classifier (header, message fallback, PermissionDenied only, copy with no purchase pitch), tab filter and counts, store create/limit/delete and create-then-add |
+| `loci/lociTests/PackDetailMappingTests.swift` | Mirrors web's `points.test.ts` and `themes.test.ts`; `toDetail` (0-based day, ids, time to spend, access), pins numbered like cards, badge, the catalog request |
 | `loci/lociTests/AppLinkTests.swift` | `AppLink` parsing for every route and its rejections, SessionLink parsed first, the tab that owns each link and `takeLink` clearing it once |
 | `loci/lociTests/ParityPayloadTests.swift` | Nearby sentence byte-for-byte, default weekend, `allPlaces` dedup |
 | `loci/lociTests/SettingsPayloadTests.swift` | Empty-string omission in profile updates, web defaults on a new travel profile, ids and full lists on update, Telegram deep link |

@@ -68,6 +68,12 @@ enum DesignPreview: String {
   case listDetail
   /// A place's Add to list sheet over its detail.
   case addToList
+  /// City Packs' catalog: filters, and a Free, a locked and a "✓ Yours" card.
+  case packs
+  /// A free pack: map hero, three days, one stop with no position, "Open as my trip".
+  case packDetail
+  /// A paid pack nobody owns: day one, "2 more days in this pack", no price.
+  case packLocked
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -127,6 +133,9 @@ enum DesignPreview: String {
     case .lists: NavigationStack { ListsView(store: ListsStore(service: PreviewListsService())) }
     case .listDetail: NavigationStack { ListDetailView(store: .preview) }
     case .addToList: AddToListPreview()
+    case .packs: NavigationStack { PacksView(store: PacksStore(service: PreviewPacksService())) }
+    case .packDetail: NavigationStack { PackDetailView(slug: PackSummary.previewLisbon.slug, service: PreviewPacksService()) }
+    case .packLocked: NavigationStack { PackDetailView(slug: PackSummary.previewLocked.slug, service: PreviewPacksService()) }
     }
   }
 }
