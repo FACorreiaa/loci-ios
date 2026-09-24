@@ -191,6 +191,9 @@ nonisolated extension SearchState {
       needsSessionFetch = complete.loadFromSession && !hasResult
       status = .completed
       return .completed
+    case .route:
+      // Multi-city route (proto #26). Ignored until iOS renders multi-city trips.
+      break
     }
     return nil
   }
@@ -227,6 +230,7 @@ nonisolated extension Loci_Chat_StreamEvent.OneOf_Payload {
     case .progress: "progress"
     case .error: "error"
     case .complete: "complete"
+    case .route: "route"
     }
   }
 }
