@@ -163,25 +163,7 @@ nonisolated extension SearchState {
       lastEventId = event.eventID
     }
 
-    if case .route(let route) = payload {
-      absorb(route: route)
-      return nil
-    }
-    // One city of a multi-city search: its events build that city's state.
-    // A city's error is that city's; the search goes on.
-    if event.hasStopIndex, let i = stops.firstIndex(where: { $0.index == Int(event.stopIndex) }) {
-      if case .error(let error) = payload {
-        stops[i].error = error.userMessage.isEmpty ? "This city could not be planned." : error.userMessage
-        return nil
-      }
-      var inner = event
-      inner.clearStopIndex()
-      inner.eventID = ""  // already de-duplicated above
-      stops[i].state.apply(inner)
-      // The first city stands in for the flat fields, so every existing view has something.
-      if i == 0 { adoptFirstStop(stops[0].state) }
-      return nil
-    }
+    if applyMultiCity(event, payload) { return nil }
 
     switch payload {
     case .start(let start):
@@ -245,6 +227,28 @@ nonisolated extension SearchState {
     if !result.restaurants.isEmpty { restaurants = result.restaurants }
     if !result.activities.isEmpty { activities = result.activities }
     absorb(city: result.hasGeneralCityData ? result.generalCityData : nil)
+  }
+
+  /// A multi-city event: the ROUTE, or one city's event, which builds that
+  /// city's state. A city's error is that city's; the search goes on. Returns
+  /// false for anything else, which applies to the search as it always did.
+  private mutating func applyMultiCity(_ event: Loci_Chat_StreamEvent, _ payload: Loci_Chat_StreamEvent.OneOf_Payload) -> Bool {
+    if case .route(let route) = payload {
+      absorb(route: route)
+      return true
+    }
+    guard event.hasStopIndex, let i = stops.firstIndex(where: { $0.index == Int(event.stopIndex) }) else { return false }
+    if case .error(let error) = payload {
+      stops[i].error = error.userMessage.isEmpty ? "This city could not be planned." : error.userMessage
+      return true
+    }
+    var inner = event
+    inner.clearStopIndex()
+    inner.eventID = ""  // already de-duplicated by the search
+    stops[i].state.apply(inner)
+    // The first city stands in for the flat fields, so every existing view has something.
+    if i == 0 { adoptFirstStop(stops[0].state) }
+    return true
   }
 
   /// A ROUTE builds the cities; the one carrying the trip id keeps what each already has.

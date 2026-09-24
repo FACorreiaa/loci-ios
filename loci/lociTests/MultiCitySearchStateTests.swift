@@ -5,19 +5,26 @@ import Testing
 @testable import loci
 
 /// Multi-city stream events: a ROUTE, then each city's events tagged with its index.
+/// One city of a test route.
+struct RouteCity {
+  let name: String
+  let session: String
+  let days: [Int32]
+}
+
 enum MultiEvents {
-  static func route(_ cities: [(String, String, [Int32])], tripID: String? = nil, id: String = "r0") -> Loci_Chat_StreamEvent {
+  static func route(_ cities: [RouteCity], tripID: String? = nil, id: String = "r0") -> Loci_Chat_StreamEvent {
     var event = Loci_Chat_StreamEvent()
     event.eventID = id
     event.route.stops = cities.enumerated().map { i, c in
       var ref = Loci_Chat_StopRef()
       ref.index = Int32(i)
-      ref.cityName = c.0
-      ref.sessionID = c.1
-      ref.dayNumbers = c.2
+      ref.cityName = c.name
+      ref.sessionID = c.session
+      ref.dayNumbers = c.days
       return ref
     }
-    event.route.outline = cities.map(\.0).joined(separator: " → ")
+    event.route.outline = cities.map(\.name).joined(separator: " → ")
     if let tripID { event.route.tripID = tripID }
     return event
   }
@@ -45,7 +52,7 @@ enum MultiEvents {
 
 @Suite("Multi-city search")
 struct MultiCitySearchStateTests {
-  let lisbonPorto: [(String, String, [Int32])] = [("Lisbon", "s0", [1, 2]), ("Porto", "s1", [3])]
+  let lisbonPorto = [RouteCity(name: "Lisbon", session: "s0", days: [1, 2]), RouteCity(name: "Porto", session: "s1", days: [3])]
 
   @Test func routeBuildsStopsAndTaggedEventsGoToTheirCity() {
     var state = SearchState()
@@ -98,8 +105,18 @@ struct MultiCitySearchStateTests {
 struct MultiCityRequestTests {
   func envelope() -> SearchEnvelope {
     SearchEnvelope(
-      sessionId: nil, requestId: "r", profileId: nil, lastEventId: nil, query: "trip",
-      cityName: nil, domain: nil, latitude: nil, longitude: nil, startedAt: .now, finished: false, notified: false
+      sessionId: nil,
+      requestId: "r",
+      profileId: nil,
+      lastEventId: nil,
+      query: "trip",
+      cityName: nil,
+      domain: nil,
+      latitude: nil,
+      longitude: nil,
+      startedAt: .now,
+      finished: false,
+      notified: false
     )
   }
 
@@ -118,5 +135,23 @@ struct MultiCityRequestTests {
     let json = #"{"requestId":"r","query":"q","startedAt":0,"finished":false,"notified":false}"#
     let env = try JSONDecoder().decode(SearchEnvelope.self, from: Data(json.utf8))
     #expect(env.stops == nil)
+  }
+}
+
+@Suite("Multi-city format")
+struct MultiCityFormatTests {
+  /// The same strings web renders (multi-city-view.ts), so both apps read alike.
+  @Test func matchesWeb() {
+    var leg = Loci_Trip_TripLeg()
+    leg.mode = "train"
+    leg.durationMins = 194
+    leg.distanceKm = 274.4
+    #expect(MultiCityFormat.leg(leg) == "Train · ≈3h14 · 274 km")
+    leg.mode = "drive"
+    leg.durationMins = 30
+    leg.distanceKm = 40
+    #expect(MultiCityFormat.leg(leg) == "Drive · ≈30 min · 40 km")
+    let stop = StopResult(index: 0, cityName: "Lisbon", sessionId: "s", dayNumbers: [1, 2])
+    #expect(MultiCityFormat.chip(stop) == "Lisbon · 2n")
   }
 }

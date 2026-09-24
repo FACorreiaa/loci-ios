@@ -19,9 +19,9 @@ nonisolated struct SearchEnvelope: Codable, Equatable, Sendable {
   var finished: Bool
   var notified: Bool
   /// A multi-city search from the stop builder, in the traveller's order.
-  var stops: [StopInput]? = nil
+  var stops: [StopInput]?
   /// Let the server reorder `stops` into a sensible route.
-  var suggestOrder: Bool? = nil
+  var suggestOrder: Bool?
 }
 
 /// One city of a multi-city search, as the stop builder hands it over.
