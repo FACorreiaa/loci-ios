@@ -72,7 +72,7 @@ private struct LockScreenView: View {
 }
 
 /// NATIVE_DESIGN light tokens. The Lock Screen tints the background itself.
-private enum Palette {
+enum Palette {
   static let paper = Color(red: 0.961, green: 0.941, blue: 0.902)
   static let ink = Color(red: 0.102, green: 0.180, blue: 0.149)
   static let forest = Color(red: 0.129, green: 0.302, blue: 0.235)
