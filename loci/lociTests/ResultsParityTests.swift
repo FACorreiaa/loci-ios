@@ -1,4 +1,6 @@
 import Foundation
+import MapKit
+import SwiftUI
 import LociConnectProto
 import Testing
 
@@ -65,6 +67,42 @@ struct ResultsParityTests {
     itinerary.adopt(response)
     #expect(itinerary.dayGroups.count == 2)
     #expect(itinerary.extras.map(\.name) == ["Z"])
+  }
+
+  // MARK: - Full map flyover
+
+  @MainActor private func mapData(_ stops: [Loci_Poi_POIDetailedInfo], showsDays: Bool = true) -> ResultsMapData {
+    let groups = DayGrouping.groups(stops)
+    return ResultsMapData(groups: groups, extras: [], sequence: DayGrouping.sequence(groups), showsDays: showsDays, alerts: [])
+  }
+
+  @MainActor @Test func flyoverStartsAtDayOnesFirstPin() {
+    let data = mapData([stop("B", day: 2, lat: 41.9, lon: 12.47), stop("A", day: 1, lat: 41.89, lon: 12.49), stop("C", day: 1, lat: 41.88, lon: 12.48)])
+    #expect(data.flyoverStart?.name == "A")
+  }
+
+  @MainActor @Test func flyoverSkipsStopsWithoutCoordinates() {
+    let data = mapData([stop("A", day: 1), stop("B", day: 1, lat: 41.89, lon: 12.49)])
+    #expect(data.flyoverStart?.name == "B")
+  }
+
+  @MainActor @Test func flyoverFallsBackToTheFirstPinWithoutDays() {
+    let data = mapData([stop("H1", lat: 38.7, lon: -9.1), stop("H2", lat: 38.71, lon: -9.14)], showsDays: false)
+    #expect(data.pins.allSatisfy { $0.day == 0 })
+    #expect(data.flyoverStart?.name == "H1")
+  }
+
+  @MainActor @Test func flyoverIsNilWhenNothingHasCoordinates() {
+    #expect(mapData([stop("A", day: 1), stop("B", day: 2)]).flyoverStart == nil)
+  }
+
+  @MainActor @Test func flyoverCameraIsPitchedAndClose() {
+    let camera = ResultsMapData.flyoverCamera(at: .init(latitude: 41.8902, longitude: 12.4922))
+    #expect(camera.pitch == 60)
+    #expect(camera.distance == 900)
+    #expect(camera.heading == 30)
+    #expect(camera.centerCoordinate.latitude == 41.8902)
+    #expect(camera.centerCoordinate.longitude == 12.4922)
   }
 
   // MARK: - Share text

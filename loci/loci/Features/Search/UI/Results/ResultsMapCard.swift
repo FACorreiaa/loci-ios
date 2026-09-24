@@ -66,6 +66,19 @@ struct ResultsMapData: Equatable {
   }
 
   static func color(day: Int?) -> Color { day.map(LociTheme.dayColor) ?? LociTheme.ungroupedColor }
+
+  /// Where the full map opens: Day 1's first stop, else the first pin at all.
+  var flyoverStart: Pin? { pins.first(where: { $0.day == 1 }) ?? pins.first }
+
+  /// A pitched street-level camera over one place, so MapKit's 3D buildings
+  /// and landmarks read as 3D. Used for the opening flyover and for selection.
+  static func flyoverCamera(at coordinate: CLLocationCoordinate2D) -> MapCamera {
+    MapCamera(centerCoordinate: coordinate, distance: flyoverDistance, heading: flyoverHeading, pitch: flyoverPitch)
+  }
+
+  static let flyoverDistance: Double = 900
+  static let flyoverPitch: Double = 60
+  static let flyoverHeading: Double = 30
 }
 
 /// The map content itself, shared by the hero card and the full map.
@@ -177,6 +190,7 @@ struct FullMapView: View {
   @Binding var selectedID: String?
 
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var camera: MapCameraPosition = .automatic
   @State private var showList = true
   @State private var detail: Loci_Poi_POIDetailedInfo?
@@ -186,17 +200,23 @@ struct FullMapView: View {
       Map(position: $camera, selection: $selectedID) {
         ResultsMapContent(data: data, selectedID: selectedID)
       }
-      .mapStyle(.standard(pointsOfInterest: .excludingAll))
-      .mapControls { MapCompass(); MapScaleView() }
+      .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
+      .mapControls { MapCompass(); MapPitchToggle(); MapScaleView() }
       .ignoresSafeArea(edges: .bottom)
       .navigationTitle(title)
       .navigationBarTitleDisplayMode(.inline)
       .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
       .sensoryFeedback(.selection, trigger: selectedID)
+      .onAppear {
+        guard let start = data.flyoverStart else { return }
+        withAnimation(reduceMotion ? nil : LociTheme.resultArrive) {
+          camera = .camera(ResultsMapData.flyoverCamera(at: start.coordinate))
+        }
+      }
       .onChange(of: selectedID) { _, id in
         guard let id, let pin = data.pins.first(where: { $0.id == id }) else { return }
-        withAnimation(LociTheme.selectionSettle) {
-          camera = .region(MKCoordinateRegion(center: pin.coordinate, latitudinalMeters: 1200, longitudinalMeters: 1200))
+        withAnimation(reduceMotion ? nil : LociTheme.selectionSettle) {
+          camera = .camera(ResultsMapData.flyoverCamera(at: pin.coordinate))
         }
       }
       .sheet(isPresented: $showList) {

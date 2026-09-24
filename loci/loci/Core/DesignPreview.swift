@@ -31,6 +31,8 @@ enum DesignPreview: String {
   /// The same page scrolled to the days, and to the Trip Kit.
   case resultsDays
   case resultsKit
+  /// The same itinerary's full map: pitched 3D, flown to Day 1's first stop.
+  case resultsFullMap
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -60,6 +62,7 @@ enum DesignPreview: String {
     case .results: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places")
     case .resultsDays: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places", scrollTo: ResultsPage.Anchor.days)
     case .resultsKit: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places", scrollTo: ResultsPage.Anchor.kit)
+    case .resultsFullMap: FullMapPreview(state: .resultsSample)
     }
   }
 }
@@ -120,6 +123,27 @@ private struct MuseChatPreview: View {
     .safeAreaInset(edge: .bottom, spacing: 0) {
       PreviewComposer().padding(.horizontal, LociTheme.defaultPadding).padding(.vertical, 10).background(Color.museCanvas)
     }
+  }
+}
+
+/// FullMapView fed the way ResultsPage feeds it, with its own selection.
+private struct FullMapPreview: View {
+  let state: SearchState
+  @State private var selectedID: String?
+
+  var body: some View {
+    let groups = state.dayGroups
+    let sequence = DayGrouping.sequence(groups)
+    let showsDays = state.destination == .itinerary
+    FullMapView(
+      data: ResultsMapData(groups: groups, extras: state.extras, sequence: sequence, showsDays: showsDays, alerts: []),
+      groups: groups,
+      sequence: sequence,
+      destination: state.destination,
+      showsDays: showsDays,
+      title: state.cityName ?? "Rome",
+      selectedID: $selectedID
+    )
   }
 }
 
