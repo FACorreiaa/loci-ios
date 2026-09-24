@@ -44,6 +44,9 @@ enum DesignPreview: String {
   case resultsKit
   /// The same itinerary's full map: pitched 3D, flown to Day 1's first stop.
   case resultsFullMap
+  /// A saved place pushed from Saved, opened on its snapshot: name-keyed, so
+  /// there is nothing on the server to fill it in.
+  case savedPlace
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -91,6 +94,7 @@ enum DesignPreview: String {
     case .resultsDays: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places", scrollTo: ResultsPage.Anchor.days)
     case .resultsKit: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places", scrollTo: ResultsPage.Anchor.kit)
     case .resultsFullMap: FullMapPreview(state: .resultsSample)
+    case .savedPlace: NavigationStack { SavedPlaceDetailView(item: .savedPlaceSample) }
     }
   }
 }
@@ -486,5 +490,23 @@ extension Loci_Chat_ChatSession {
     rome.updatedAt = .init(date: Date().addingTimeInterval(-86_400 * 2))
     rome.conversationHistory = [message(.user, "3 days in Rome, first time, lots of walking"), message(.assistant, "Rome on foot.")]
     return [lisbon, rome]
+  }
+}
+
+extension Loci_Favorites_V1_FavoriteItem {
+  static var savedPlaceSample: Self {
+    var item = Self()
+    item.id = "preview-saved"
+    item.itemID = "Miradouro da Senhora do Monte|38.7193|-9.1327"
+    item.itemName = "Miradouro da Senhora do Monte"
+    item.contentType = .poi
+    item.cityName = "Lisbon"
+    item.category = "Viewpoint"
+    item.rating = 4.8
+    item.latitude = 38.7193
+    item.longitude = -9.1327
+    item.description_p = "The highest viewpoint in Lisbon, best just before sunset."
+    item.notes = "Go on the way back from Graça."
+    return item
   }
 }

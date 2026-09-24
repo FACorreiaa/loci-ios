@@ -22,15 +22,24 @@ struct SavedView: View {
         switch segment {
         case .places:
           ForEach(favorites, id: \.id) { item in
-            VStack(alignment: .leading, spacing: 3) {
-              Text(item.itemName).font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
-              HStack {
-                if !item.cityName.isEmpty { Text(item.cityName) }
-                if !item.category.isEmpty { Text(item.category) }
-                if item.rating > 0 { Text(String(format: "★ %.1f", item.rating)) }
+            NavigationLink(value: item) {
+              HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: SavedPlace.kindSymbol(item.contentType))
+                  .foregroundStyle(Color.lociForest)
+                  .frame(width: 20)
+                  .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                  Text(item.itemName).font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
+                  HStack {
+                    Text(SavedPlace.kindLabel(item.contentType))
+                    if !item.cityName.isEmpty { Text(item.cityName) }
+                    if !item.category.isEmpty { Text(item.category) }
+                    if item.rating > 0 { Text(String(format: "★ %.1f", item.rating)) }
+                  }
+                  .lociCoordStyle(10)
+                  if !item.notes.isEmpty { Text(item.notes).font(.lociCaption()).foregroundStyle(Color.lociMutedInk).lineLimit(2) }
+                }
               }
-              .lociCoordStyle(10)
-              if !item.notes.isEmpty { Text(item.notes).font(.lociCaption()).foregroundStyle(Color.lociMutedInk).lineLimit(2) }
             }
             .listRowBackground(Color.lociCard)
             .swipeActions { Button("Remove", role: .destructive) { Task { await remove(item) } } }
@@ -64,6 +73,17 @@ struct SavedView: View {
       }
       .navigationTitle("Saved")
       .navigationDestination(for: Loci_Itinerary_UserSavedItinerary.self) { SavedItineraryView(itinerary: $0) }
+      .navigationDestination(for: Loci_Favorites_V1_FavoriteItem.self) { item in
+        // Unsaving from the detail takes the row out here too; saving it
+        // again puts it back where it was.
+        SavedPlaceDetailView(item: item) { isSaved in
+          if isSaved {
+            if !favorites.contains(where: { $0.id == item.id }) { Task { await load() } }
+          } else {
+            favorites.removeAll { $0.id == item.id }
+          }
+        }
+      }
       .refreshable { await load() }
       .errorAlert($error)
       .task { await load() }

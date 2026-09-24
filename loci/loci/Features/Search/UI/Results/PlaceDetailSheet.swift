@@ -15,54 +15,88 @@ struct PlaceDetailSheet: View {
   let cityName: String
 
   @Environment(\.dismiss) private var dismiss
+
+  var body: some View {
+    NavigationStack {
+      PlaceDetailView(stop: stop, destination: destination, cityName: cityName)
+        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
+    }
+    .presentationDetents([.medium, .large])
+    .presentationDragIndicator(.visible)
+  }
+}
+
+/// The detail itself, for a sheet or for pushing onto a stack. With
+/// `savedItem` it is a saved place: the heart starts filled, toggles the
+/// favourite off and on again, and the note the user wrote is shown.
+struct PlaceDetailView: View {
+  let stop: Loci_Poi_POIDetailedInfo
+  let destination: SearchDestination
+  let cityName: String
+  var savedItem: Loci_Favorites_V1_FavoriteItem?
+  var onSavedChange: ((Bool) -> Void)?
+
   @Environment(\.openURL) private var openURL
   @State private var facts: Loci_Place_PlaceFacts?
   /// Apple's street-level imagery; nil where there is no coverage, and then
   /// the section is simply absent.
   @State private var lookAround: MKLookAroundScene?
-  @State private var saved = false
+  @State private var saved: Bool
   @State private var saving = false
   @State private var error: String?
 
+  init(
+    stop: Loci_Poi_POIDetailedInfo,
+    destination: SearchDestination,
+    cityName: String,
+    savedItem: Loci_Favorites_V1_FavoriteItem? = nil,
+    onSavedChange: ((Bool) -> Void)? = nil
+  ) {
+    self.stop = stop
+    self.destination = destination
+    self.cityName = cityName
+    self.savedItem = savedItem
+    self.onSavedChange = onSavedChange
+    _saved = State(initialValue: savedItem != nil)
+  }
+
   var body: some View {
-    NavigationStack {
-      ScrollView {
-        VStack(alignment: .leading, spacing: 16) {
-          gallery
-          VStack(alignment: .leading, spacing: 6) {
-            Label(stop.category.isEmpty ? destination.title : stop.category, systemImage: PlaceSymbol.name(for: stop.category)).lociCoordStyle(10)
-            Text(stop.name).font(.lociTitle(22)).foregroundStyle(Color.lociInk)
-            if !stop.address.isEmpty { Text(stop.address).font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk) }
-            GroundedBadge(stop: stop)
-          }
-          stats
-          if let lookAround {
-            LookAroundPreview(initialScene: lookAround)
-              .frame(height: 200)
-              .clipShape(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
-              .accessibilityLabel("Look Around at \(stop.name)")
-          }
-          if !stop.blurb.isEmpty {
-            section("About") { Text(stop.blurb).font(.lociBody(15)).foregroundStyle(Color.lociInk) }
-          }
-          if let facts, !facts.facts.isEmpty { PlaceFactsList(facts: facts) }
-          contact
-          chips
+    ScrollView {
+      VStack(alignment: .leading, spacing: 16) {
+        gallery
+        VStack(alignment: .leading, spacing: 6) {
+          Label(stop.category.isEmpty ? destination.title : stop.category, systemImage: PlaceSymbol.name(for: stop.category)).lociCoordStyle(10)
+          Text(stop.name).font(.lociTitle(22)).foregroundStyle(Color.lociInk)
+          if !stop.address.isEmpty { Text(stop.address).font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk) }
+          GroundedBadge(stop: stop)
         }
-        .padding(LociTheme.defaultPadding)
+        stats
+        if let lookAround {
+          LookAroundPreview(initialScene: lookAround)
+            .frame(height: 200)
+            .clipShape(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
+            .accessibilityLabel("Look Around at \(stop.name)")
+        }
+        if !stop.blurb.isEmpty {
+          section("About") { Text(stop.blurb).font(.lociBody(15)).foregroundStyle(Color.lociInk) }
+        }
+        if let notes = savedItem?.notes, !notes.isEmpty {
+          section("Your notes") { Text(notes).font(.lociBody(15)).foregroundStyle(Color.lociInk) }
+        }
+        if let facts, !facts.facts.isEmpty { PlaceFactsList(facts: facts) }
+        contact
+        chips
       }
-      .background(Color.lociPaper.ignoresSafeArea())
-      .safeAreaInset(edge: .bottom) { footer }
-      .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
-      .errorAlert($error)
-      .task {
-        async let scene: Void = loadLookAround()
-        await loadFacts()
-        await scene
-      }
+      .padding(LociTheme.defaultPadding)
     }
-    .presentationDetents([.medium, .large])
-    .presentationDragIndicator(.visible)
+    .background(Color.lociPaper.ignoresSafeArea())
+    .safeAreaInset(edge: .bottom) { footer }
+    .errorAlert($error)
+    .task(id: stop.id) {
+      async let scene: Void = loadLookAround()
+      await loadFacts()
+      await scene
+    }
   }
 
   // MARK: - Pieces
@@ -124,7 +158,8 @@ struct PlaceDetailSheet: View {
   private var footer: some View {
     HStack(spacing: 8) {
       Button(saved ? "Saved" : "Save", systemImage: saved ? "heart.fill" : "heart") { Task { await save() } }
-        .disabled(saved || saving)
+        .disabled((saved && savedItem == nil) || saving)
+        .accessibilityHint(savedItem != nil && saved ? "Removes it from Saved" : "")
       ShareLink(item: shareText) { Label("Share", systemImage: "square.and.arrow.up") }
       if GoogleMapsRoute.hasCoordinate(stop) {
         Button("Apple Maps", systemImage: "map") { openInAppleMaps() }
@@ -154,7 +189,8 @@ struct PlaceDetailSheet: View {
   // MARK: - Actions
 
   private func loadFacts() async {
-    guard !stop.id.isEmpty, !ResultsSideData.isOffline else { return }
+    // Facts hang off a stored POI; a name-keyed saved place has none to ask about.
+    guard SavedPlace.isStoredID(stop.id), !ResultsSideData.isOffline else { return }
     facts = try? await ResultsAPI.placeFacts(poiID: stop.id)
   }
 
@@ -173,8 +209,14 @@ struct PlaceDetailSheet: View {
     saving = true
     defer { saving = false }
     do {
-      try await ResultsAPI.addFavorite(stop, destination: destination, cityName: cityName)
-      saved = true
+      if let savedItem {
+        if saved { try await SavedPlaceAPI.remove(savedItem) } else { try await SavedPlaceAPI.restore(savedItem) }
+        saved.toggle()
+        onSavedChange?(saved)
+      } else {
+        try await ResultsAPI.addFavorite(stop, destination: destination, cityName: cityName)
+        saved = true
+      }
     } catch { self.error = error.userMessage }
   }
 
