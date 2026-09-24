@@ -11,6 +11,9 @@ enum AnalyticsEvent: String {
   case signupCompleted = "signup_completed"
   /// A search reached COMPLETE. Metric: finished first itinerary (first per person, in PostHog).
   case itineraryFinished = "itinerary_finished"
+  /// A place went into a list (`surface: "list"`, `content_type`), as web's
+  /// useAddToListMutation sends it. Metric: saves per active user.
+  case poiSaved = "poi_saved"
 }
 
 @MainActor enum Analytics {

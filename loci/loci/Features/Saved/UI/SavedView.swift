@@ -3,7 +3,8 @@ import SwiftProtobuf
 import SwiftUI
 
 /// Saved (web: /saved; /favorites and /bookmarks redirect here). Places from
-/// FavoritesService.GetFavorites, itineraries from ItineraryService.GetUserItineraries.
+/// FavoritesService.GetFavorites, itineraries from ItineraryService.GetUserItineraries,
+/// lists from ListService (`ListsRows`, the same rows as Profile › Lists).
 struct SavedView: View {
   enum Segment: String, CaseIterable { case places = "Places", itineraries = "Itineraries", lists = "Lists" }
 
@@ -14,6 +15,7 @@ struct SavedView: View {
   @State private var isLoading = true
   @State private var error: String?
   @State private var linked: AppLink?
+  @State private var lists = ListsStore()
   private let router = AppRouter.shared
 
   var body: some View {
@@ -63,7 +65,7 @@ struct SavedView: View {
             .swipeActions { Button("Delete", role: .destructive) { Task { await delete(itinerary) } } }
           }
         case .lists:
-          EmptyView()
+          ListsRows(store: lists)
         }
       }
       .listStyle(.insetGrouped)
@@ -74,8 +76,6 @@ struct SavedView: View {
           ContentUnavailableView("No saved places", systemImage: "heart", description: Text("Save a place from any result and it lands here."))
         } else if !isLoading, segment == .itineraries, itineraries.isEmpty {
           ContentUnavailableView("No saved itineraries", systemImage: "bookmark", description: Text("Save an itinerary from its page."))
-        } else if segment == .lists {
-          ComingSoonPlaceholder(title: YouDestination.lists.title, systemImage: YouDestination.lists.systemImage)
         }
       }
       .navigationTitle("Saved")
@@ -92,7 +92,8 @@ struct SavedView: View {
         }
       }
       .navigationDestination(item: $linked) { AppLinkDestination(link: $0) }
-      .refreshable { await load() }
+      .listsChrome(store: lists, isActive: segment == .lists)
+      .refreshable { await refresh() }
       .errorAlert($error)
       .task { await load() }
       .onAppear(perform: openPending)
@@ -106,6 +107,8 @@ struct SavedView: View {
     segment = .lists
     linked = link
   }
+
+  private func refresh() async { if segment == .lists { await lists.load() } else { await load() } }
 
   /// The phone's copies first, then the server; offline keeps them and says so.
   private func load() async {

@@ -8,7 +8,7 @@ the doors first and the rooms later. Every new entry pushes a placeholder
 | Entry | Where | Replaced by |
 |---|---|---|
 | Profile › You: Recents, Where you've been, Lists, My reviews, Contribute | `Features/Profile/UI/YouSection.swift` (`YouDestination`) | Phases 1, 7, 2, 5, 6 |
-| Saved › Lists segment | `SavedView.Segment.lists` (inline `ComingSoonPlaceholder`) | Phase 2 |
+| Saved › Lists segment | `SavedView.Segment.lists` (`ListsRows`, real since Phase 2, `16-lists.md`) | Phase 2 |
 | Discover › City Packs card | `DiscoverView.packsEntry` | Phase 4 |
 
 ## App links
@@ -19,7 +19,7 @@ result link keeps opening its session. It accepts `loci://<route>/…` and
 
 | Path | Case | Tab | Pushes |
 |---|---|---|---|
-| `/lists/:id` | `.list(id:)` | Saved (Lists segment) | placeholder |
+| `/lists/:id` | `.list(id:)` | Saved (Lists segment) | `ListDetailView(listID:)` (`16-lists.md`) |
 | `/packs/:slug` | `.pack(slug:)` | Discover | placeholder |
 | `/trips/:id` | `.trip(id:)` | Calendar (Trips hang off it) | `TripEditorView(tripID:)` |
 | `/recents` | `.recents` | Profile | `RecentsView` (`15-recents.md`) |

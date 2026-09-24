@@ -62,6 +62,12 @@ enum DesignPreview: String {
   case recentsCities
   /// One city from Recents: Overview with its stats and the latest prompts.
   case recentCity
+  /// Profile › Lists: four lists (one public, one itinerary) with the tab chips.
+  case lists
+  /// One list: header, map card and four stop cards, one without a position.
+  case listDetail
+  /// A place's Add to list sheet over its detail.
+  case addToList
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -118,6 +124,9 @@ enum DesignPreview: String {
     case .recents: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService())) }
     case .recentsCities: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService()), segment: .cities) }
     case .recentCity: NavigationStack { RecentCityView(city: RecentCity.previewLisbon) }
+    case .lists: NavigationStack { ListsView(store: ListsStore(service: PreviewListsService())) }
+    case .listDetail: NavigationStack { ListDetailView(store: .preview) }
+    case .addToList: AddToListPreview()
     }
   }
 }
