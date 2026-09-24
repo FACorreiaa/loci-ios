@@ -74,6 +74,12 @@ enum DesignPreview: String {
   case packDetail
   /// A paid pack nobody owns: day one, "2 more days in this pack", no price.
   case packLocked
+  /// A place's Reviews section: summary, star bars, three reviews, See all.
+  case placeReviews
+  /// The write/edit sheet, editing your own review, over the section.
+  case reviewComposer
+  /// Profile › My reviews: three of your reviews with the summary line.
+  case myReviews
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -136,6 +142,9 @@ enum DesignPreview: String {
     case .packs: NavigationStack { PacksView(store: PacksStore(service: PreviewPacksService())) }
     case .packDetail: NavigationStack { PackDetailView(slug: PackSummary.previewLisbon.slug, service: PreviewPacksService()) }
     case .packLocked: NavigationStack { PackDetailView(slug: PackSummary.previewLocked.slug, service: PreviewPacksService()) }
+    case .placeReviews: PlaceReviewsPreview()
+    case .reviewComposer: ReviewComposerPreview()
+    case .myReviews: NavigationStack { MyReviewsView(store: MyReviewsStore(service: PreviewReviewsService())) }
     }
   }
 }

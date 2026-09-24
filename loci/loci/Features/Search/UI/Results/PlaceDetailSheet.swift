@@ -8,7 +8,7 @@ import SwiftUI
 nonisolated extension Loci_Poi_POIDetailedInfo: @retroactive Identifiable {}
 
 /// Web's `DetailedItemModal`: a credited gallery, stat tiles, the grounded
-/// badge, verified facts, contact rows, and Save / Add to list / Share / Maps at the bottom.
+/// badge, verified facts, contact rows, reviews, and Save / Add to list / Share / Maps at the bottom.
 struct PlaceDetailSheet: View {
   let stop: Loci_Poi_POIDetailedInfo
   let destination: SearchDestination
@@ -87,6 +87,15 @@ struct PlaceDetailView: View {
         if let facts, !facts.facts.isEmpty { PlaceFactsList(facts: facts) }
         contact
         chips
+        // Reviews hang off a stored POI, the same rule as Add to list.
+        if ReviewPayload.canReview(stop) {
+          PlaceReviewsSection(
+            poiID: stop.id,
+            placeName: stop.name,
+            service: ResultsSideData.isOffline ? PreviewReviewsService() : ConnectReviewsService()
+          )
+          .padding(.top, 8)
+        }
       }
       .padding(LociTheme.defaultPadding)
     }
