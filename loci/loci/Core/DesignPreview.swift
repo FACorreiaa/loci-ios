@@ -96,6 +96,10 @@ enum DesignPreview: String {
   case addToTrip
   /// The Rome results page after COMPLETE named a saved trip: "Trip saved · Rome — Edit trip".
   case resultsTripSaved
+  /// Where you've been: the globe with cities, arcs (one over the antimeridian) and the legs sheet.
+  case globe
+  /// Where you've been with nothing recorded (backfilled, so "No travels recorded yet").
+  case globeEmpty
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -180,6 +184,9 @@ enum DesignPreview: String {
     case .openingHours: NavigationStack { ClaimFormPreview(field: .openingHours) }
     case .addToTrip: AddToTripPreview()
     case .resultsTripSaved: MuseChatPreview(state: .resultsSample.with { $0.savedTripID = "preview-rome" }, caption: "Rome · 12 places")
+    case .globe: NavigationStack { GlobeView(store: GlobeStore(service: PreviewTravelHistoryService()), recents: PreviewRecentsService()) }
+    case .globeEmpty:
+      NavigationStack { GlobeView(store: GlobeStore(service: PreviewTravelHistoryService(data: .previewEmpty)), recents: PreviewRecentsService()) }
     }
   }
 }

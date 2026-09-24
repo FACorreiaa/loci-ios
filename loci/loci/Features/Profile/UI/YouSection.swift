@@ -35,6 +35,7 @@ enum YouDestination: String, CaseIterable, Identifiable {
     case .lists: ListsView()
     case .reviews: MyReviewsView()
     case .contribute: ContributeView()
+    case .travelHistory: GlobeView()
     default: ComingSoonView(title: title, systemImage: systemImage)
     }
   }
