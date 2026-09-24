@@ -47,6 +47,12 @@ import Observation
     messages = stored + messages.filter { !storedIds.contains($0.id) }
   }
 
+  /// The id of the message a push named, as this thread spells it; nil when it
+  /// is not here (not stored yet, or not a proactive message).
+  func messageId(matching id: String) -> String? {
+    messages.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }?.id
+  }
+
   /// A follow-up that reads like a standing request: ask the server what it understood.
   func offer(_ text: String) async {
     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)

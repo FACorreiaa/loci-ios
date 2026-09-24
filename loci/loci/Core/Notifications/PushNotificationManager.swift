@@ -20,6 +20,7 @@ import UserNotifications
   /// Configure the notification center delegate.
   public func configure() {
     UNUserNotificationCenter.current().delegate = self
+    UNUserNotificationCenter.current().setNotificationCategories(NotificationCategory.all)
     Task { await refreshAuthorizationStatus() }
   }
 
@@ -80,13 +81,15 @@ import UserNotifications
   ) {
     let userInfo = notification.request.content.userInfo
     self.lastNotificationPayload = userInfo
-    // The page for this search is already on screen: web's RunWatcher shows
-    // no toast for the run you are looking at, and neither does the banner.
-    if let link = SessionLink(userInfo: userInfo), SearchSessionController.shared.viewingSessionId == link.sessionId {
+    switch PushRoute.presentation(userInfo: userInfo, viewingSessionId: SearchSessionController.shared.viewingSessionId) {
+    case .banner:
+      completionHandler([.banner, .badge, .sound])
+    case .suppress:
       completionHandler([])
-      return
+    case .suppressAndRefresh(let refresh):
+      AppRouter.shared.refreshThread(refresh)
+      completionHandler([])
     }
-    completionHandler([.banner, .badge, .sound])
   }
 
   /// Handle user interaction with a notification (e.g. tap on banner).
@@ -98,7 +101,11 @@ import UserNotifications
     let userInfo = response.notification.request.content.userInfo
     self.lastNotificationPayload = userInfo
     NotificationCenter.default.post(name: .pushNotificationDidReceiveResponse, object: userInfo)
-    if let link = SessionLink(userInfo: userInfo) { AppRouter.shared.open(link) }
+    switch PushRoute.tap(userInfo: userInfo) {
+    case .none: break
+    case .open(let link): AppRouter.shared.open(link)
+    case let .openThread(link, refresh): AppRouter.shared.open(link, refresh: refresh)
+    }
     completionHandler()
   }
 }

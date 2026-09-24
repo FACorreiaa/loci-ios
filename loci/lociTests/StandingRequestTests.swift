@@ -278,6 +278,22 @@ actor StubStandingTaskService: StandingTaskService {
     await thread.loadHistory(sessionId: "session-1")
     #expect(thread.messages.filter { $0.id == "confirm-w-1" }.count == 1)
   }
+
+  /// A chat push names the message in the server's spelling of the id.
+  @Test func theThreadFindsThePushedMessage() async {
+    var message = Loci_Chat_ConversationMessage()
+    message.id = "9A8B7C6D-0000-4000-8000-000000000001"
+    message.role = .assistant
+    message.content = "Rain from 14:00."
+    message.origin = .proactive
+    message.sourceLabel = "Standing task"
+    let service = StubStandingTaskService()
+    await service.setHistory([message])
+    let thread = MuseThread(service: service, timezone: "UTC")
+    await thread.loadHistory(sessionId: "s1")
+    #expect(thread.messageId(matching: "9a8b7c6d-0000-4000-8000-000000000001") == message.id)
+    #expect(thread.messageId(matching: "missing") == nil)
+  }
 }
 
 @MainActor struct StandingTasksStoreTests {

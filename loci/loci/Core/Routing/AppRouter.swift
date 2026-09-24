@@ -110,6 +110,9 @@ public nonisolated struct SessionLink: Sendable, Equatable, Hashable {
 
   public var selectedTab: Tab = .discover
   public var pendingSession: SessionLink?
+  /// A thread to fetch again, set by a chat push. The page showing that session
+  /// takes it (`takeThreadRefresh`), whether it was already open or opens now.
+  var threadRefresh: ThreadRefresh?
   /// Bumped by "New chat" on a results page: Ask Loci pops to its root and
   /// puts the cursor in its composer, whichever tab the page was on.
   public private(set) var newChatRequest = 0
@@ -129,5 +132,23 @@ public nonisolated struct SessionLink: Sendable, Equatable, Hashable {
   public func open(_ link: SessionLink) {
     selectedTab = .assistant
     pendingSession = link
+  }
+
+  /// Open a session and show a message the agent just posted in it.
+  func open(_ link: SessionLink, refresh: ThreadRefresh) {
+    threadRefresh = refresh
+    open(link)
+  }
+
+  /// Ask the page showing `refresh.sessionId` to fetch its thread again.
+  func refreshThread(_ refresh: ThreadRefresh) {
+    threadRefresh = refresh
+  }
+
+  /// The pending refresh for `sessionId`, cleared so it runs once.
+  func takeThreadRefresh(for sessionId: String) -> ThreadRefresh? {
+    guard let refresh = threadRefresh, refresh.sessionId == sessionId else { return nil }
+    threadRefresh = nil
+    return refresh
   }
 }
