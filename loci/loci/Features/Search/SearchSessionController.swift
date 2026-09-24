@@ -75,7 +75,8 @@ import UIKit
     }
 
     stop()
-    _ = await PushNotificationManager.shared.requestAuthorizationIfNeeded()
+    // Not awaited: the search runs while the user reads why we'd like to notify them.
+    Task { await PushPrimer.shared.primeIfNeeded() }
 
     let envelope = SearchEnvelope(
       sessionId: sessionId,
@@ -184,6 +185,9 @@ import UIKit
     envelope.finished = true
     // A partial result is still a result: web keeps it and shows the error on the rail.
     if state.status == .completed || state.hasResult { store.saveResult(state) }
+    // Metric: finished itinerary (web: chatStream.ts, on COMPLETE). Every
+    // completion — streamed, resumed or polled — passes through here once.
+    if state.status == .completed { Analytics.capture(.itineraryFinished, ["city": state.cityName ?? ""]) }
     let isViewing = isForeground && viewingSessionId != nil && viewingSessionId == state.sessionId
     // Once this phone is registered for APNs the server announces the run
     // itself, killed app included; a local notification would be a second banner.

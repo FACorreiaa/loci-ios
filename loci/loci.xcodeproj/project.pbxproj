@@ -10,6 +10,7 @@
 		0DC776E2305DBE860029F87E /* LociConnectProto in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776E1305DBE860029F87E /* LociConnectProto */; };
 		0DC776E5305DBE860029F87E /* Connect in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776E4305DBE860029F87E /* Connect */; };
 		0DC776F2305DBE860029F87E /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776F1305DBE860029F87E /* GoogleSignIn */; };
+		0DC776F5305DBE860029F87E /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776F4305DBE860029F87E /* PostHog */; };
 		14314FDF44DCB0760A62D268 /* NearbyWalkAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC7483382DCDDCF36790C44 /* NearbyWalkAttributes.swift */; };
 		50572CA008FED317A5104806 /* NearbyWalkLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE42D50A7E3826BD5FA47F13 /* NearbyWalkLiveActivity.swift */; };
 		C72D3152FC1BE9A7745BFFAF /* NearbyWalkWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2685B34C7CC0A36E8298F99 /* NearbyWalkWidgetBundle.swift */; };
@@ -98,6 +99,7 @@
 				0DC776E2305DBE860029F87E /* LociConnectProto in Frameworks */,
 				0DC776E5305DBE860029F87E /* Connect in Frameworks */,
 				0DC776F2305DBE860029F87E /* GoogleSignIn in Frameworks */,
+				0DC776F5305DBE860029F87E /* PostHog in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -201,6 +203,7 @@
 				0DC776E1305DBE860029F87E /* LociConnectProto */,
 				0DC776E4305DBE860029F87E /* Connect */,
 				0DC776F1305DBE860029F87E /* GoogleSignIn */,
+				0DC776F4305DBE860029F87E /* PostHog */,
 			);
 			productName = loci;
 			productReference = 0DC776A9305DBE860029F87E /* loci.app */;
@@ -301,6 +304,7 @@
 				0DC776E0305DBE860029F87E /* XCLocalSwiftPackageReference "loci-connect-proto" */,
 				0DC776E3305DBE860029F87E /* XCRemoteSwiftPackageReference "connect-swift" */,
 				0DC776F0305DBE860029F87E /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				0DC776F3305DBE860029F87E /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0DC776AA305DBE860029F87E /* Products */;
@@ -1025,6 +1029,14 @@
 				minimumVersion = 9.0.0;
 			};
 		};
+		0DC776F3305DBE860029F87E /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.82.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1042,6 +1054,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0DC776F0305DBE860029F87E /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignIn;
+		};
+		0DC776F4305DBE860029F87E /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0DC776F3305DBE860029F87E /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

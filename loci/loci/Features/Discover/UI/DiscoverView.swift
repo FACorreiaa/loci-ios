@@ -13,6 +13,14 @@ struct DiscoverView: View {
     ("Beaches", "beach.umbrella"), ("Adventure", "mountain.2"), ("Cultural", "theatermasks"), ("Markets", "storefront"),
   ]
 
+  /// Shown until the first search, so a new user sees what a good prompt looks
+  /// like. The first is web's landing placeholder, word for word.
+  static let examplePrompts = [
+    "Three chill days in Lisbon for food and views",
+    "A rainy afternoon in Porto",
+    "A weekend of markets and street food in Mexico City",
+  ]
+
   @State private var path: [SessionLink] = []
   @State private var page: Loci_Discover_DiscoverPageData?
   @State private var city = ""
@@ -25,6 +33,7 @@ struct DiscoverView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 24) {
           hero
+          if page?.recentDiscoveries.isEmpty == true { examplesSection }
           HereBriefSection(model: here)
           InSeasonBand(seed: $composerSeed)
           quickCategoriesSection
@@ -82,6 +91,24 @@ struct DiscoverView: View {
       .font(.lociCaption(13))
       .buttonStyle(.bordered)
       .tint(.lociForest)
+    }
+  }
+
+  private var examplesSection: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Try one").font(.lociHeadline())
+      ForEach(Self.examplePrompts, id: \.self) { prompt in
+        Button {
+          composerSeed = prompt
+        } label: {
+          Label(prompt, systemImage: "sparkle")
+            .font(.lociBody(15))
+            .foregroundStyle(Color.lociInk)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .lociCard(padding: 12)
+        }
+        .buttonStyle(.plain)
+      }
     }
   }
 

@@ -31,6 +31,7 @@ import SwiftUI
         }
       }.task {
         let restored = await AuthSessionManager.shared.restoreSessionIfNeeded()
+        if restored { identifyCurrentUser() }
         withAnimation {
           isAuthenticated = restored
           isCheckingAuth = false
@@ -40,9 +41,11 @@ import SwiftUI
           isAuthenticated = true
           isCheckingAuth = false
         }
+        identifyCurrentUser()
         // The APNs token often arrives before the first sign-in; register it now.
         Task { await PushRegistration.shared.registerIfNeeded() }
       }.onReceive(NotificationCenter.default.publisher(for: .authSessionDidInvalidate)) { _ in
+        Analytics.reset()
         withAnimation {
           isAuthenticated = false
           isCheckingAuth = false
@@ -65,5 +68,10 @@ import SwiftUI
           }
         }
     }
+  }
+
+  private func identifyCurrentUser() {
+    let session = AuthSessionManager.shared
+    Analytics.identify(userId: session.currentUserID, username: session.currentUsername)
   }
 }

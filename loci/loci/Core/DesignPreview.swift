@@ -7,6 +7,8 @@ import SwiftUI
 /// without signing in. Debug builds only; never set in normal use.
 enum DesignPreview: String {
   case inSeason
+  /// The notifications primer a first search raises, over an empty screen.
+  case pushPrimer
   /// The Muse chat (SearchResultsView's pieces) with a finished answer.
   case museChat
   /// The Muse chat while tokens stream in ("is writing", ring turning).
@@ -61,6 +63,8 @@ enum DesignPreview: String {
   @ViewBuilder var body: some View {
     switch self {
     case .inSeason: InSeasonPreview()
+    case .pushPrimer:
+      Color.lociPaper.ignoresSafeArea().sheet(isPresented: .constant(true)) { PushPrimerSheet(primer: PushPrimer()) }
     case .museChat: MuseChatPreview(state: .museSampleCompleted)
     case .museChatStreaming: MuseChatPreview(state: .museSampleStreaming)
     case .museChatThinking: MuseChatPreview(state: .museSampleThinking)

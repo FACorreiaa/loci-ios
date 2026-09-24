@@ -72,20 +72,34 @@ import SwiftUI
 
     isLoading = true
     Task {
+      let email = email.trimmingCharacters(in: .whitespaces)
       do {
         _ = try await authService.register(
-          email: email.trimmingCharacters(in: .whitespaces),
+          email: email,
           username: username.trimmingCharacters(in: .whitespaces),
           password: password
         )
-        self.isLoading = false
-        self.isSignup = false
-        self.successMessage = "Account created successfully! Please sign in."
-        self.password = ""
-        self.confirmPassword = ""
+        Analytics.capture(.signupCompleted, ["method": "password"])
       } catch {
         self.isLoading = false
         self.errorMessage = error.localizedDescription
+        return
+      }
+
+      // Register issues no tokens. Asking a new user to type the same password
+      // again is where a first trip was being lost (web: SignUp.tsx does the same).
+      // A brand-new account has no second factor, so there is no MFA branch here.
+      do {
+        _ = try await authService.login(email: email, password: password)
+        self.isLoading = false
+        self.onAuthenticated()
+      } catch {
+        // The account exists; only the automatic sign-in failed.
+        self.isLoading = false
+        self.isSignup = false
+        self.successMessage = "Account created. Sign in to continue."
+        self.password = ""
+        self.confirmPassword = ""
       }
     }
   }
