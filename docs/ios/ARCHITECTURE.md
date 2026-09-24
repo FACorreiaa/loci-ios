@@ -1576,13 +1576,20 @@ in-season band, the Muse chat (stages A and B), result-page parity, the here
 brief. The build signs, tests pass in CI, TestFlight builds ship from the
 `beta` lane.
 
-**Never verified live.** The roadmap's own line still applies: "Not yet
-verified against the live API. Nothing has been run signed-in." Specifically
-unrecorded on a device: token refresh against the real API; every settings
-screen; a streamed search end to end and a notification tap; every screen in
-PR #4; native sign-in after the fix; a real walk (steps, a geofence firing,
-the Live Activity on the Lock Screen); the here brief with location granted
-and denied.
+**Verified live so far.** One TestFlight session on the owner's phone
+(build 10, 2026-09-22 evening): Google sign-in, Discover, Saved, the Ask Loci
+list and a Near me search all reached the server. Every search of that
+session died on the Postgres pgvector crash and, once that was fixed, on the
+shared OpenRouter key being out of credits; on 2026-09-23 the raw-token
+result page showed up in the same way (fixed in #10). Web searches generate
+again since the evening of 2026-09-23.
+
+**Still unrecorded on a device.** Token refresh against the real API; every
+settings screen; a streamed search end to end with the new result page, and
+a notification tap that restores it; the trips editor, Compare and Saved
+flows in PR #4; native sign-in after the fix; a real walk (steps, a geofence
+firing, the Live Activity on the Lock Screen); the here brief with location
+granted and denied.
 
 **Phase 2 items that already exist.** The Near me walk with `CMPedometer`,
 `CLMonitor` fences and the Live Activity (`NearbyWalkWidget`) is roadmap
@@ -1601,9 +1608,12 @@ reconcile is the mechanism item 2 needs for offline refresh.
 - `EditTripCTA` needs `navigation` (a trip id) in `CompletePayload`; the Swift
   message today has `sessionID`, `result`, `loadFromSession` and `message`
   only (`gen/swift/loci/chat/chat.pb.swift:1426-1457`).
-- StreamChat resume bugs (replay does not follow a live generation; shared
-  `event_id`s; per-pod resume buffer). iOS works around the second with its
-  `(id, case)` key and treats the first as "still working" and polls.
+- StreamChat resume was fixed server-side on 2026-09-23 (proto v5.21.1, api
+  1f64023): a resume now follows a live run to its terminal event, event ids
+  are unique per stream, and a run whose buffer is gone answers with one
+  COMPLETE carrying `load_from_session` (handled since #10). The reducer's
+  `(id, case)` dedup key is therefore belt and braces, not a workaround, and
+  polling `GetChatSession` could give way to `GetRunStatus`.
 - Buf Swift + Connect-Swift generation in proto CI; `gen/swift` is committed
   by hand.
 - Sign in with Apple token validation on the server; StoreKit 2 receipts.
