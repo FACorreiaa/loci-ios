@@ -201,7 +201,7 @@ struct PlaceDetailView: View {
 
   /// Off the main actor: the request and its scene aren't Sendable, so both
   /// live here and only the finished scene is handed back.
-  @concurrent private static func lookAroundScene(at coordinate: CLLocationCoordinate2D) async -> sending MKLookAroundScene? {
+  @concurrent static func lookAroundScene(at coordinate: CLLocationCoordinate2D) async -> sending MKLookAroundScene? {
     try? await MKLookAroundSceneRequest(coordinate: coordinate).scene
   }
 
