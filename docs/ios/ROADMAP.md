@@ -1,5 +1,7 @@
 # Loci iOS roadmap
 
+Study guide to the codebase (layers, networking, search state, screens, tests): [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
 ## Phase 1 — Core MVP (this pass)
 API and journey parity with web in a native shell. Slices and their notes:
 
