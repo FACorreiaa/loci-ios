@@ -3,7 +3,8 @@ import SwiftUI
 import WidgetKit
 
 /// Lock Screen and Dynamic Island for a Near me walk: steps, distance, how
-/// many places are fenced, and the closest one. The extension cannot see the
+/// many places are fenced, and the closest one (or, when following a route,
+/// the place being walked to). The extension cannot see the
 /// app's theme, so the three brand colours are written here (NATIVE_DESIGN §1).
 struct NearbyWalkLiveActivity: Widget {
   var body: some WidgetConfiguration {
@@ -20,7 +21,10 @@ struct NearbyWalkLiveActivity: Widget {
           Text(context.state.distanceText).font(.headline).foregroundStyle(Palette.ink)
         }
         DynamicIslandExpandedRegion(.bottom) {
-          if let nearest = context.state.nearestText {
+          if let destination = context.state.destinationText {
+            Label(destination, systemImage: "arrow.triangle.turn.up.right.diamond.fill")
+              .font(.subheadline).foregroundStyle(Palette.forest).lineLimit(1)
+          } else if let nearest = context.state.nearestText {
             Label(nearest, systemImage: "mappin.and.ellipse").font(.subheadline).foregroundStyle(Palette.terracotta).lineLimit(1)
           } else {
             Text("\(context.state.placesNearby) places within \(context.attributes.radiusKm) km").font(.subheadline).foregroundStyle(.secondary)
@@ -63,7 +67,10 @@ private struct LockScreenView: View {
           Text("places").font(.caption).foregroundStyle(.secondary)
         }
       }
-      if let nearest = state.nearestText {
+      if let destination = state.destinationText {
+        Label(destination, systemImage: "arrow.triangle.turn.up.right.diamond.fill")
+          .font(.subheadline.weight(.medium)).foregroundStyle(Palette.forest).lineLimit(1)
+      } else if let nearest = state.nearestText {
         Label(nearest, systemImage: "mappin.and.ellipse").font(.subheadline).foregroundStyle(Palette.terracotta).lineLimit(1)
       }
     }

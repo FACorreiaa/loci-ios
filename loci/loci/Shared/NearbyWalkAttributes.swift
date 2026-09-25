@@ -12,13 +12,30 @@ public nonisolated struct NearbyWalkAttributes: ActivityAttributes {
     /// The closest place right now, if one is within the walk's reach.
     public var nearestName: String?
     public var nearestMeters: Double?
+    /// The place being walked to, when following a route. Optional so an
+    /// activity started by an older build still decodes.
+    public var destinationName: String?
+    public var destinationMeters: Double?
+    public var etaSeconds: Double?
 
-    public init(steps: Int, distanceMeters: Double, placesNearby: Int, nearestName: String? = nil, nearestMeters: Double? = nil) {
+    public init(
+      steps: Int,
+      distanceMeters: Double,
+      placesNearby: Int,
+      nearestName: String? = nil,
+      nearestMeters: Double? = nil,
+      destinationName: String? = nil,
+      destinationMeters: Double? = nil,
+      etaSeconds: Double? = nil
+    ) {
       self.steps = steps
       self.distanceMeters = distanceMeters
       self.placesNearby = placesNearby
       self.nearestName = nearestName
       self.nearestMeters = nearestMeters
+      self.destinationName = destinationName
+      self.destinationMeters = destinationMeters
+      self.etaSeconds = etaSeconds
     }
   }
 
@@ -41,6 +58,20 @@ public nonisolated extension NearbyWalkAttributes.ContentState {
     guard let nearestName else { return nil }
     if let nearestMeters { return "\(nearestName) · \(Self.format(meters: nearestMeters))" }
     return nearestName
+  }
+
+  /// "Bolhão · 400 m · 5 min" while following a route.
+  var destinationText: String? {
+    guard let destinationName else { return nil }
+    var parts = [destinationName]
+    if let destinationMeters { parts.append(Self.format(meters: destinationMeters)) }
+    if let etaSeconds { parts.append(Self.format(eta: etaSeconds)) }
+    return parts.joined(separator: " · ")
+  }
+
+  static func format(eta seconds: Double) -> String {
+    let minutes = max(1, Int((seconds / 60).rounded()))
+    return minutes < 60 ? "\(minutes) min" : "\(minutes / 60) h \(minutes % 60) min"
   }
 
   static func format(meters: Double) -> String {

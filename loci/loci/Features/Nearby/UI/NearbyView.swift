@@ -27,7 +27,12 @@ struct NearbyView: View {
   @State private var showList = true
   @State private var sessionId: String?
   @State private var error: String?
+  @State private var detent: PresentationDetent = .medium
+  /// The camera rides behind the walker until the person pans the map.
+  @State private var following = true
+  @State private var lastStepAt = Date.distantPast
   private let walk = NearbyWalk.shared
+  private var navigator: WalkNavigator { walk.navigator }
 
   /// Only this screen's search, not whatever else is running.
   private var places: [Loci_Poi_POIDetailedInfo] {
@@ -37,9 +42,47 @@ struct NearbyView: View {
 
   private var isSearching: Bool { controller.state.isActive && (sessionId == nil || controller.state.sessionId == sessionId) }
 
+  /// Where the walk starts from: the live fix while walking, else the search's.
+  private var here: CLLocationCoordinate2D? { walk.location?.coordinate ?? coordinate }
+
+  private var walkerHeading: CLLocationDirection? {
+    guard let location = walk.location else { return nil }
+    return WalkingRoute.heading(
+      course: location.course,
+      speed: location.speed,
+      from: location.coordinate,
+      toward: navigator.remaining.dropFirst().first ?? navigator.destinationCoordinate
+    )
+  }
+
+  /// Moving by GPS, or the pedometer counted a step in the last few seconds.
+  private var isMoving: Bool {
+    (walk.location?.speed ?? 0) > 0.3 || Date().timeIntervalSince(lastStepAt) < 3
+  }
+
   var body: some View {
     Map(position: $camera, selection: $selectedID) {
-      UserAnnotation()
+      if navigator.isNavigating, let location = walk.location {
+        Annotation("You", coordinate: location.coordinate, anchor: .bottom) {
+          WalkerFigure(
+            facesLeft: walkerHeading.map(WalkingRoute.facesLeft) ?? false,
+            isMoving: isMoving,
+            destinationName: navigator.destination?.name
+          )
+        }
+        .annotationTitles(.hidden)
+      } else {
+        UserAnnotation()
+      }
+      if navigator.remaining.count > 1 {
+        MapPolyline(coordinates: navigator.remaining)
+          .stroke(
+            Color.lociForest,
+            style: navigator.isNavigating && !navigator.isStraightLine
+              ? StrokeStyle(lineWidth: 7, lineCap: .round, lineJoin: .round)
+              : StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round, dash: [1, 10])
+          )
+      }
       ForEach(places, id: \.stableID) { poi in
         Marker(
           poi.name,
@@ -54,10 +97,40 @@ struct NearbyView: View {
       MapUserLocationButton()
       MapCompass()
     }
+    .overlay(alignment: .top) {
+      if navigator.isNavigating, !following {
+        Button("Recenter", systemImage: "location.north.line.fill") { follow() }
+          .buttonStyle(.borderedProminent).tint(.lociForest)
+          .padding(.top, 8)
+          .transition(.move(edge: .top).combined(with: .opacity))
+      }
+    }
     .onChange(of: selectedID) { _, id in
-      guard id != nil else { return }
+      guard let id else {
+        if !navigator.isNavigating { navigator.end() }
+        return
+      }
       UIImpactFeedbackGenerator(style: .light).impactOccurred()
       showList = true
+      guard let poi = places.first(where: { $0.stableID == id }), let here else { return }
+      Task {
+        await navigator.preview(to: poi, from: here)
+        guard navigator.destination?.stableID == id, let rect = WalkingRoute.mapRect(for: navigator.remaining) else { return }
+        withAnimation(LociTheme.selectionSettle) { camera = .rect(rect) }
+      }
+    }
+    .onChange(of: walk.location) { _, location in
+      guard navigator.isNavigating, following, let location else { return }
+      withAnimation(.easeInOut(duration: 0.8)) { camera = followCamera(at: location) }
+    }
+    .onChange(of: camera) { _, position in
+      if position.positionedByUser, navigator.isNavigating { withAnimation { following = false } }
+    }
+    .onChange(of: navigator.arrivedAt) { _, arrived in
+      guard arrived != nil else { return }
+      UINotificationFeedbackGenerator().notificationOccurred(.success)
+      detent = .medium
+      withAnimation { camera = .userLocation(fallback: .automatic) }
     }
     .navigationTitle("Near me")
     .navigationBarTitleDisplayMode(.inline)
@@ -72,10 +145,23 @@ struct NearbyView: View {
     }
     .onChange(of: radiusKm) { Task { await search() } }
     .sheet(isPresented: $showList) {
-      NearbyList(places: places, selectedID: $selectedID, isSearching: isSearching, walk: walk, radiusKm: radiusKm) {
-        Task { await search() }
+      VStack(spacing: 0) {
+        if navigator.destination != nil || navigator.arrivedAt != nil {
+          RouteCard(
+            navigator: navigator,
+            steps: walk.isActive && !walk.tracker.deniedByUser ? walk.tracker.stepsText : nil,
+            canGo: here != nil,
+            onGo: go,
+            onEnd: endRoute
+          )
+          .padding(.top, 18)
+        }
+        NearbyList(places: places, selectedID: $selectedID, isSearching: isSearching, walk: walk, radiusKm: radiusKm) {
+          Task { await search() }
+        }
       }
-        .presentationDetents([.fraction(0.25), .medium, .large])
+        .background(Color.lociPaper)
+        .presentationDetents([.fraction(0.25), .medium, .large], selection: $detent)
         .presentationBackgroundInteraction(.enabled(upThrough: .medium))
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled()
@@ -86,7 +172,39 @@ struct NearbyView: View {
       if isSearching, sessionId == nil { sessionId = link?.sessionId }
     }
     .onChange(of: places.map(\.stableID)) { Task { await walk.update(places: places) } }
-    .onChange(of: walk.tracker.steps) { walk.refreshActivity() }
+    .onChange(of: walk.tracker.steps) {
+      lastStepAt = Date()
+      walk.refreshActivity()
+    }
+  }
+
+  private func go() {
+    Task {
+      await walk.navigate(places: places, radiusKm: radiusKm)
+      detent = .fraction(0.25)
+      follow()
+    }
+  }
+
+  private func endRoute() {
+    navigator.end()
+    selectedID = nil
+    following = true
+    withAnimation { camera = .userLocation(fallback: .automatic) }
+  }
+
+  private func follow() {
+    withAnimation { following = true }
+    guard let location = walk.location else {
+      camera = .userLocation(followsHeading: true, fallback: .automatic)
+      return
+    }
+    withAnimation(.easeInOut(duration: 0.8)) { camera = followCamera(at: location) }
+  }
+
+  /// Low and tilted behind the walker, looking the way they are heading.
+  private func followCamera(at location: CLLocation) -> MapCameraPosition {
+    .camera(MapCamera(centerCoordinate: location.coordinate, distance: 400, heading: walkerHeading ?? 0, pitch: 60))
   }
 
   private func search() async {
