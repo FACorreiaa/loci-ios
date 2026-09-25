@@ -31,7 +31,12 @@ struct WalkDayTests {
     day.id = "d2"
     day.dayNumber = 2
     day.cityName = "Sintra"
-    day.stops = [tripStop("Pena", 38.7876, -9.3906), tripStop("No pin", nil, nil), tripStop("Null Island", 0, 0), tripStop("Quinta", 38.7963, -9.3960)]
+    day.stops = [
+      tripStop("Pena", 38.7876, -9.3906),
+      tripStop("No pin", nil, nil),
+      tripStop("Null Island", 0, 0),
+      tripStop("Quinta", 38.7963, -9.3960),
+    ]
 
     let walk = WalkDay.from(trip: trip, day: day)
 
