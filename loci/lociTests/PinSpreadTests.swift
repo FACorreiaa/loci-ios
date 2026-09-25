@@ -5,7 +5,7 @@ import Testing
 @testable import loci
 
 /// Crowded map pins (pack detail showed 1 under 2 and 7 under 8): pins that
-/// would overlap at the current zoom are fanned out one diameter apart.
+/// would overlap at the current zoom are pushed apart until they touch.
 struct PinSpreadTests {
   private func pin(_ id: String, _ lat: Double, _ lon: Double) -> PinSpread.Input {
     PinSpread.Input(id: id, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon))
@@ -25,27 +25,35 @@ struct PinSpreadTests {
     #expect(PinSpread.coordinates(for: pins, mapPointsPerPoint: scale).isEmpty)
   }
 
-  @Test func twoCrowdedPinsEndUpOneDiameterApartInNumberOrder() throws {
-    let pins = [pin("1", 38.71, -9.14), pin("2", 38.71001, -9.14001), pin("far", 38.75, -9.10)]
+  @Test func twoCrowdedPinsEndUpOneDiameterApart() throws {
+    let pins = [pin("1", 38.71, -9.14), pin("2", 38.71001, -9.13999), pin("far", 38.75, -9.10)]
     let spread = PinSpread.coordinates(for: pins, mapPointsPerPoint: scale)
     #expect(Set(spread.keys) == ["1", "2"])
     let one = try #require(spread["1"])
     let two = try #require(spread["2"])
     #expect(abs(screenDistance(one, two, scale: scale) - PinSpread.pinDiameter) < 0.5)
-    // Number order reads left to right.
+    // Pushed along the line between them: 2 stays east of 1.
     #expect(one.longitude < two.longitude)
   }
 
-  @Test func clustersAreTransitive() {
-    // a–b and b–c overlap, a–c does not: all three still move together.
+  @Test func pinsOnTheSameSpotSplitInNumberOrder() throws {
+    let pins = [pin("1", 38.71, -9.14), pin("2", 38.71, -9.14)]
+    let spread = PinSpread.coordinates(for: pins, mapPointsPerPoint: scale)
+    let one = try #require(spread["1"])
+    let two = try #require(spread["2"])
+    #expect(one.longitude < two.longitude)
+    #expect(abs(screenDistance(one, two, scale: scale) - PinSpread.pinDiameter) < 0.5)
+  }
+
+  @Test func chainsAreUntangled() {
+    // a–b and b–c overlap, a–c does not; pushing b must not leave it on a or c.
     let step = 20.0 * scale  // map points: 20 screen points apart, under the 28-point diameter
     let origin = MKMapPoint(CLLocationCoordinate2D(latitude: 38.71, longitude: -9.14))
     let pins = (0..<3).map { index in
       PinSpread.Input(id: "\(index)", coordinate: MKMapPoint(x: origin.x + step * Double(index), y: origin.y).coordinate)
     }
     let spread = PinSpread.coordinates(for: pins, mapPointsPerPoint: scale)
-    #expect(spread.count == 3)
-    let placed = pins.compactMap { spread[$0.id] }
+    let placed = pins.map { spread[$0.id] ?? $0.coordinate }
     for (lhs, rhs) in [(0, 1), (1, 2), (0, 2)] {
       #expect(screenDistance(placed[lhs], placed[rhs], scale: scale) >= PinSpread.pinDiameter - 0.5)
     }

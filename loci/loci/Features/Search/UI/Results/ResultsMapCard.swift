@@ -143,6 +143,8 @@ struct ResultsMapCard: View {
 
   @State private var camera: MapCameraPosition = .automatic
   @State private var size: CGSize = .zero
+  /// The zoom MapKit actually settled on; until then, an estimate from the pins.
+  @State private var cameraScale: Double?
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -150,13 +152,20 @@ struct ResultsMapCard: View {
         ResultsMapContent(
           data: data,
           selectedID: selectedID,
-          spread: data.spread(mapPointsPerPoint: PinSpread.fittedScale(for: data.spreadInputs, in: size))
+          spread: data.spread(mapPointsPerPoint: cameraScale ?? PinSpread.fittedScale(for: data.spreadInputs, in: size))
         )
       }
       .mapStyle(.standard(pointsOfInterest: .excludingAll))
       .mapControlVisibility(.hidden)
       .frame(height: 260)
       .onGeometryChange(for: CGSize.self, of: \.size) { size = $0 }
+      .onMapCameraChange(frequency: .onEnd) { context in
+        guard size.width > 0 else { return }
+        let scale = context.rect.size.width / size.width
+        // Spreading moves pins, which refits the camera; settle instead of chasing it.
+        if let cameraScale, abs(scale - cameraScale) / cameraScale < 0.05 { return }
+        cameraScale = scale
+      }
       .clipShape(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
       .overlay(alignment: .bottomTrailing) {
         Label("Expand", systemImage: "arrow.up.left.and.arrow.down.right")
@@ -167,7 +176,10 @@ struct ResultsMapCard: View {
       }
       .contentShape(Rectangle())
       .onTapGesture(perform: onExpand)
-      .onChange(of: data) { _, _ in camera = .automatic }
+      .onChange(of: data) { _, _ in
+        cameraScale = nil
+        camera = .automatic
+      }
       .accessibilityElement(children: .ignore)
       .accessibilityLabel("Map of \(data.pins.count) places")
       .accessibilityAddTraits(.isButton)
