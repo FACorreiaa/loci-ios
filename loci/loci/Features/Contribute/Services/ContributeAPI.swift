@@ -35,6 +35,18 @@ nonisolated enum ContributeAPI {
     return response.places.map(PendingPlace.init)
   }
 
+  /// The three writes throw `ContributeError`, which keeps the Connect code so
+  /// a refusal can be worded for the scout (`rpc` folds most codes into text).
+  static func write<Input: Sendable, Output>(
+    _ fallback: String,
+    _ request: Input,
+    _ call: @Sendable (Input) async -> ResponseMessage<Output>
+  ) async throws(ContributeError) -> Output {
+    let response = await withAuthRetry { await call(request) }
+    if let message = response.message { return message }
+    throw ContributeError(response.error, fallback: fallback)
+  }
+
   /// web: useSubmitPlaceClaims. One SubmitPlaceClaim per answer, all at once;
   /// any failure fails the report (web's Promise.all). Returns the best status.
   static func submitClaims(poiID: String, field: Loci_Place_PlaceFactField, values: [String]) async throws -> ClaimResult {
@@ -42,7 +54,7 @@ nonisolated enum ContributeAPI {
     let results = try await withThrowingTaskGroup(of: (Int, ClaimResult).self) { group in
       for (index, request) in requests.enumerated() {
         group.addTask {
-          let response = try await rpc("Could not file your report.", request) { await places.submitPlaceClaim(request: $0, headers: [:]) }
+          let response = try await write("Could not file your report.", request) { await places.submitPlaceClaim(request: $0, headers: [:]) }
           return (index, ClaimResult(claimID: response.claimID, status: response.status))
         }
       }
@@ -55,7 +67,7 @@ nonisolated enum ContributeAPI {
 
   /// web: useSubmitPlace, with the draft's own client id so a retry is a repeat.
   static func submitPlace(_ draft: PlaceDraft) async throws -> PlaceSubmissionResult {
-    let response = try await rpc("Could not add this place.", ContributePayload.submitPlace(draft)) {
+    let response = try await write("Could not add this place.", ContributePayload.submitPlace(draft)) {
       await places.submitPlace(request: $0, headers: [:])
     }
     return PlaceSubmissionResult(
@@ -67,7 +79,7 @@ nonisolated enum ContributeAPI {
 
   /// web: useConfirmPlace.
   static func confirmPlace(submissionID: String) async throws -> PlaceSubmissionResult {
-    let response = try await rpc("That did not go through. Try again.", ContributePayload.confirm(submissionID: submissionID)) {
+    let response = try await write("That did not go through. Try again.", ContributePayload.confirm(submissionID: submissionID)) {
       await places.confirmPlace(request: $0, headers: [:])
     }
     return PlaceSubmissionResult(

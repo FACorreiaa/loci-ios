@@ -70,6 +70,17 @@ nonisolated enum ContributePayload {
   /// web: MissingPlaceCard. Hybrid within 25 km when the location is known,
   /// otherwise semantic in the named city. Nil when there is nothing to search
   /// with: no query, or neither a location nor a city.
+  /// The coordinate to search around, or nil when the scout typed a city other
+  /// than the one they are standing in: a search "within 25 km of you" cannot
+  /// find anything in Porto from Lisbon, so that city gets a semantic search.
+  static func searchCoordinate(typedCity: String, context: ContributeSearchContext?) -> CLLocationCoordinate2D? {
+    guard let context else { return nil }
+    let typed = typedCity.trimmingCharacters(in: .whitespacesAndNewlines)
+    let located = context.city.trimmingCharacters(in: .whitespacesAndNewlines)
+    if typed.isEmpty || located.isEmpty || typed.caseInsensitiveCompare(located) == .orderedSame { return context.coordinate }
+    return nil
+  }
+
   static func search(query: String, city: String, coordinate: CLLocationCoordinate2D?) -> Loci_Poi_SearchPOIRequest? {
     let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
     let city = city.trimmingCharacters(in: .whitespacesAndNewlines)

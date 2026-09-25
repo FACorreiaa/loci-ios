@@ -18,7 +18,8 @@ import LociConnectProto
   /// kept here long enough for the scout to read what their confirmation did.
   private(set) var confirmed: [String: (place: PendingPlace, outcome: PlaceSubmissionResult)] = [:]
   private(set) var confirming: Set<String> = []
-  private(set) var confirmFailed: Set<String> = []
+  /// Why a confirmation failed, per submission; `canRetry` decides whether the button comes back.
+  private(set) var confirmFailed: [String: ContributeError] = [:]
   private(set) var page = 1
 
   // Missing-place search.
@@ -81,7 +82,7 @@ import LociConnectProto
   func confirm(_ place: PendingPlace) async {
     guard !confirming.contains(place.submissionID) else { return }
     confirming.insert(place.submissionID)
-    confirmFailed.remove(place.submissionID)
+    confirmFailed[place.submissionID] = nil
     defer { confirming.remove(place.submissionID) }
     do {
       let outcome = try await service.confirmPlace(submissionID: place.submissionID)
@@ -89,7 +90,7 @@ import LociConnectProto
       if let refreshed = try? await service.pendingPlaces() { pending = refreshed }
       if let refreshed = try? await service.profile() { profile = refreshed }
     } catch {
-      confirmFailed.insert(place.submissionID)
+      confirmFailed[place.submissionID] = error as? ContributeError ?? ContributeError(kind: .other, serverMessage: "")
     }
   }
 
@@ -100,8 +101,11 @@ import LociConnectProto
     if city.trimmingCharacters(in: .whitespaces).isEmpty { city = context.city }
   }
 
+  /// Around the scout when the City field names where they are (or nothing), else in the typed city.
+  private var searchCoordinate: CLLocationCoordinate2D? { ContributePayload.searchCoordinate(typedCity: city, context: searchContext) }
+
   var canSearch: Bool {
-    ContributePayload.search(query: query, city: city, coordinate: searchContext?.coordinate) != nil && !isSearching
+    ContributePayload.search(query: query, city: city, coordinate: searchCoordinate) != nil && !isSearching
   }
 
   func search() async {
@@ -111,7 +115,7 @@ import LociConnectProto
     searchError = nil
     defer { isSearching = false }
     do {
-      results = try await service.searchPlaces(query: query, city: city, coordinate: searchContext?.coordinate)
+      results = try await service.searchPlaces(query: query, city: city, coordinate: searchCoordinate)
     } catch {
       results = []
       searchError = "We couldn't search places. Try again."
@@ -129,7 +133,11 @@ import LociConnectProto
   let task: VerificationTask
   private(set) var field: Loci_Place_PlaceFactField?
   private(set) var tokens: [String] = []
-  var hours = OpeningHours.default
+  var hours = OpeningHours.default {
+    didSet { if hours != oldValue { result = nil } }
+  }
+  /// The week already filed, so the same week cannot be filed twice by accident.
+  private(set) var submittedHours: OpeningHours?
   private(set) var isSubmitting = false
   private(set) var result: ClaimResult?
   var error: String?
@@ -169,7 +177,7 @@ import LociConnectProto
 
   var isReady: Bool {
     guard field != nil else { return false }
-    return isStructured ? hours.isValid : !tokens.isEmpty
+    return isStructured ? hours.isValid && hours != submittedHours : !tokens.isEmpty
   }
 
   func submit() async {
@@ -185,9 +193,10 @@ import LociConnectProto
         ["field": PlaceFactVocabulary.wireName(field), "status": outcome.statusName, "poiId": task.poiID, "answers": values.count]
       )
       tokens = []
+      if isStructured { submittedHours = hours }
       onSubmitted?()
     } catch {
-      self.error = error.userMessage
+      self.error = ContributeError.message(from: error, for: .report)
     }
   }
 }
@@ -234,7 +243,7 @@ import LociConnectProto
       draft.clearAfterSubmit()
       onSubmitted?()
     } catch {
-      self.error = error.userMessage
+      self.error = ContributeError.message(from: error, for: .addPlace)
     }
   }
 }

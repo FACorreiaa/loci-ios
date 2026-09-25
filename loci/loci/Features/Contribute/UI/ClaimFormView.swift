@@ -75,6 +75,9 @@ struct ClaimFormView: View {
       if store.isStructured {
         OpeningHoursEditor(hours: $store.hours)
           .lociCard(padding: 12)
+        if store.hours == store.submittedHours {
+          Text("This week is already filed. Change it to file again.").font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk)
+        }
       } else if let vocabulary = store.vocabulary {
         FlowLayout(spacing: 8) {
           ForEach(vocabulary.options, id: \.token) { option in
