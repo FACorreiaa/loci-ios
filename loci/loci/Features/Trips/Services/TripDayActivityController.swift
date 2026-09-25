@@ -48,7 +48,7 @@ import UserNotifications
   private(set) var running: Running?
   private(set) var manualIndex: Int?
   private var activity: Activity<TripDayAttributes>?
-  private let fences = POIProximityMonitor(name: "loci-trip-day")
+  private let fences = POIProximityMonitor(name: POIProximityMonitor.tripDayName)
 
   var isRunning: Bool { running != nil }
   var liveActivitiesEnabled: Bool { ActivityAuthorizationInfo().areActivitiesEnabled }

@@ -32,6 +32,15 @@ import Testing
     #expect(!chosen.contains { $0.name == "No pin" })
   }
 
+  /// CLMonitor aborts the whole app, not throws, on a name it rejects: open a
+  /// real one with every name we use.
+  @Test(arguments: [POIProximityMonitor.nearbyWalkName, POIProximityMonitor.tripDayName])
+  func monitorNamesAreAcceptedByCLMonitor(name: String) async {
+    // Getting past this line is the test: a rejected name is SIGABRT.
+    let monitor = await CLMonitor(name)
+    _ = await monitor.identifiers
+  }
+
   @Test func nearestPlaceUsesRealDistance() throws {
     let here = CLLocationCoordinate2D(latitude: 41.1496, longitude: -8.6109)  // Porto
     let places = [poi("Lisbon", 38.7223, -9.1393), poi("Bolhão", 41.1496, -8.6070), poi("Gaia", 41.1339, -8.6099)]
