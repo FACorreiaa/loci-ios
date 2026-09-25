@@ -55,7 +55,8 @@ public enum NativeSignIn {
       accessToken: msg.accessToken,
       refreshToken: msg.refreshToken,
       userId: msg.userID,
-      username: msg.username
+      username: msg.username,
+      isNewUser: msg.isNewUser
     )
     return msg
   }

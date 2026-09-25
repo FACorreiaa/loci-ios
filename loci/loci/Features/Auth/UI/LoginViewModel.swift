@@ -90,7 +90,7 @@ import SwiftUI
       // again is where a first trip was being lost (web: SignUp.tsx does the same).
       // A brand-new account has no second factor, so there is no MFA branch here.
       do {
-        _ = try await authService.login(email: email, password: password)
+        _ = try await authService.login(email: email, password: password, isNewUser: true)
         self.isLoading = false
         self.onAuthenticated()
       } catch {
