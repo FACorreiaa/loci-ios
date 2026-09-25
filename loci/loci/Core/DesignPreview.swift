@@ -80,6 +80,11 @@ enum DesignPreview: String {
   case reviewComposer
   /// Profile › My reviews: three of your reviews with the summary line.
   case myReviews
+  /// A three-day trip page, offline, on a free plan: hero, preferences (open),
+  /// days, the export menu, suggestions, packing and expenses.
+  case tripExtras
+  /// The same page scrolled to the checklists.
+  case tripChecklists
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -145,6 +150,20 @@ enum DesignPreview: String {
     case .placeReviews: PlaceReviewsPreview()
     case .reviewComposer: ReviewComposerPreview()
     case .myReviews: NavigationStack { MyReviewsView(store: MyReviewsStore(service: PreviewReviewsService())) }
+    case .tripExtras:
+      NavigationStack {
+        TripEditorView(
+          tripID: Loci_Trip_TripDraft.previewLisbon.id,
+          trip: .previewLisbon,
+          checklist: .preview(tripID: Loci_Trip_TripDraft.previewLisbon.id),
+          isOffline: true,
+          expandsPreferences: true
+        )
+      }
+    case .tripChecklists:
+      NavigationStack {
+        List { TripChecklistsSection(store: .preview(tripID: Loci_Trip_TripDraft.previewLisbon.id)) }.settingsStyle("Checklists")
+      }
     }
   }
 }

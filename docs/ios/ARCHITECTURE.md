@@ -248,7 +248,7 @@ loci/loci
 │   ├── Search/                      SearchSessionController; Model (SearchState, SearchEnvelope, DayGrouping);
 │   │                                Services (ChatStreamClient, ResultsAPI, SearchNotifier); UI (composer, results page)
 │   ├── Settings/                    SettingsClients + one view per web settings tab
-│   └── Trips/UI/                    TripsView, TripEditorView
+│   └── Trips/                       UI (TripsView, TripEditorView + hero/preferences/export/checklists, TodayBand), Model (TripFormat, TripChecklist, TripExportGate, TripChecklistStore, DayTimeline), Services (TripAPI, TripChecklistService, TripDayActivityController)
 ├── Resources/Fonts                  Fraunces, DM Sans, Space Mono (+ OFL licences)
 └── Shared/NearbyWalkAttributes.swift  ActivityAttributes compiled into app and widget
 ```
@@ -1089,20 +1089,38 @@ and adopts the `TripDraft` the server returns, so a stale edit from another
 device is refused rather than merged:
 
 ```swift
-// loci/loci/Features/Trips/UI/TripEditorView.swift:167
-  /// Run an edit and adopt the trip the server returns.
+// loci/loci/Features/Trips/UI/TripEditorView.swift:223
+  /// Run an edit and adopt the trip the server returns; a stale `baseVersion`
+  /// raises the conflict alert instead of a generic error.
   private func apply<Input: Sendable>(
     _ fallback: String,
     _ request: Input,
     _ call: @escaping @Sendable (Input) async -> ResponseMessage<Loci_Trip_TripDraft>
   ) async {
-    do { trip = try await rpc(fallback, request, call) } catch { self.error = error.userMessage }
+    do {
+      let next = try await TripAPI.call(fallback, request, call)
+      await adopt(next)  // trip = next, loaded = .fresh(next), LocalCache.put
+    } catch {
+      if error.isVersionConflict {
+        hasConflict = true
+      } else if !error.isCancelled {
+        self.error = error.message
+      }
+    }
   }
 ```
 
-Each mutation (`reorder`, `rename`, `setDuration`, …, lines 176-260) builds
-its request, sets `request.baseVersion = trip.version`, and calls `apply`.
-Gap: Pro-only export limits are the server's message, shown as-is.
+Each mutation (`reorder`, `rename`, `setDuration`, …) builds its request,
+sets `request.baseVersion = trip.version`, and calls `apply`. Since slice 17,
+`apply` goes through `TripAPI.call`, which keeps the Connect code
+(`TripRPCError`), so a version conflict (FailedPrecondition) raises "This trip
+changed on another device" plus Reload instead of a generic error. The page is
+split into `TripHero`, `TripPreferencesSection`, `TripExportSection`
+(`TripExportGate` mirrors web's Pro gate) and `TripChecklistsSection` over a
+`TripChecklistStore` with optimistic edits. The trip itself is read
+cache-through (`LocalCache`, kind `.trip`); a copy the server could not
+confirm is drawn read-only with the cache chip.
+See [`17-trip-extras.md`](17-trip-extras.md).
 
 ### Compare
 
@@ -1471,6 +1489,7 @@ All unit tests are Swift Testing (`import Testing`, `@Test`, `#expect`,
 | `loci/lociTests/OAuthWebAuthTests.swift` | Redirect URI, cancellation detection, no window without scenes |
 | `loci/lociTests/HereBriefModelTests.swift` | Empty until loaded, locality over region, weather alone counts |
 | `loci/lociTests/CalendarMathTests.swift` | Date key, Monday-first October 2026 grid |
+| `loci/lociTests/TripFormatTests.swift` | Trip page: date ranges, preferences merge, export gate, checklist maths, store rollback, RPC error codes |
 | `loci/lociTests/lociTests.swift` | JWT payload parsing, `APIError` descriptions, `AppConfig` resolution |
 
 **The `Events` fixture helpers** build stream events the way the server sends
