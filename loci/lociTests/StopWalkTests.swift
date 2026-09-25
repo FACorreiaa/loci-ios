@@ -232,6 +232,16 @@ private let origin = CLLocationCoordinate2D(latitude: 41.1460, longitude: -8.610
     #expect(!walk.isWalking(key: "trip:t:d"))
   }
 
+  @Test func lockScreenStateFollowsThePhase() {
+    let walking = StopWalk.contentState(phase: .walking, stopName: "B", progress: "2 of 3", meters: 400, eta: 300, steps: 900, walked: 700)
+    #expect(walking.routeText == "2 of 3 · B · 400 m · 5 min")
+    #expect(walking.steps == 900)
+    let arrived = StopWalk.contentState(phase: .arrived, stopName: "B", progress: "2 of 3", meters: nil, eta: nil, steps: 900, walked: 700)
+    #expect(arrived.routeText == "2 of 3 · At B")
+    let done = StopWalk.contentState(phase: .done, stopName: nil, progress: "3 of 3", meters: nil, eta: nil, steps: 900, walked: 700)
+    #expect(done.routeText == "Day walked")
+  }
+
   @Test func nextIndexSkipsSkippedStops() {
     #expect(StopWalk.nextIndex(after: 0, count: 4, skipped: [1, 2]) == 3)
     #expect(StopWalk.nextIndex(after: 2, count: 3, skipped: []) == nil)
