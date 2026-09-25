@@ -27,7 +27,7 @@ struct TravelProfilesView: View {
         }
         .swipeActions {
           Button("Delete", role: .destructive) { Task { await delete(profile.id) } }
-          if !profile.isDefault { Button("Make default") { Task { await makeDefault(profile.id) } }.tint(.lociForest) }
+          if !profile.isDefault { Button("Make default") { Task { await makeDefault(profile.id) } }.tint(Color.lociForestFill) }
         }
       }
     }

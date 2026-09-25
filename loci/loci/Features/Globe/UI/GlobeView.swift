@@ -171,7 +171,7 @@ struct GlobeView: View {
       } description: {
         Text(message)
       } actions: {
-        Button("Try again") { Task { await store.load() } }.buttonStyle(.borderedProminent).tint(Color.lociForest)
+        Button("Try again") { Task { await store.load() } }.lociProminentButton()
       }.background(Color.lociPaper.opacity(0.94))
     case .loaded:
       if store.data.isEmpty {
@@ -324,7 +324,7 @@ struct RecentCityLink: View {
       } description: {
         Text(message)
       } actions: {
-        Button("Try again") { Task { await load() } }.buttonStyle(.borderedProminent).tint(Color.lociForest)
+        Button("Try again") { Task { await load() } }.lociProminentButton()
       }
     case .loaded:
       ContentUnavailableView {

@@ -100,7 +100,7 @@ struct NearbyView: View {
     .overlay(alignment: .top) {
       if navigator.isNavigating, !following {
         Button("Recenter", systemImage: "location.north.line.fill") { follow() }
-          .buttonStyle(.borderedProminent).tint(.lociForest)
+          .lociProminentButton()
           .padding(.top, 8)
           .transition(.move(edge: .top).combined(with: .opacity))
       }
@@ -307,7 +307,7 @@ struct WalkRow: View {
         }
         Spacer()
         Button("Start", systemImage: "figure.walk") { Task { await walk.start(places: places, radiusKm: radiusKm) } }
-          .buttonStyle(.borderedProminent).tint(.lociForest)
+          .lociProminentButton()
           .disabled(places.isEmpty)
       }
     }

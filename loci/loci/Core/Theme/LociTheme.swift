@@ -82,6 +82,13 @@ public extension Color {
   static let lociCard = dynamic(light: 0xFDFBF7, dark: 0x162019)
   /// primary
   static let lociForest = dynamic(light: 0x214D3C, dark: 0xA8B896)
+  /// Text and icons on a `lociForest` fill. Dark mode's forest is a light sage,
+  /// so white labels on it measure 2.1:1 and fail WCAG AA; the canvas colour
+  /// measures 8.4:1 there, and white on the light-mode forest 9.6:1.
+  static let lociOnForest = dynamic(light: 0xFFFFFF, dark: 0x101A16)
+  /// A forest fill for places the system forces a white label: swipe actions.
+  /// Dark mode deepens it so white measures 5.7:1 (the sage forest gives 2.1:1).
+  static let lociForestFill = dynamic(light: 0x214D3C, dark: 0x40705A)
   /// secondary (also the active tab fill)
   static let lociSage = dynamic(light: 0xD8E0D0, dark: 0x384840)
   /// muted. Dark value kept from the app's earlier palette; NATIVE_DESIGN gives none.

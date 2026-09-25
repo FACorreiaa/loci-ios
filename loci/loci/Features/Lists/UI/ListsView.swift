@@ -42,7 +42,7 @@ struct ListsRows: View {
           .listRowBackground(Color.lociCard)
           .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button("Delete", systemImage: "trash", role: .destructive) { store.pendingDelete = list }
-            Button("Edit", systemImage: "pencil") { store.editor = .edit(list) }.tint(Color.lociForest)
+            Button("Edit", systemImage: "pencil") { store.editor = .edit(list) }.tint(Color.lociForestFill)
           }
           .contextMenu {
             Button("Edit", systemImage: "pencil") { store.editor = .edit(list) }
@@ -106,7 +106,7 @@ private struct ListsChrome: ViewModifier {
       } description: {
         Text(message)
       } actions: {
-        Button("Try again") { Task { await store.load() } }.buttonStyle(.borderedProminent).tint(Color.lociForest)
+        Button("Try again") { Task { await store.load() } }.lociProminentButton()
       }
     case .loaded where store.visible.isEmpty:
       // Web's copy, per tab.
@@ -116,7 +116,7 @@ private struct ListsChrome: ViewModifier {
         Text("Create your first list to start organizing your favorite places and travel plans.")
       } actions: {
         Button("Create a list", systemImage: "plus") { store.editor = .new }
-          .buttonStyle(.borderedProminent).tint(Color.lociForest)
+          .lociProminentButton()
       }
     default: EmptyView()
     }
@@ -290,7 +290,7 @@ struct EntitlementSheet: View {
       Text(limit.message).font(.lociBody(16)).foregroundStyle(Color.lociInk).multilineTextAlignment(.center)
       Text(limit.suggestion).font(.lociCaption(14)).foregroundStyle(Color.lociMutedInk).multilineTextAlignment(.center)
       Button("OK") { dismiss() }
-        .buttonStyle(.borderedProminent).tint(Color.lociForest)
+        .lociProminentButton()
         .controlSize(.large)
         .padding(.top, 6)
     }

@@ -45,7 +45,7 @@ struct RouteCard: View {
           .buttonStyle(.bordered).tint(.lociForest)
           .accessibilityLabel("Open in Maps")
           Button("Go", systemImage: "figure.walk", action: onGo)
-            .buttonStyle(.borderedProminent).tint(.lociForest)
+            .lociProminentButton()
             .disabled(!canGo || navigator.leg == nil)
         }
       }

@@ -412,7 +412,7 @@ private struct RecentsError: View {
     } description: {
       Text(message)
     } actions: {
-      Button(retry, action: onRetry).buttonStyle(.borderedProminent).tint(Color.lociForest)
+      Button(retry, action: onRetry).lociProminentButton()
     }
   }
 }
@@ -429,7 +429,7 @@ private struct RecentsEmpty: View {
     } description: {
       Text(message)
     } actions: {
-      Button(action, systemImage: "sparkles", action: onAction).buttonStyle(.borderedProminent).tint(Color.lociForest)
+      Button(action, systemImage: "sparkles", action: onAction).lociProminentButton()
     }
   }
 }

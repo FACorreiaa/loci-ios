@@ -104,7 +104,7 @@ struct PackDetailView: View {
           } description: {
             Text(message)
           } actions: {
-            Button("Try again") { Task { await store.load() } }.buttonStyle(.borderedProminent).tint(Color.lociForest)
+            Button("Try again") { Task { await store.load() } }.lociProminentButton()
           }
         }
       }.frame(maxWidth: .infinity, alignment: .leading).padding(LociTheme.defaultPadding)
@@ -242,7 +242,7 @@ private struct PackAccessCard: View {
               Image(systemName: "arrow.right")
             }
           }.frame(minHeight: 30)
-        }.buttonStyle(.borderedProminent).tint(Color.lociForest).disabled(isClaiming)
+        }.lociProminentButton().disabled(isClaiming)
         if claimFailed { Text("That did not save. Try again in a moment.").font(.lociCaption(13)).foregroundStyle(Color.lociDestructive) }
       case .locked(let days):
         Image(systemName: "lock.fill").foregroundStyle(Color.lociMutedInk).accessibilityHidden(true)

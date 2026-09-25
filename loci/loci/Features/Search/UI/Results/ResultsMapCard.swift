@@ -313,7 +313,7 @@ private struct MapStopList: View {
             ForEach(group.stops, id: \.stableID) { stop in
               Button { selectedID = stop.stableID } label: { row(stop, day: group.number) }
                 .listRowBackground(selectedID == stop.stableID ? Color.lociSage : Color.lociCard)
-                .swipeActions(edge: .trailing) { Button("Details", systemImage: "info.circle") { onDetail(stop) }.tint(.lociForest) }
+                .swipeActions(edge: .trailing) { Button("Details", systemImage: "info.circle") { onDetail(stop) }.tint(Color.lociForestFill) }
                 .id(stop.stableID)
             }
           } header: {

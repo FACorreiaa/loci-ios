@@ -28,7 +28,7 @@ struct MyReviewsView: View {
         .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
           Button("Delete", systemImage: "trash", role: .destructive) { pendingDelete = review }
-          Button("Edit", systemImage: "pencil") { editing = review }.tint(Color.lociForest)
+          Button("Edit", systemImage: "pencil") { editing = review }.tint(Color.lociForestFill)
         }
         .contextMenu {
           Button("Edit", systemImage: "pencil") { editing = review }
@@ -92,7 +92,7 @@ struct MyReviewsView: View {
       } description: {
         Text(message)
       } actions: {
-        Button("Try again") { Task { await store.load() } }.buttonStyle(.borderedProminent).tint(Color.lociForest)
+        Button("Try again") { Task { await store.load() } }.lociProminentButton()
       }
     case .loaded where store.reviews.isEmpty:
       ContentUnavailableView(
