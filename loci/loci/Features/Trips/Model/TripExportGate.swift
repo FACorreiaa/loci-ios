@@ -1,7 +1,9 @@
 import Foundation
 import LociConnectProto
 
-/// Which exports a plan gets, mirroring web's TripExportMenu:
+/// Which exports a plan gets, mirroring web's TripExportMenu. With plan
+/// gating off (`PlanGating.enabled`, the default) every format exports for
+/// every plan with no notice; the rules below apply once gating is on:
 /// - Calendar (.ics) always works; a free plan on a multi-day trip gets Day 1
 ///   (the server trims it) and a note saying so.
 /// - PDF is Pro-only once the trip is longer than one day.
@@ -18,7 +20,8 @@ nonisolated enum TripExportGate {
 
   static let formats: [Loci_Trip_ExportFormat] = [.ics, .pdf, .markdown]
 
-  static func decide(_ format: Loci_Trip_ExportFormat, isPro: Bool, dayCount: Int) -> Decision {
+  static func decide(_ format: Loci_Trip_ExportFormat, isPro: Bool, dayCount: Int, gating: Bool = PlanGating.enabled) -> Decision {
+    let isPro = ProGate.entitled(isPro: isPro, gating: gating)
     switch format {
     case .ics:
       if !isPro, dayCount > 1 { return .export(notice: "Day-1 calendar works free. Pro includes every day in the .ics.") }
@@ -34,8 +37,8 @@ nonisolated enum TripExportGate {
     }
   }
 
-  static func isLocked(_ format: Loci_Trip_ExportFormat, isPro: Bool, dayCount: Int) -> Bool {
-    if case .locked = decide(format, isPro: isPro, dayCount: dayCount) { return true }
+  static func isLocked(_ format: Loci_Trip_ExportFormat, isPro: Bool, dayCount: Int, gating: Bool = PlanGating.enabled) -> Bool {
+    if case .locked = decide(format, isPro: isPro, dayCount: dayCount, gating: gating) { return true }
     return false
   }
 

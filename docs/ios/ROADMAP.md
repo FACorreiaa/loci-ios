@@ -94,7 +94,7 @@ PY
 ```
 
 ## Deferred — Pro gating (documented 2026-09-25, not scheduled)
-Decision: **the app stays open.** Nothing on iOS is paywalled until (a) Stripe has taken one real charge on web and (b) StoreKit 2 has completed one sandbox purchase with server-side receipt validation (see *Server work that unlocks Phase 2*). Phase 1.6/0 only reads the plan so gates stop hard-coding `isPro = false`.
+Decision: **the app stays open, and nothing is gated by plan anywhere.** The gates that existed (Day-1 exports, Markdown, list and place caps, compare candidates, Trip Kit's first day) were switched off on 2026-09-25 behind one flag per repo, left in place for later: `PLAN_GATING` on the server (`subscription.Entitled`), `PLAN_GATING_ENABLED` on web (`canUsePro`), `PlanGating.enabled` on iOS (`ProGate.entitled`, `TripExportGate.decide(gating:)`). Flip all three together to start gating; the tests for the gated behaviour pass `gating: true` explicitly and keep it honest meanwhile. Nothing on iOS is paywalled until (a) Stripe has taken one real charge on web and (b) StoreKit 2 has completed one sandbox purchase with server-side receipt validation (see *Server work that unlocks Phase 2*). Phase 1.6/0 only reads the plan so gates stop hard-coding `isPro = false`.
 
 When gating starts, in this order (each is a small PR on top of `EntitlementsStore`):
 1. **Multi-day exports and the offline trip day for the whole trip.** Free keeps Day 1, the same rule web already applies (`TripExportGate`, `entitlements.export_full`). Offline is what a traveller pays for at the airport.

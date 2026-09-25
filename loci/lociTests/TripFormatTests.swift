@@ -126,25 +126,35 @@ struct TripFormatTests {
 
 /// web: components/trip/TripExportMenu.tsx
 struct TripExportGateTests {
-  @Test func icsAlwaysExports() {
-    #expect(TripExportGate.decide(.ics, isPro: true, dayCount: 3) == .export(notice: nil))
-    #expect(TripExportGate.decide(.ics, isPro: false, dayCount: 1) == .export(notice: nil))
-    guard case .export(let notice?) = TripExportGate.decide(.ics, isPro: false, dayCount: 3) else {
-      Issue.record("free multi-day ICS should export with a notice")
+  /// Plan gating is off (PlanGating.enabled) until there are users to gate:
+  /// every format exports for every plan, with no notice.
+  @Test func nothingIsGatedByDefault() {
+    #expect(!PlanGating.enabled)
+    for format in TripExportGate.formats {
+      #expect(TripExportGate.decide(format, isPro: false, dayCount: 5) == .export(notice: nil))
+      #expect(!TripExportGate.isLocked(format, isPro: false, dayCount: 5))
+    }
+  }
+
+  @Test func icsAlwaysExportsWhenGated() {
+    #expect(TripExportGate.decide(.ics, isPro: true, dayCount: 3, gating: true) == .export(notice: nil))
+    #expect(TripExportGate.decide(.ics, isPro: false, dayCount: 1, gating: true) == .export(notice: nil))
+    guard case .export(let notice?) = TripExportGate.decide(.ics, isPro: false, dayCount: 3, gating: true) else {
+      Issue.record("gated free multi-day ICS should export with a notice")
       return
     }
     #expect(notice.hasPrefix("Day-1 calendar works free"))
   }
 
-  @Test func pdfIsProPastOneDay() {
-    #expect(TripExportGate.decide(.pdf, isPro: false, dayCount: 1) == .export(notice: nil))
-    #expect(TripExportGate.isLocked(.pdf, isPro: false, dayCount: 2))
-    #expect(!TripExportGate.isLocked(.pdf, isPro: true, dayCount: 5))
+  @Test func pdfIsProPastOneDayWhenGated() {
+    #expect(TripExportGate.decide(.pdf, isPro: false, dayCount: 1, gating: true) == .export(notice: nil))
+    #expect(TripExportGate.isLocked(.pdf, isPro: false, dayCount: 2, gating: true))
+    #expect(!TripExportGate.isLocked(.pdf, isPro: true, dayCount: 5, gating: true))
   }
 
-  @Test func markdownIsProOnly() {
-    #expect(TripExportGate.isLocked(.markdown, isPro: false, dayCount: 1))
-    #expect(!TripExportGate.isLocked(.markdown, isPro: true, dayCount: 1))
+  @Test func markdownIsProOnlyWhenGated() {
+    #expect(TripExportGate.isLocked(.markdown, isPro: false, dayCount: 1, gating: true))
+    #expect(!TripExportGate.isLocked(.markdown, isPro: true, dayCount: 1, gating: true))
   }
 
   /// No pricing link and no price in any gate copy (App Store 3.1.1).
@@ -153,7 +163,7 @@ struct TripExportGateTests {
       for isPro in [false, true] {
         for dayCount in [1, 3] {
           let text: String? =
-            switch TripExportGate.decide(format, isPro: isPro, dayCount: dayCount) {
+            switch TripExportGate.decide(format, isPro: isPro, dayCount: dayCount, gating: true) {
             case .export(let notice): notice
             case .locked(let message): message
             }

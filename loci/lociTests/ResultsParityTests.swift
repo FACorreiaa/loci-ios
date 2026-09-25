@@ -168,8 +168,18 @@ struct ResultsParityTests {
     #expect(!ProGate.isPro(plan: "free"))
     #expect(!ProGate.isPro(plan: nil))
     let groups = DayGrouping.groups([stop("A", day: 1), stop("B", day: 2)])
-    #expect(ProGate.unlocked(groups, isPro: false).count == 1)
-    #expect(ProGate.unlocked(groups, isPro: true).count == 2)
+    #expect(ProGate.unlocked(groups, isPro: false, gating: true).count == 1)
+    #expect(ProGate.unlocked(groups, isPro: true, gating: true).count == 2)
+  }
+
+  /// Plan gating is off until there are users to gate: a free plan gets every
+  /// day, and the gate reports itself off so the views skip the plan copy.
+  @Test func proGateIsOffByDefault() {
+    #expect(!PlanGating.enabled)
+    let groups = DayGrouping.groups([stop("A", day: 1), stop("B", day: 2)])
+    #expect(ProGate.unlocked(groups, isPro: false).count == 2)
+    #expect(ProGate.entitled(isPro: false))
+    #expect(!ProGate.entitled(isPro: false, gating: true))
   }
 
   // MARK: - Reducer

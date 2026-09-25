@@ -21,8 +21,10 @@ struct TripKitView: View {
   @State private var error: String?
 
   private var unlocked: [DayGroup] { ProGate.unlocked(groups, isPro: side.isPro) }
-  private var gated: Bool { !side.isPro && groups.count > 1 }
-  private var checking: Bool { !side.planChecked }
+  /// With plan gating off nothing here depends on the plan, so the view
+  /// neither waits for it nor mentions it.
+  private var gated: Bool { !ProGate.entitled(isPro: side.isPro) && groups.count > 1 }
+  private var checking: Bool { PlanGating.enabled && !side.planChecked }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
@@ -39,7 +41,7 @@ struct TripKitView: View {
           Text("Day 1 is included on the free plan.").font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk)
           Link("Unlock the full Trip Kit with Pro", destination: ProGate.pricingURL).font(.lociCaption(12))
         }
-      } else if !side.isPro, side.planChecked, groups.count == 1 {
+      } else if PlanGating.enabled, !side.isPro, side.planChecked, groups.count == 1 {
         Text("Everything here is on the free plan.").font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk)
       }
     }

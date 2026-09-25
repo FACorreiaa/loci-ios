@@ -209,6 +209,12 @@ nonisolated enum ProGate {
     return proPlans.contains(plan)
   }
 
-  /// Free plans export Day 1 only.
-  static func unlocked(_ groups: [DayGroup], isPro: Bool) -> [DayGroup] { isPro ? groups : Array(groups.prefix(1)) }
+  /// Whether this plan gets the Pro feature set right now: everyone while
+  /// gating is off (`PlanGating.enabled`), only Pro while it is on.
+  static func entitled(isPro: Bool, gating: Bool = PlanGating.enabled) -> Bool { !gating || isPro }
+
+  /// Gated free plans export Day 1 only.
+  static func unlocked(_ groups: [DayGroup], isPro: Bool, gating: Bool = PlanGating.enabled) -> [DayGroup] {
+    entitled(isPro: isPro, gating: gating) ? groups : Array(groups.prefix(1))
+  }
 }
