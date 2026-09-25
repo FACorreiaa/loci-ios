@@ -7,6 +7,7 @@ public struct MainTabView: View {
 
   @Bindable private var router = AppRouter.shared
   @Bindable private var pushPrimer = PushPrimer.shared
+  @Bindable private var tripSetup = TripSetupOffer.shared
 
   public var body: some View {
     TabView(selection: $router.selectedTab) {
@@ -23,6 +24,10 @@ public struct MainTabView: View {
       // Swiping the primer away is a "not now"; after a button this is a no-op.
       .sheet(isPresented: $pushPrimer.isAsking, onDismiss: { pushPrimer.respond(false) }) {
         PushPrimerSheet(primer: pushPrimer)
+      }
+      // Once, after the first sign-in of an account with no profile (web: /trip-setup).
+      .fullScreenCover(isPresented: $tripSetup.isPresenting) {
+        TripSetupView { tripSetup.dismiss() }
       }
   }
 }

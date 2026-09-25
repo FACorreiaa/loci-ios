@@ -44,6 +44,8 @@ import SwiftUI
         identifyCurrentUser()
         // The APNs token often arrives before the first sign-in; register it now.
         Task { await PushRegistration.shared.registerIfNeeded() }
+        // A brand-new account gets the four-question profile wizard, once.
+        Task { await TripSetupOffer.shared.offerIfNeeded() }
       }.onReceive(NotificationCenter.default.publisher(for: .authSessionDidInvalidate)) { _ in
         Analytics.reset()
         withAnimation {
