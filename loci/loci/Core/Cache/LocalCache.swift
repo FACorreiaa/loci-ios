@@ -7,7 +7,7 @@ import SwiftProtobuf
 /// Same storage rules as SearchStore: atomic writes, readable after the first
 /// unlock so a background refresh can use it.
 actor LocalCache {
-  enum Kind: String, CaseIterable, Sendable { case trip, trips, saved, localContext, fx }
+  enum Kind: String, CaseIterable, Sendable { case trip, trips, saved, localContext, fx, checklist }
 
   static let shared = LocalCache()
 

@@ -405,6 +405,56 @@ private struct FakeChecklistService: TripChecklistService {
     #expect(store.items.isEmpty)
     #expect(await service.log.calls.isEmpty)
   }
+
+  // MARK: - Review follow-ups (#31)
+
+  private func freshCache() -> LocalCache {
+    LocalCache(root: FileManager.default.temporaryDirectory.appending(path: "loci-checklist-\(UUID().uuidString)"))
+  }
+
+  /// A load that fails for any reason but Unimplemented is a failure with a
+  /// Retry, not "checklists are not available on your account".
+  @Test func failedLoadCanBeRetried() async {
+    let store = TripChecklistStore(tripID: "t", service: FakeChecklistService(checklistResult: .failure(broken)), cache: freshCache())
+    await store.load()
+    #expect(store.availability == .failed("boom"))
+    #expect(store.error == nil)
+    #expect(!store.canEdit)
+  }
+
+  @Test func cachedCopyShowsReadOnlyWhenTheServerIsUnreachable() async throws {
+    let cache = freshCache()
+    var response = Loci_Trip_GetTripChecklistResponse()
+    response.items = [item(.packing, "passport")]
+    try await cache.put(response, kind: .checklist, id: "t")
+    let store = TripChecklistStore(tripID: "t", service: FakeChecklistService(checklistResult: .failure(broken)), cache: cache)
+    await store.load()
+    #expect(store.packing.map(\.text) == ["passport"])
+    #expect(store.availability == .cached)
+    #expect(!store.canEdit)
+    #expect(store.error == nil)
+  }
+
+  @Test func aSuccessfulLoadIsKeptForNextTime() async throws {
+    let cache = freshCache()
+    var response = Loci_Trip_GetTripChecklistResponse()
+    response.items = [item(.packing, "passport")]
+    let store = TripChecklistStore(tripID: "t", service: FakeChecklistService(checklistResult: .success(response)), cache: cache)
+    await store.load()
+    let copy = await cache.get(Loci_Trip_GetTripChecklistResponse.self, kind: .checklist, id: "t")
+    #expect(copy?.value.items.map(\.text) == ["passport"])
+  }
+
+  /// Toggle A is sent, toggle B on the same item lands, then A fails: A's
+  /// rollback must not undo B.
+  @Test func aFailedEditNeverUndoesALaterOne() {
+    let failed = item(.packing, "hat", done: true)
+    var later = failed
+    later.done = false
+    #expect(TripChecklist.shouldRollBack(current: failed, failed: failed))
+    #expect(!TripChecklist.shouldRollBack(current: later, failed: failed))
+    #expect(!TripChecklist.shouldRollBack(current: nil, failed: failed))
+  }
 }
 
 struct TripRPCErrorTests {

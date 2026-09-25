@@ -17,6 +17,11 @@ import Observation
     case ready
     /// The server does not have the checklist RPCs yet (Unimplemented).
     case unavailable
+    /// The phone's copy, read-only: the server could not be reached and the
+    /// list has not been confirmed since. Retry reloads.
+    case cached
+    /// The load failed and there is no copy to show. Retry reloads.
+    case failed(String)
   }
 
   let tripID: String
@@ -28,6 +33,7 @@ import Observation
   var error: String?
 
   private let service: TripChecklistService
+  private let cache: LocalCache
   private let locale: Locale
 
   init(
@@ -37,10 +43,12 @@ import Observation
     dismissed: [String] = [],
     suggestions: [Loci_Trip_PackingSuggestion] = [],
     availability: Availability = .loading,
+    cache: LocalCache = .shared,
     locale: Locale = .current
   ) {
     self.tripID = tripID
     self.service = service
+    self.cache = cache
     self.items = items
     self.dismissed = dismissed
     self.suggestions = suggestions
@@ -57,6 +65,10 @@ import Observation
   var currency: String { TripChecklist.defaultCurrency(items, locale: locale) }
   var totalLabel: String { TripChecklist.totalLabel(items, fallbackCurrency: currency, locale: locale) }
   var canEdit: Bool { availability == .ready }
+  var isFailed: Bool {
+    if case .failed = availability { return true }
+    return false
+  }
 
   // MARK: - Load
 
@@ -66,22 +78,36 @@ import Observation
     _ = await (checklist, packing)
   }
 
+  /// The phone's copy first, read-only, then the server. A refresh that fails
+  /// keeps whatever is on screen: a copy stays a copy, a confirmed list stays
+  /// editable with an alert, and only an empty first load becomes `.failed`.
   private func loadChecklist() async {
+    if availability != .ready, let copy = await cache.get(Loci_Trip_GetTripChecklistResponse.self, kind: .checklist, id: tripID) {
+      items = copy.value.items
+      dismissed = copy.value.dismissedSuggestions
+      availability = .cached
+    }
     do {
       let response = try await service.checklist(tripID: tripID)
       items = response.items
       dismissed = response.dismissedSuggestions
       availability = .ready
+      try? await cache.put(response, kind: .checklist, id: tripID)
     } catch {
       if error.isUnimplemented {
         availability = .unavailable
-      } else if !error.isCancelled {
-        // Keep whatever is on screen; a failed refresh is not an empty list.
-        if availability == .loading { availability = .unavailable }
+      } else if error.isCancelled {
+        return
+      } else if availability == .ready {
         self.error = error.message
+      } else if availability != .cached {
+        availability = .failed(error.message)
       }
     }
   }
+
+  /// The Retry button on a failed or cached list.
+  func retry() async { await load() }
 
   /// Suggestions are a nice-to-have (web retries once and moves on), so a
   /// failure leaves the panel empty rather than raising an alert.
@@ -180,7 +206,10 @@ import Observation
       // A later edit to the same item may already be on screen; keep it.
       if let current = items.first(where: { $0.id == item.id }), current == item { replace(saved) }
     } catch {
-      if let previous { replace(previous) } else { items.removeAll { $0.id == item.id } }
+      // Only undo while this edit is still the one on screen (see shouldRollBack).
+      if TripChecklist.shouldRollBack(current: items.first { $0.id == item.id }, failed: item) {
+        if let previous { replace(previous) } else { items.removeAll { $0.id == item.id } }
+      }
       report(error)
     }
   }

@@ -41,12 +41,20 @@ nonisolated enum TripChecklist {
     return "\(packing.filter(\.done).count)/\(packing.count) packed"
   }
 
+  /// Whether a failed edit may put back what was there before: only while the
+  /// item on screen is still the one that failed. A later edit to the same item
+  /// that already landed is newer truth and must not be undone by an older
+  /// failure arriving late.
+  static func shouldRollBack(current: Loci_Trip_ChecklistItem?, failed: Loci_Trip_ChecklistItem) -> Bool {
+    current == failed
+  }
+
   /// The position after the last item of that kind.
   static func nextPosition(_ items: [Loci_Trip_ChecklistItem], kind: Loci_Trip_ChecklistItemKind) -> Int32 {
     (items.filter { $0.kind == kind }.map(\.position).max() ?? -1) + 1
   }
 
-  /// A new item with a client UUID, so an offline replay upserts the same row.
+  /// A new item with a client UUID, so a retry of the same edit upserts the same row.
   static func makeItem(
     kind: Loci_Trip_ChecklistItemKind,
     text: String,
