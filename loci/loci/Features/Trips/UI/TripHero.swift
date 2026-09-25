@@ -7,6 +7,8 @@ import SwiftUI
 struct TripHero: View {
   let trip: Loci_Trip_TripDraft
 
+  @Environment(\.dynamicTypeSize) private var typeSize
+
   private static let fill = LinearGradient(
     colors: [Color(hex: 0x214D3C), Color(hex: 0x2F7D6E)],
     startPoint: .topLeading,
@@ -21,9 +23,16 @@ struct TripHero: View {
       Text(trip.title.isEmpty ? trip.cityName : trip.title)
         .font(.lociDisplay(28)).foregroundStyle(LociTheme.stampInk)
         .fixedSize(horizontal: false, vertical: true)
-      ViewThatFits(in: .horizontal) {
-        HStack(spacing: 16) { details }
-        VStack(alignment: .leading, spacing: 6) { details }
+      Group {
+        // ViewThatFits kept the row at AX sizes and split "Lisbon" mid-word.
+        if typeSize.isAccessibilitySize {
+          VStack(alignment: .leading, spacing: 6) { details }
+        } else {
+          ViewThatFits(in: .horizontal) {
+            HStack(spacing: 16) { details }
+            VStack(alignment: .leading, spacing: 6) { details }
+          }
+        }
       }
       .foregroundStyle(LociTheme.stampInk.opacity(0.8))
     }

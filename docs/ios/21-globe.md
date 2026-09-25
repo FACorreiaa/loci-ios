@@ -21,9 +21,15 @@ What the server does with it (`internal/domain/travelhistory/handler.go`
 - `limit` caps the cities and the legs separately (two queries). Legs come
   newest first, by the trip day's date (or the trip's creation when the day
   has none).
-- `summary.*_prev_period` are cumulative totals as they stood `periodDays` ago,
-  not the previous window's own counts, so an arrow is what this period added
-  and in practice only ever points up.
+- Trends (proto v5.29.0, server api #101): `*_this_period` counts the last
+  `periodDays` and `*_prev_period` the window before it, so a trend is this
+  window against the last. Servers before that send zeros for `*_this_period`
+  and cumulative totals as they stood `periodDays` ago in `*_prev_period`; there
+  the arrow is the all-time total against that and only ever points up.
+  `TravelSummary.hasWindowCounts` (any `*_this_period` non-zero) picks the rule,
+  so the app works either side of the deploy. The catch: on a new server with
+  nothing in the current window every count is zero, which reads as an old
+  server and falls back to the total-based trend.
 - Proto3 drops zero values; the Swift defaults already read them as 0 / "".
   A missing summary maps to all zeros and `periodDays 365`.
 

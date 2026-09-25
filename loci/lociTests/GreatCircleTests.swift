@@ -234,6 +234,57 @@ struct GlobeMappingTests {
     #expect(mapped.periodDays == 365)
   }
 
+  @Test func windowCountsDriveTheTrendOnceTheServerSendsThem() {
+    // v5.29.0: *_prev_period is the previous window's count; compare it with *_this_period.
+    var summary = Loci_Travelhistory_TravelSummary()
+    summary.citiesVisited = 7
+    summary.countriesVisited = 5
+    summary.poisVisited = 48
+    summary.citiesVisitedThisPeriod = 3
+    summary.citiesVisitedPrevPeriod = 2
+    summary.countriesVisitedThisPeriod = 1
+    summary.countriesVisitedPrevPeriod = 2
+    summary.poisVisitedThisPeriod = 12
+    summary.poisVisitedPrevPeriod = 0
+    let mapped = GlobeMapping.summary(summary)
+    #expect(mapped.hasWindowCounts)
+    #expect(mapped.citiesVisitedThis == 3)
+    #expect(mapped.citiesTrend == 50)
+    #expect(mapped.countriesTrend == -50)
+    #expect(mapped.poisTrend == nil)  // nothing in the previous window: no baseline, no arrow
+  }
+
+  @Test func olderServersKeepTheTotalAgainstPreviousTotalTrend() {
+    // Before v5.29.0 there are no window counts; *_prev_period was the total when the window opened.
+    var summary = Loci_Travelhistory_TravelSummary()
+    summary.citiesVisited = 7
+    summary.countriesVisited = 5
+    summary.poisVisited = 48
+    summary.citiesVisitedPrevPeriod = 5
+    summary.countriesVisitedPrevPeriod = 4
+    summary.poisVisitedPrevPeriod = 40
+    let mapped = GlobeMapping.summary(summary)
+    #expect(!mapped.hasWindowCounts)
+    #expect(mapped.citiesTrend == 40)
+    #expect(mapped.countriesTrend == 25)
+    #expect(mapped.poisTrend == 20)
+  }
+
+  @Test func oneNonZeroWindowCountSwitchesEveryStat() {
+    var summary = TravelSummary()
+    summary.citiesVisited = 7
+    summary.countriesVisited = 5
+    summary.poisVisited = 48
+    summary.citiesVisitedPrev = 4
+    summary.countriesVisitedPrev = 1
+    summary.poisVisitedPrev = 10
+    summary.poisVisitedThis = 5
+    #expect(summary.hasWindowCounts)
+    #expect(summary.citiesTrend == -100)  // 0 this window against 4 last window
+    #expect(summary.countriesTrend == -100)
+    #expect(summary.poisTrend == -50)
+  }
+
   @Test func recentsCityMatchIgnoresCaseAndAccents() {
     let cities = [
       RecentCity(name: "Évora", country: "", interactionCount: 1, lastActivity: nil, interactions: []),

@@ -80,8 +80,7 @@ struct ContributeView: View {
             .font(.lociBody(15).weight(.semibold))
             .frame(maxWidth: .infinity, minHeight: LociTheme.minTapTarget)
         }
-        .buttonStyle(.borderedProminent)
-        .tint(Color.lociForest)
+        .lociProminentButton()
         .disabled(!store.canSearch)
       }
       if store.searchContext != nil {
@@ -197,7 +196,7 @@ struct ContributeView: View {
         } description: {
           Text(message)
         } actions: {
-          Button("Try again") { Task { await store.load() } }.buttonStyle(.borderedProminent).tint(Color.lociForest)
+          Button("Try again") { Task { await store.load() } }.lociProminentButton()
         }
       case .loaded where store.tasks.isEmpty:
         ContentUnavailableView(
@@ -386,8 +385,7 @@ private struct PendingPlaceCard: View {
               .font(.lociBody(15).weight(.semibold))
               .frame(maxWidth: .infinity, minHeight: LociTheme.minTapTarget)
           }
-          .buttonStyle(.borderedProminent)
-          .tint(Color.lociForest)
+          .lociProminentButton()
           .disabled(isConfirming)
         }
         if let failure {

@@ -42,7 +42,7 @@ struct ListsRows: View {
           .listRowBackground(Color.lociCard)
           .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button("Delete", systemImage: "trash", role: .destructive) { store.pendingDelete = list }
-            Button("Edit", systemImage: "pencil") { store.editor = .edit(list) }.tint(Color.lociForest)
+            Button("Edit", systemImage: "pencil") { store.editor = .edit(list) }.tint(Color.lociForestFill)
           }
           .contextMenu {
             Button("Edit", systemImage: "pencil") { store.editor = .edit(list) }
@@ -106,7 +106,7 @@ private struct ListsChrome: ViewModifier {
       } description: {
         Text(message)
       } actions: {
-        Button("Try again") { Task { await store.load() } }.buttonStyle(.borderedProminent).tint(Color.lociForest)
+        Button("Try again") { Task { await store.load() } }.lociProminentButton()
       }
     case .loaded where store.visible.isEmpty:
       // Web's copy, per tab.
@@ -116,7 +116,7 @@ private struct ListsChrome: ViewModifier {
         Text("Create your first list to start organizing your favorite places and travel plans.")
       } actions: {
         Button("Create a list", systemImage: "plus") { store.editor = .new }
-          .buttonStyle(.borderedProminent).tint(Color.lociForest)
+          .lociProminentButton()
       }
     default: EmptyView()
     }
@@ -126,6 +126,8 @@ private struct ListsChrome: ViewModifier {
 /// Name with its public/private mark, the Itinerary badge, the description and the date.
 struct ListRow: View {
   let list: LociList
+
+  @Environment(\.dynamicTypeSize) private var typeSize
 
   private var meta: String {
     var parts: [String] = []
@@ -145,14 +147,14 @@ struct ListRow: View {
         .accessibilityHidden(true)
       VStack(alignment: .leading, spacing: 3) {
         HStack(spacing: 6) {
-          Text(list.name).font(.lociHeadline(16)).foregroundStyle(Color.lociInk).lineLimit(1)
+          Text(list.name).font(.lociHeadline(16)).foregroundStyle(Color.lociInk).lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
           Image(systemName: list.isPublic ? "globe" : "lock")
             .font(.caption)
             .foregroundStyle(list.isPublic ? Color.lociForest : Color.lociMutedInk)
             .accessibilityLabel(list.isPublic ? "Public" : "Private")
         }
         if !list.description.isEmpty {
-          Text(list.description).font(.lociCaption()).foregroundStyle(Color.lociMutedInk).lineLimit(2)
+          Text(list.description).font(.lociCaption()).foregroundStyle(Color.lociMutedInk).lineLimit(typeSize.isAccessibilitySize ? 4 : 2)
         }
         if !meta.isEmpty { Text(meta).lociCoordStyle(10) }
       }
@@ -260,7 +262,7 @@ struct ListFormSheet: View {
       }
       .onAppear { if !isEditing { nameFocused = true } }
     }
-    .presentationDetents([.medium, .large])
+    .adaptiveDetents([.medium, .large])
     .interactiveDismissDisabled(saving)
   }
 
@@ -290,14 +292,14 @@ struct EntitlementSheet: View {
       Text(limit.message).font(.lociBody(16)).foregroundStyle(Color.lociInk).multilineTextAlignment(.center)
       Text(limit.suggestion).font(.lociCaption(14)).foregroundStyle(Color.lociMutedInk).multilineTextAlignment(.center)
       Button("OK") { dismiss() }
-        .buttonStyle(.borderedProminent).tint(Color.lociForest)
+        .lociProminentButton()
         .controlSize(.large)
         .padding(.top, 6)
     }
     .padding(24)
     .frame(maxWidth: .infinity)
     .background(Color.lociPaper.ignoresSafeArea())
-    .presentationDetents([.height(340), .medium])
+    .adaptiveDetents([.height(340), .medium])
     .presentationDragIndicator(.visible)
   }
 }

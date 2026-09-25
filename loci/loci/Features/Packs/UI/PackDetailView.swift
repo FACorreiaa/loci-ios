@@ -104,7 +104,7 @@ struct PackDetailView: View {
           } description: {
             Text(message)
           } actions: {
-            Button("Try again") { Task { await store.load() } }.buttonStyle(.borderedProminent).tint(Color.lociForest)
+            Button("Try again") { Task { await store.load() } }.lociProminentButton()
           }
         }
       }.frame(maxWidth: .infinity, alignment: .leading).padding(LociTheme.defaultPadding)
@@ -172,10 +172,7 @@ private struct PackHeader: View {
         Text(pack.title).font(.lociDisplay(28)).foregroundStyle(Color.lociInk)
       }
       if !pack.summary.isEmpty { Text(pack.summary).font(.lociBody(15)).foregroundStyle(Color.lociMutedInk) }
-      HStack(spacing: 8) {
-        PackTags(pack: pack)
-        if pack.badge == .yours { PackBadgeChip(badge: .yours) }
-      }
+      PackTags(pack: pack, showsYours: pack.badge == .yours)
     }
   }
 }
@@ -188,14 +185,20 @@ private struct PackDaySection: View {
   @Binding var selectedID: String?
   var onOpen: (PackStop) -> Void
 
+  @Environment(\.dynamicTypeSize) private var typeSize
+
   private var color: Color { LociTheme.dayColor(day.dayNumber) }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      HStack(alignment: .firstTextBaseline, spacing: 8) {
-        Circle().fill(color).frame(width: 10, height: 10)
-        Text("Day \(day.dayNumber)").font(.lociHeadline(15)).foregroundStyle(Color.lociInk)
-        if !day.title.isEmpty { Text(day.title).font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk).lineLimit(1) }
+      AdaptiveStack(alignment: .firstTextBaseline, spacing: 8) {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+          Circle().fill(color).frame(width: 10, height: 10)
+          Text("Day \(day.dayNumber)").font(.lociHeadline(15)).foregroundStyle(Color.lociInk)
+        }
+        if !day.title.isEmpty {
+          Text(day.title).font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk).lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
+        }
         Spacer(minLength: 4)
         Text("\(day.stops.count) \(day.stops.count == 1 ? "stop" : "stops")").lociCoordStyle(10)
       }.accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
@@ -242,7 +245,7 @@ private struct PackAccessCard: View {
               Image(systemName: "arrow.right")
             }
           }.frame(minHeight: 30)
-        }.buttonStyle(.borderedProminent).tint(Color.lociForest).disabled(isClaiming)
+        }.lociProminentButton().disabled(isClaiming)
         if claimFailed { Text("That did not save. Try again in a moment.").font(.lociCaption(13)).foregroundStyle(Color.lociDestructive) }
       case .locked(let days):
         Image(systemName: "lock.fill").foregroundStyle(Color.lociMutedInk).accessibilityHidden(true)

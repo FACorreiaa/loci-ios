@@ -67,6 +67,14 @@ struct ResultsMapData: Equatable {
 
   static func color(day: Int?) -> Color { day.map(LociTheme.dayColor) ?? LociTheme.ungroupedColor }
 
+  var spreadInputs: [PinSpread.Input] { pins.map { PinSpread.Input(id: $0.id, coordinate: $0.coordinate) } }
+
+  /// Where crowded pins draw at a given zoom (see PinSpread).
+  func spread(mapPointsPerPoint: Double?) -> [String: CLLocationCoordinate2D] {
+    guard let mapPointsPerPoint else { return [:] }
+    return PinSpread.coordinates(for: spreadInputs, mapPointsPerPoint: mapPointsPerPoint)
+  }
+
   /// Where the full map opens: Day 1's first stop, else the first pin at all.
   var flyoverStart: Pin? { pins.first(where: { $0.day == 1 }) ?? pins.first }
 
@@ -85,6 +93,8 @@ struct ResultsMapData: Equatable {
 struct ResultsMapContent: MapContent {
   let data: ResultsMapData
   var selectedID: String?
+  /// Display coordinates for pins that would overlap at the current zoom.
+  var spread: [String: CLLocationCoordinate2D] = [:]
 
   var body: some MapContent {
     ForEach(data.routes, id: \.day) { route in
@@ -98,7 +108,7 @@ struct ResultsMapContent: MapContent {
         .stroke(LocalAlertStyle.color(severity: halo.severity), lineWidth: 1)
     }
     ForEach(data.pins) { pin in
-      Annotation(pin.name, coordinate: pin.coordinate, anchor: .center) {
+      Annotation(pin.name, coordinate: spread[pin.id] ?? pin.coordinate, anchor: .center) {
         MapPin(number: pin.index, color: ResultsMapData.color(day: pin.day), isSelected: pin.id == selectedID)
       }
       .annotationTitles(.hidden)
@@ -132,15 +142,30 @@ struct ResultsMapCard: View {
   var onExpand: () -> Void
 
   @State private var camera: MapCameraPosition = .automatic
+  @State private var size: CGSize = .zero
+  /// The zoom MapKit actually settled on; until then, an estimate from the pins.
+  @State private var cameraScale: Double?
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       Map(position: $camera, interactionModes: []) {
-        ResultsMapContent(data: data, selectedID: selectedID)
+        ResultsMapContent(
+          data: data,
+          selectedID: selectedID,
+          spread: data.spread(mapPointsPerPoint: cameraScale ?? PinSpread.fittedScale(for: data.spreadInputs, in: size))
+        )
       }
       .mapStyle(.standard(pointsOfInterest: .excludingAll))
       .mapControlVisibility(.hidden)
       .frame(height: 260)
+      .onGeometryChange(for: CGSize.self, of: \.size) { size = $0 }
+      .onMapCameraChange(frequency: .onEnd) { context in
+        guard size.width > 0 else { return }
+        let scale = context.rect.size.width / size.width
+        // Spreading moves pins, which refits the camera; settle instead of chasing it.
+        if let cameraScale, abs(scale - cameraScale) / cameraScale < 0.05 { return }
+        cameraScale = scale
+      }
       .clipShape(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
       .overlay(alignment: .bottomTrailing) {
         Label("Expand", systemImage: "arrow.up.left.and.arrow.down.right")
@@ -151,7 +176,10 @@ struct ResultsMapCard: View {
       }
       .contentShape(Rectangle())
       .onTapGesture(perform: onExpand)
-      .onChange(of: data) { _, _ in camera = .automatic }
+      .onChange(of: data) { _, _ in
+        cameraScale = nil
+        camera = .automatic
+      }
       .accessibilityElement(children: .ignore)
       .accessibilityLabel("Map of \(data.pins.count) places")
       .accessibilityAddTraits(.isButton)
@@ -199,11 +227,13 @@ struct FullMapView: View {
   @State private var satellite = false
   @State private var lookAround: MKLookAroundScene?
   @State private var showLookAround = false
+  @State private var mapPointsPerPoint: Double?
+  @State private var mapWidth: Double = 0
 
   var body: some View {
     NavigationStack {
       Map(position: $camera, selection: $selectedID) {
-        ResultsMapContent(data: data, selectedID: selectedID)
+        ResultsMapContent(data: data, selectedID: selectedID, spread: data.spread(mapPointsPerPoint: mapPointsPerPoint))
       }
       .mapStyle(
         isPitched && satellite
@@ -211,7 +241,12 @@ struct FullMapView: View {
           : .standard(elevation: .realistic, pointsOfInterest: .excludingAll)
       )
       .mapControls { MapCompass(); MapPitchToggle(); MapScaleView() }
-      .onMapCameraChange(frequency: .onEnd) { isPitched = $0.camera.pitch > 10 }
+      .onMapCameraChange(frequency: .onEnd) { context in
+        isPitched = context.camera.pitch > 10
+        // Re-spread crowded pins for the new zoom (a pitched rect overstates it, which only spreads a little more).
+        if mapWidth > 0 { mapPointsPerPoint = context.rect.size.width / mapWidth }
+      }
+      .onGeometryChange(for: Double.self, of: { $0.size.width }) { mapWidth = $0 }
       .overlay(alignment: .topLeading) {
         VStack(alignment: .leading, spacing: 8) {
           if isPitched {
@@ -290,7 +325,7 @@ private struct MapStopList: View {
             ForEach(group.stops, id: \.stableID) { stop in
               Button { selectedID = stop.stableID } label: { row(stop, day: group.number) }
                 .listRowBackground(selectedID == stop.stableID ? Color.lociSage : Color.lociCard)
-                .swipeActions(edge: .trailing) { Button("Details", systemImage: "info.circle") { onDetail(stop) }.tint(.lociForest) }
+                .swipeActions(edge: .trailing) { Button("Details", systemImage: "info.circle") { onDetail(stop) }.tint(Color.lociForestFill) }
                 .id(stop.stableID)
             }
           } header: {

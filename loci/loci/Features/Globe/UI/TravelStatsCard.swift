@@ -19,26 +19,31 @@ struct TravelStatsCard: View {
     let cities = Stat(
       id: "Cities",
       value: count(s.citiesVisited),
-      trend: GlobeFormat.trendPercent(current: s.citiesVisited, previous: s.citiesVisitedPrev)
+      trend: s.citiesTrend
     )
     // Country is only known where a city resolved against the cities table.
     let countries = Stat(
       id: "Countries",
       value: count(s.countriesVisited),
-      trend: GlobeFormat.trendPercent(current: s.countriesVisited, previous: s.countriesVisitedPrev),
+      trend: s.countriesTrend,
       hint: noCountry ? "No country recorded yet" : nil
     )
-    let places = Stat(id: "Places", value: count(s.poisVisited), trend: GlobeFormat.trendPercent(current: s.poisVisited, previous: s.poisVisitedPrev))
+    let places = Stat(id: "Places", value: count(s.poisVisited), trend: s.poisTrend)
     let distance = Stat(id: "Distance", value: GlobeFormat.distance(s.distanceKm), trend: nil)
     return [cities, countries, places, distance]
   }
+
+  @Environment(\.dynamicTypeSize) private var typeSize
+
+  /// Two across, one at accessibility sizes so a value and its trend stay on a line.
+  private var columns: Int { typeSize.isAccessibilitySize ? 1 : 2 }
 
   private func count(_ value: Int) -> String { GlobeFormat.number(Double(value)) }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
       Text("Your travels").lociCoordStyle(10)
-      LazyVGrid(columns: [GridItem(.flexible(), alignment: .topLeading), GridItem(.flexible(), alignment: .topLeading)], spacing: 14) {
+      LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .topLeading), count: columns), spacing: 14) {
         ForEach(stats) { stat in StatCell(label: stat.id, value: stat.value, trend: stat.trend, hint: stat.hint, periodDays: summary.periodDays) }
       }
     }.frame(maxWidth: .infinity, alignment: .leading).lociCard()

@@ -52,10 +52,7 @@ struct TripPreferencesSection: View {
     VStack(alignment: .leading, spacing: 6) {
       Label("Trip preferences", systemImage: "slider.horizontal.3")
         .font(.lociCoord(11)).foregroundStyle(Color.lociMutedInk)
-      ViewThatFits(in: .horizontal) {
-        HStack(spacing: 6) { badges }
-        VStack(alignment: .leading, spacing: 4) { badges }
-      }
+      FlowLayout(spacing: 6) { badges }
     }
     .accessibilityElement(children: .combine)
   }

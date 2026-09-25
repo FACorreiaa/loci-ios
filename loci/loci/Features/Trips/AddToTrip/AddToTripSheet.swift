@@ -52,7 +52,7 @@ struct AddToTripSheet: View {
       .sensoryFeedback(.success, trigger: store.added != nil)
       .onAppear { Analytics.screen("add_to_trip") }
     }
-    .presentationDetents([.medium, .large])
+    .adaptiveDetents([.medium, .large])
     .presentationDragIndicator(.visible)
   }
 
@@ -92,8 +92,7 @@ struct AddToTripSheet: View {
             Text(store.newTripCity.isEmpty ? "Create a trip" : "Create a \(store.newTripCity) trip")
           }
         }
-        .buttonStyle(.borderedProminent)
-        .tint(Color.lociForest)
+        .lociProminentButton()
         .disabled(store.isCreating)
         Button("Open Trips") { route = .trips }
           .tint(Color.lociForest)
@@ -154,8 +153,7 @@ struct AddToTripSheet: View {
         Text("\(store.placeName) is in \(AddToTripPayload.tripTitle(added.trip)).")
           .font(.lociBody(15)).foregroundStyle(Color.lociInk)
         Button("Open trip", systemImage: "arrow.right") { route = .trip(added.trip.id) }
-          .buttonStyle(.borderedProminent)
-          .tint(Color.lociForest)
+          .lociProminentButton()
       }
       .padding(.vertical, 4)
     }
@@ -176,9 +174,8 @@ struct AddToTripSheet: View {
         }
         .frame(maxWidth: .infinity)
       }
-      .buttonStyle(.borderedProminent)
+      .lociProminentButton()
       .controlSize(.large)
-      .tint(Color.lociForest)
       .disabled(!store.canAdd)
       .padding(.horizontal, LociTheme.defaultPadding).padding(.vertical, 10)
       .background(Color.lociPaper)

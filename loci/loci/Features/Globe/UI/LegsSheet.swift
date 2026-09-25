@@ -46,6 +46,8 @@ private struct LegRow: View {
   let leg: GlobeLeg
   let isSelected: Bool
 
+  @Environment(\.dynamicTypeSize) private var typeSize
+
   var body: some View {
     HStack(alignment: .center, spacing: 12) {
       Image(systemName: LegMode.symbol(leg.mode)).font(.system(size: 15, weight: .medium)).foregroundStyle(Color.lociCoral).frame(
@@ -57,7 +59,7 @@ private struct LegRow: View {
           Text(leg.fromName.isEmpty ? "—" : leg.fromName)
           Image(systemName: "arrow.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.lociMutedInk)
           Text(leg.toName.isEmpty ? "—" : leg.toName)
-        }.font(.lociHeadline(16)).foregroundStyle(Color.lociInk).lineLimit(1)
+        }.font(.lociHeadline(16)).foregroundStyle(Color.lociInk).lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
         Text(detail).font(.lociCaption(12)).monospacedDigit().foregroundStyle(Color.lociMutedInk)
       }
       Spacer(minLength: 4)

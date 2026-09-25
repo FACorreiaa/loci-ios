@@ -21,7 +21,7 @@ struct PlaceDetailSheet: View {
       PlaceDetailView(stop: stop, destination: destination, cityName: cityName)
         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
     }
-    .presentationDetents([.medium, .large])
+    .adaptiveDetents([.medium, .large])
     .presentationDragIndicator(.visible)
   }
 }

@@ -11,23 +11,28 @@ struct StopCard: View {
   var isSelected = false
   var onSelect: () -> Void = {}
 
+  @Environment(\.dynamicTypeSize) private var typeSize
+
+  /// At accessibility sizes the photo sits above the text, which gets the full width and more lines.
+  private var isLarge: Bool { typeSize.isAccessibilitySize }
+
   var body: some View {
     Button(action: onSelect) {
-      HStack(alignment: .top, spacing: 12) {
+      AdaptiveStack(alignment: .top, spacing: 12) {
         PlaceImage(stop: stop, index: index, color: color)
         VStack(alignment: .leading, spacing: 4) {
           HStack(alignment: .firstTextBaseline) {
             Label(stop.category.isEmpty ? destination.title : stop.category, systemImage: PlaceSymbol.name(for: stop.category))
-              .lociCoordStyle(10).lineLimit(1)
+              .lociCoordStyle(10).lineLimit(isLarge ? 2 : 1)
             Spacer(minLength: 4)
             if stop.rating > 0 { RatingChip(rating: stop.rating) }
           }
-          Text(stop.name).font(.lociHeadline(16)).foregroundStyle(Color.lociInk).lineLimit(2).multilineTextAlignment(.leading)
+          Text(stop.name).font(.lociHeadline(16)).foregroundStyle(Color.lociInk).lineLimit(isLarge ? 4 : 2).multilineTextAlignment(.leading)
           if !stop.blurb.isEmpty {
-            Text(stop.blurb).font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk).lineLimit(2).multilineTextAlignment(.leading)
+            Text(stop.blurb).font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk).lineLimit(isLarge ? 4 : 2).multilineTextAlignment(.leading)
           }
           if let meta = StopMeta.line(for: stop, destination: destination) {
-            Text(meta).font(.lociCaption(12)).foregroundStyle(Color.lociForest).lineLimit(1)
+            Text(meta).font(.lociCaption(12)).foregroundStyle(Color.lociForest).lineLimit(isLarge ? 2 : 1)
           }
         }
       }

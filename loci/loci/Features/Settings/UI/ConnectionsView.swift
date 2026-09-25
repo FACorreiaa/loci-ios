@@ -455,7 +455,7 @@ struct OutboundConnectionsSection: View {
           }
           .swipeActions {
             Button("Disconnect", role: .destructive) { Task { await disconnect(connection.provider) } }
-            Button("Test") { Task { await test(connection.provider) } }.tint(.lociForest)
+            Button("Test") { Task { await test(connection.provider) } }.tint(Color.lociForestFill)
           }
         }
         Button("Connect a server", systemImage: "plus") { isAdding = true }

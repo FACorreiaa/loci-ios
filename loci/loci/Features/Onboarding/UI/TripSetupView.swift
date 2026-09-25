@@ -207,9 +207,8 @@ struct TripSetupView: View {
           .padding(.horizontal, 20)
           .frame(minWidth: 160, minHeight: 50)
       }
-      .buttonStyle(.borderedProminent)
+      .lociProminentButton()
       .buttonBorderShape(.capsule)
-      .tint(Color.lociForest)
       .disabled(!store.canContinue || store.isSaving)
     }
     .padding(.horizontal, LociTheme.defaultPadding)

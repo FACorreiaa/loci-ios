@@ -43,7 +43,7 @@ struct RecentCityView: View {
 
   @ViewBuilder private var overview: some View {
     Section {
-      HStack(spacing: 12) {
+      AdaptiveStack(spacing: 12) {
         StatTile(value: "\(city.interactionCount)", label: city.interactionCount == 1 ? "Interaction" : "Interactions", systemImage: "bubble.left")
         if let last = city.lastActivity {
           StatTile(value: DayBuckets.relativeTime(last, now: now), label: "Last active", systemImage: "clock")
@@ -77,15 +77,18 @@ struct RecentCityView: View {
       ForEach(items) { item in
         HStack(alignment: .top, spacing: 12) {
           RecentsBadgeIcon(systemImage: item.badge.systemImage)
-          VStack(alignment: .leading, spacing: 3) {
-            Text(item.prompt).font(.lociBody(15)).foregroundStyle(Color.lociInk)
-            Text(item.badge.label).lociCoordStyle(10)
+          // The time joins the text column at accessibility sizes.
+          AdaptiveStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
+              Text(item.prompt).font(.lociBody(15)).foregroundStyle(Color.lociInk)
+              Text(item.badge.label).lociCoordStyle(10)
+            }
+            Spacer(minLength: 0)
+            Text(DayBuckets.relativeTime(item.occurredAt, now: now))
+              .font(.lociCaption())
+              .foregroundStyle(Color.lociMutedInk)
+              .fixedSize()
           }
-          Spacer(minLength: 8)
-          Text(DayBuckets.relativeTime(item.occurredAt, now: now))
-            .font(.lociCaption())
-            .foregroundStyle(Color.lociMutedInk)
-            .fixedSize()
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)

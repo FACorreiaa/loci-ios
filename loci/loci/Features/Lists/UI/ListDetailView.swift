@@ -130,7 +130,7 @@ struct ListDetailView: View {
       } description: {
         Text(message)
       } actions: {
-        Button("Try again") { Task { await store.load() } }.buttonStyle(.borderedProminent).tint(Color.lociForest)
+        Button("Try again") { Task { await store.load() } }.lociProminentButton()
       }
     case .loaded where entries.isEmpty:
       ContentUnavailableView(

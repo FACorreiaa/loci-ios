@@ -205,8 +205,7 @@ struct SearchResultsView: View {
     } actions: {
       if let message = rerunMessage, !message.isEmpty {
         Button("Run it again") { Task { await runAgain(message) } }
-          .buttonStyle(.borderedProminent)
-          .tint(Color.lociForest)
+          .lociProminentButton()
       }
     }
   }

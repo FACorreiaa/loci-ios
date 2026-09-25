@@ -60,9 +60,8 @@ struct PushPrimerSheet: View {
         // Paper on forest, not the default white: dark mode's forest is a light sage.
         Text("Notify me").font(.lociBody().weight(.semibold)).foregroundStyle(Color.lociPaper).frame(maxWidth: .infinity)
       }
-      .buttonStyle(.borderedProminent)
+      .lociProminentButton()
       .controlSize(.large)
-      .tint(.lociForest)
       Button { primer.respond(false) } label: {
         Text("Not now").font(.lociBody()).frame(maxWidth: .infinity)
       }

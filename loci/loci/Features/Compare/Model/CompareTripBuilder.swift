@@ -18,7 +18,8 @@ nonisolated enum CompareTripBuilder {
     var trip = Loci_Trip_TripDraft()
     trip.userID = owner(userID)
     trip.cityName = column.cityName
-    trip.cityID = column.cityID
+    // city_id is optional with min_len 1: an empty one is rejected, so leave it unset.
+    if !column.cityID.isEmpty { trip.cityID = column.cityID }
     trip.title = dual ? "Weekend: \(columns[0].cityName) + \(columns[1].cityName)" : "\(column.cityName) weekend"
     trip.constraints.pace = .moderate
     let stops = (dual ? Array(columns.prefix(2)) : [column]).flatMap { col in
