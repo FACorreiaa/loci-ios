@@ -62,3 +62,27 @@ struct WalkDayTests {
     #expect(walk.withoutLocation == 1)
   }
 }
+
+struct WalkCardTests {
+  @Test func routeTextLeadsWithTheStopProgress() {
+    let state = NearbyWalkAttributes.ContentState(
+      steps: 1,
+      distanceMeters: 1,
+      placesNearby: 0,
+      destinationName: "Café X",
+      destinationMeters: 400,
+      etaSeconds: 300,
+      stopProgress: "3 of 6"
+    )
+    #expect(state.routeText == "3 of 6 · Café X · 400 m · 5 min")
+    #expect(NearbyWalkAttributes.ContentState(steps: 0, distanceMeters: 0, placesNearby: 0).routeText == nil)
+  }
+
+  @Test func olderPayloadsStillDecode() throws {
+    let state = #"{"steps":3,"distanceMeters":2,"placesNearby":1}"#
+    let decoded = try JSONDecoder().decode(NearbyWalkAttributes.ContentState.self, from: Data(state.utf8))
+    #expect(decoded.stopProgress == nil)
+    let attributes = #"{"startedAt":0,"radiusKm":5}"#
+    #expect(try JSONDecoder().decode(NearbyWalkAttributes.self, from: Data(attributes.utf8)).title == nil)
+  }
+}

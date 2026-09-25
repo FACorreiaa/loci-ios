@@ -2,7 +2,7 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
-/// Lock Screen and Dynamic Island for a Near me walk: steps, distance, how
+/// Lock Screen and Dynamic Island for a walk (Near me, or a day stop by stop): steps, distance, how
 /// many places are fenced, and the closest one (or, when following a route,
 /// the place being walked to). The extension cannot see the
 /// app's theme, so the three brand colours are written here (NATIVE_DESIGN §1).
@@ -21,13 +21,14 @@ struct NearbyWalkLiveActivity: Widget {
           Text(context.state.distanceText).font(.headline).foregroundStyle(Palette.ink)
         }
         DynamicIslandExpandedRegion(.bottom) {
-          if let destination = context.state.destinationText {
+          if let destination = context.state.routeText {
             Label(destination, systemImage: "arrow.triangle.turn.up.right.diamond.fill")
               .font(.subheadline).foregroundStyle(Palette.forest).lineLimit(1)
           } else if let nearest = context.state.nearestText {
             Label(nearest, systemImage: "mappin.and.ellipse").font(.subheadline).foregroundStyle(Palette.terracotta).lineLimit(1)
           } else {
-            Text("\(context.state.placesNearby) places within \(context.attributes.radiusKm) km").font(.subheadline).foregroundStyle(.secondary)
+            Text(context.attributes.title ?? "\(context.state.placesNearby) places within \(context.attributes.radiusKm) km")
+              .font(.subheadline).foregroundStyle(.secondary)
           }
         }
       } compactLeading: {
@@ -48,7 +49,7 @@ private struct LockScreenView: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack {
-        Label("Near me walk", systemImage: "figure.walk").font(.caption.weight(.medium)).foregroundStyle(Palette.forest)
+        Label(attributes.title ?? "Near me walk", systemImage: "figure.walk").font(.caption.weight(.medium)).foregroundStyle(Palette.forest)
         Spacer()
         Text(attributes.startedAt, style: .timer).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
       }
@@ -62,12 +63,14 @@ private struct LockScreenView: View {
           Text("walked").font(.caption).foregroundStyle(.secondary)
         }
         Spacer()
-        VStack(alignment: .trailing, spacing: 2) {
-          Text("\(state.placesNearby)").font(.title.weight(.semibold)).foregroundStyle(Palette.ink)
-          Text("places").font(.caption).foregroundStyle(.secondary)
+        if state.placesNearby > 0 || attributes.title == nil {
+          VStack(alignment: .trailing, spacing: 2) {
+            Text("\(state.placesNearby)").font(.title.weight(.semibold)).foregroundStyle(Palette.ink)
+            Text("places").font(.caption).foregroundStyle(.secondary)
+          }
         }
       }
-      if let destination = state.destinationText {
+      if let destination = state.routeText {
         Label(destination, systemImage: "arrow.triangle.turn.up.right.diamond.fill")
           .font(.subheadline.weight(.medium)).foregroundStyle(Palette.forest).lineLimit(1)
       } else if let nearest = state.nearestText {
