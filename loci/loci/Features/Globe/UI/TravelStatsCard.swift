@@ -19,16 +19,16 @@ struct TravelStatsCard: View {
     let cities = Stat(
       id: "Cities",
       value: count(s.citiesVisited),
-      trend: GlobeFormat.trendPercent(current: s.citiesVisited, previous: s.citiesVisitedPrev)
+      trend: s.citiesTrend
     )
     // Country is only known where a city resolved against the cities table.
     let countries = Stat(
       id: "Countries",
       value: count(s.countriesVisited),
-      trend: GlobeFormat.trendPercent(current: s.countriesVisited, previous: s.countriesVisitedPrev),
+      trend: s.countriesTrend,
       hint: noCountry ? "No country recorded yet" : nil
     )
-    let places = Stat(id: "Places", value: count(s.poisVisited), trend: GlobeFormat.trendPercent(current: s.poisVisited, previous: s.poisVisitedPrev))
+    let places = Stat(id: "Places", value: count(s.poisVisited), trend: s.poisTrend)
     let distance = Stat(id: "Distance", value: GlobeFormat.distance(s.distanceKm), trend: nil)
     return [cities, countries, places, distance]
   }

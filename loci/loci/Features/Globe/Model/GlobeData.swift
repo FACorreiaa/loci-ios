@@ -56,6 +56,26 @@ nonisolated struct TravelSummary: Equatable, Sendable {
   var countriesVisitedPrev = 0
   var poisVisitedPrev = 0
   var periodDays = 365
+  /// Counts inside the last `periodDays` (proto v5.29.0). Zero from older
+  /// servers, which sent all-time totals as they stood when the window opened
+  /// in the `*Prev` fields instead of the previous window's counts.
+  var citiesVisitedThis = 0
+  var countriesVisitedThis = 0
+  var poisVisitedThis = 0
+
+  /// True when the server sends window counts. Any non-zero one decides it:
+  /// an older server always sends zeros here.
+  var hasWindowCounts: Bool { citiesVisitedThis != 0 || countriesVisitedThis != 0 || poisVisitedThis != 0 }
+
+  var citiesTrend: Double? { trend(this: citiesVisitedThis, total: citiesVisited, previous: citiesVisitedPrev) }
+  var countriesTrend: Double? { trend(this: countriesVisitedThis, total: countriesVisited, previous: countriesVisitedPrev) }
+  var poisTrend: Double? { trend(this: poisVisitedThis, total: poisVisited, previous: poisVisitedPrev) }
+
+  /// This window against the last one; before v5.29.0, the all-time total
+  /// against the total when the window opened.
+  private func trend(this: Int, total: Int, previous: Int) -> Double? {
+    GlobeFormat.trendPercent(current: hasWindowCounts ? this : total, previous: previous)
+  }
 }
 
 /// Everything the globe renders, from one GetGlobeData call.
@@ -128,7 +148,10 @@ nonisolated enum GlobeMapping {
       citiesVisitedPrev: Int(s.citiesVisitedPrevPeriod),
       countriesVisitedPrev: Int(s.countriesVisitedPrevPeriod),
       poisVisitedPrev: Int(s.poisVisitedPrevPeriod),
-      periodDays: s.periodDays > 0 ? Int(s.periodDays) : 365
+      periodDays: s.periodDays > 0 ? Int(s.periodDays) : 365,
+      citiesVisitedThis: Int(s.citiesVisitedThisPeriod),
+      countriesVisitedThis: Int(s.countriesVisitedThisPeriod),
+      poisVisitedThis: Int(s.poisVisitedThisPeriod)
     )
   }
 }
