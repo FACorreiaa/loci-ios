@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// The signed-in pages web has and the tab bar does not: Profile is their hub.
-/// Each row pushes a placeholder until its phase lands (parity plan, pass 2);
-/// Recents is real since Phase 1, Lists since Phase 2, My reviews since Phase 5,
-/// Contribute since Phase 6.
+/// Every row is real now (parity plan, pass 2): Recents since Phase 1, Lists
+/// since Phase 2, My reviews since Phase 5, Contribute since Phase 6 and Where
+/// you've been since Phase 7. `ComingSoonView` stays for AppLinkDestination.
 enum YouDestination: String, CaseIterable, Identifiable {
   case recents, travelHistory, lists, reviews, contribute
 
@@ -36,7 +36,6 @@ enum YouDestination: String, CaseIterable, Identifiable {
     case .reviews: MyReviewsView()
     case .contribute: ContributeView()
     case .travelHistory: GlobeView()
-    default: ComingSoonView(title: title, systemImage: systemImage)
     }
   }
 }

@@ -116,6 +116,15 @@ Analytics: `Analytics.screen("globe")`.
 - `country` is only set where a city resolved against the cities table, so
   "No country recorded yet" is common.
 
+## Not on iOS yet
+
+`TravelHistoryService` has six RPCs; this screen calls `GetGlobeData` and
+`GetTravelSummary`. Not wired, on purpose (the plan asked for the globe, legs
+and stats): `RecordVisit`, `DeleteVisit`, `ListVisitedCities`,
+`ListVisitedPois`. So a stop cannot be marked visited from the phone; the
+empty state says so and points at web. They are listed for parity pass 3
+follow-ups.
+
 ## Tests and previews
 
 `lociTests/GreatCircleTests.swift`: great-circle segment count and path (ends,

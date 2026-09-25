@@ -282,7 +282,7 @@ private struct GlobeEmptyState: View {
       ContentUnavailableView(
         "No travels recorded yet",
         systemImage: "globe.europe.africa",
-        description: Text("Cities appear here once a trip has real dates in the past, or once you mark a stop as visited. We don't guess from plans.")
+        description: Text("Cities appear here once a trip has real dates in the past. Marking a stop as visited is on the web app for now. We don't guess from plans.")
       )
     } else {
       ContentUnavailableView {
