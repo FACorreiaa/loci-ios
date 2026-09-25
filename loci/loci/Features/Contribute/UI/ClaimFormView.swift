@@ -115,8 +115,7 @@ struct ClaimFormView: View {
         .font(.lociBody(16).weight(.semibold))
         .frame(maxWidth: .infinity, minHeight: LociTheme.minTapTarget)
     }
-    .buttonStyle(.borderedProminent)
-    .tint(Color.lociForest)
+    .lociProminentButton()
     .disabled(!store.isReady || store.isSubmitting)
   }
 }
