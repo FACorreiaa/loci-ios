@@ -10,6 +10,9 @@ struct OpeningHoursEditor: View {
     VStack(alignment: .leading, spacing: 6) {
       ForEach(HoursDay.allCases) { day in
         row(day)
+        if let problem = hours.problem(day) {
+          Text(problem).font(.lociCaption(12)).foregroundStyle(Color.lociDestructive).accessibilityLabel("\(day.label): \(problem)")
+        }
         if day != .sun { Divider().overlay(Color.lociBorder.opacity(0.5)) }
       }
       Text("Sent as: \(hours.encoded)")

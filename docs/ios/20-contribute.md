@@ -61,6 +61,31 @@ web's tests, and the token lists are checked against the server's
 | 3 | `ContributorProfile.badges` are bare slugs with no title or rule. | iOS has the one known slug hard-coded and shows others as words. | a badge message with title and description |
 | 4 | `ConfirmPlace` by the submitter is FailedPrecondition, but pending places already exclude your own, so this only shows on a race. | none | none |
 
+## Review follow-up (after #35)
+
+Four things the review found, all in what a scout sees:
+
+- **Refusals read as sentences.** `ContributeError` (`Model/ContributeError.swift`)
+  keeps the Connect code the three writes answer with and turns each into one
+  line: AlreadyExists → "“Foo” is already on the guide. Search for it above.",
+  FailedPrecondition → the server's reason as a sentence, Unimplemented →
+  "Contributions are switched off right now", Unavailable → offline wording,
+  anything else → the action's own fallback. Web still shows the raw message.
+- **A confirm that cannot succeed loses its button.** `confirmFailed` keeps
+  the error per submission; `canRetry` is false for FailedPrecondition (no
+  coordinates yet, your own place), so the card shows the reason and no "Yes,
+  it exists".
+- **Midnight closes.** A close picked at 00:00 becomes `24:00` (`setTime`),
+  and each day that cannot be sent says why under its row (`problem(_:)`).
+  Past-midnight spans are still unsupported by design. The same week cannot
+  be filed twice by accident: Submit waits for a change.
+- **The City field wins.** With location on, a City other than the located
+  one runs a semantic search in that city instead of "within 25 km of you"
+  (`ContributePayload.searchCoordinate`).
+
+A filed report now reloads the task list as well as the profile, so the
+place's open questions update.
+
 ## Tests and previews
 
 `lociTests/ContributeModelTests.swift`: claim values, vocabulary (including

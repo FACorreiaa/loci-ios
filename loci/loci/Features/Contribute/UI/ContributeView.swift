@@ -30,7 +30,8 @@ struct ContributeView: View {
     .navigationTitle("Contribute")
     .navigationBarTitleDisplayMode(.inline)
     .navigationDestination(for: VerificationTask.self) { task in
-      ClaimFormView(task: task, service: store.service) { Task { await store.refreshProfile() } }
+      // A filed report changes the counts and the task's open questions, so both reload.
+      ClaimFormView(task: task, service: store.service) { Task { await store.load() } }
     }
     .sheet(isPresented: $addingPlace) {
       AddPlaceView(store: addPlaceStore)
@@ -167,7 +168,7 @@ struct ContributeView: View {
           place: place,
           outcome: store.outcome(for: place),
           isConfirming: store.confirming.contains(place.submissionID),
-          failed: store.confirmFailed.contains(place.submissionID)
+          failure: store.confirmFailed[place.submissionID]
         ) { Task { await store.confirm(place) } }
       }
     }
@@ -357,7 +358,7 @@ private struct PendingPlaceCard: View {
   let place: PendingPlace
   let outcome: PlaceSubmissionResult?
   let isConfirming: Bool
-  let failed: Bool
+  let failure: ContributeError?
   let onConfirm: () -> Void
 
   var body: some View {
@@ -377,16 +378,20 @@ private struct PendingPlaceCard: View {
         .font(.lociCaption(13).weight(.semibold))
         .foregroundStyle(Color.lociForest)
       } else {
-        Button(action: onConfirm) {
-          Text(isConfirming ? "Confirming…" : "Yes, it exists")
-            .font(.lociBody(15).weight(.semibold))
-            .frame(maxWidth: .infinity, minHeight: LociTheme.minTapTarget)
+        // A refusal that a retry cannot change (no coordinates yet, your own
+        // place) takes the button away and says why; anything else keeps it.
+        if failure?.canRetry ?? true {
+          Button(action: onConfirm) {
+            Text(isConfirming ? "Confirming…" : "Yes, it exists")
+              .font(.lociBody(15).weight(.semibold))
+              .frame(maxWidth: .infinity, minHeight: LociTheme.minTapTarget)
+          }
+          .buttonStyle(.borderedProminent)
+          .tint(Color.lociForest)
+          .disabled(isConfirming)
         }
-        .buttonStyle(.borderedProminent)
-        .tint(Color.lociForest)
-        .disabled(isConfirming)
-        if failed {
-          Text("That did not go through. Try again.").font(.lociCaption(12)).foregroundStyle(Color.lociDestructive)
+        if let failure {
+          Text(failure.message(for: .confirm)).font(.lociCaption(12)).foregroundStyle(Color.lociDestructive)
         }
       }
     }

@@ -137,8 +137,19 @@ nonisolated struct OpeningHours: Hashable, Sendable {
   mutating func setTime(_ day: HoursDay, start: Bool, to time: String) {
     guard case .open(let intervals) = self[day], Self.isTime(time) else { return }
     var first = intervals.first ?? Self.weekdayInterval
-    if start { first.start = time } else { first.end = time }
+    // A clock cannot show 24:00, so a close picked at midnight means the end of
+    // the day, which is the only forward-running reading of it.
+    if start { first.start = time } else { first.end = time == "00:00" ? "24:00" : time }
     self[day] = .open([first] + intervals.dropFirst())
+  }
+
+  /// Why a day cannot be sent, or nil when it can. The editor shows it under
+  /// the row so a disabled Submit is never a mystery.
+  func problem(_ day: HoursDay) -> String? {
+    guard case .open(let intervals) = self[day] else { return nil }
+    guard let first = intervals.first else { return "Set hours or mark it closed." }
+    guard let start = Self.minutes(first.start), let end = Self.minutes(first.end) else { return "Set hours or mark it closed." }
+    return start < end ? nil : "Closes before it opens. Past-midnight hours aren't supported yet."
   }
 
   /// web: the "Closed" / "Set hours" button. Reopening starts at 09:00–17:00.
