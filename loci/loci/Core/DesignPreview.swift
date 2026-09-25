@@ -102,6 +102,8 @@ enum DesignPreview: String {
   case globeEmpty
   /// The first-run profile wizard on its last step, three interests picked.
   case tripSetup
+  /// Weekend compare after Porto → Évora or Beja came back: Loci's pick, two columns.
+  case compare
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -190,6 +192,7 @@ enum DesignPreview: String {
     case .globeEmpty:
       NavigationStack { GlobeView(store: GlobeStore(service: PreviewTravelHistoryService(data: .previewEmpty)), recents: PreviewRecentsService()) }
     case .tripSetup: TripSetupPreview()
+    case .compare: NavigationStack { CompareView(preview: .previewPorto, origin: "Porto", candidates: ["Évora", "Beja"]) }
     }
   }
 }
@@ -501,19 +504,20 @@ extension SearchState {
       let lon: Double
       let day: Int
       let rating: Double
+      let photo: String
     }
     let plan = [
-      Seed(name: "Colosseum", category: "Landmark", lat: 41.8902, lon: 12.4922, day: 1, rating: 4.8),
-      Seed(name: "Roman Forum", category: "Historic site", lat: 41.8925, lon: 12.4853, day: 1, rating: 4.7),
-      Seed(name: "Palatine Hill", category: "Park", lat: 41.8892, lon: 12.4875, day: 1, rating: 4.6),
-      Seed(name: "Capitoline Museums", category: "Museum", lat: 41.8933, lon: 12.4829, day: 1, rating: 4.6),
-      Seed(name: "Pantheon", category: "Landmark", lat: 41.8986, lon: 12.4769, day: 2, rating: 4.8),
-      Seed(name: "Piazza Navona", category: "Square", lat: 41.8992, lon: 12.4731, day: 2, rating: 4.7),
-      Seed(name: "Campo de' Fiori", category: "Market", lat: 41.8955, lon: 12.4722, day: 2, rating: 4.4),
-      Seed(name: "Trevi Fountain", category: "Landmark", lat: 41.9009, lon: 12.4833, day: 2, rating: 4.7),
-      Seed(name: "Vatican Museums", category: "Museum", lat: 41.9065, lon: 12.4536, day: 3, rating: 4.7),
-      Seed(name: "St. Peter's Basilica", category: "Church", lat: 41.9022, lon: 12.4539, day: 3, rating: 4.8),
-      Seed(name: "Trastevere", category: "Neighbourhood", lat: 41.8890, lon: 12.4694, day: 3, rating: 4.6),
+      Seed(name: "Colosseum", category: "Landmark", lat: 41.8902, lon: 12.4922, day: 1, rating: 4.8, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Colosseo_2020.jpg/330px-Colosseo_2020.jpg"),
+      Seed(name: "Roman Forum", category: "Historic site", lat: 41.8925, lon: 12.4853, day: 1, rating: 4.7, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Foro_Romano_Musei_Capitolini_Roma.jpg/330px-Foro_Romano_Musei_Capitolini_Roma.jpg"),
+      Seed(name: "Palatine Hill", category: "Park", lat: 41.8892, lon: 12.4875, day: 1, rating: 4.6, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Palatine_Hill_from_across_the_Circus_Maximus_April_2019.jpg/330px-Palatine_Hill_from_across_the_Circus_Maximus_April_2019.jpg"),
+      Seed(name: "Capitoline Museums", category: "Museum", lat: 41.8933, lon: 12.4829, day: 1, rating: 4.6, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/0_Cordonata_-_Dioscuri_-_Palazzo_Senatorio.JPG/330px-0_Cordonata_-_Dioscuri_-_Palazzo_Senatorio.JPG"),
+      Seed(name: "Pantheon", category: "Landmark", lat: 41.8986, lon: 12.4769, day: 2, rating: 4.8, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Pantheon_%28Rome%29_-_Right_side_and_front.jpg/330px-Pantheon_%28Rome%29_-_Right_side_and_front.jpg"),
+      Seed(name: "Piazza Navona", category: "Square", lat: 41.8992, lon: 12.4731, day: 2, rating: 4.7, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Piazza_Navona_%28Rome%29_at_night.jpg/330px-Piazza_Navona_%28Rome%29_at_night.jpg"),
+      Seed(name: "Campo de' Fiori", category: "Market", lat: 41.8955, lon: 12.4722, day: 2, rating: 4.4, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Campo_dei_Fiori.jpg/330px-Campo_dei_Fiori.jpg"),
+      Seed(name: "Trevi Fountain", category: "Landmark", lat: 41.9009, lon: 12.4833, day: 2, rating: 4.7, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Trevi_Fountain_-_Roma.jpg/330px-Trevi_Fountain_-_Roma.jpg"),
+      Seed(name: "Vatican Museums", category: "Museum", lat: 41.9065, lon: 12.4536, day: 3, rating: 4.7, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Vatican_Museums_Spiral_Staircase_Looking_Up_2012.jpg/330px-Vatican_Museums_Spiral_Staircase_Looking_Up_2012.jpg"),
+      Seed(name: "St. Peter's Basilica", category: "Church", lat: 41.9022, lon: 12.4539, day: 3, rating: 4.8, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Basilica_di_San_Pietro_in_Vaticano_September_2015-1a.jpg/330px-Basilica_di_San_Pietro_in_Vaticano_September_2015-1a.jpg"),
+      Seed(name: "Trastevere", category: "Neighbourhood", lat: 41.8890, lon: 12.4694, day: 3, rating: 4.6, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Santa_Maria_in_Trastevere_fountain.jpg/330px-Santa_Maria_in_Trastevere_fountain.jpg"),
     ]
     response.itineraryResponse.pointsOfInterest = plan.enumerated().map { offset, entry in
       var poi = Loci_Poi_POIDetailedInfo()
@@ -527,13 +531,12 @@ extension SearchState {
       poi.rating = entry.rating
       poi.descriptionPoi = "Worth the queue early; the light is best before ten and the crowds after."
       poi.address = "Rome, Italy"
-      if offset == 0 {
-        var credit = Loci_Poi_POIImage()
-        credit.url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Colosseo_2020.jpg/640px-Colosseo_2020.jpg"
-        credit.attribution = "Wikimedia Commons"
-        credit.licence = "CC BY-SA 4.0"
-        poi.imageCredits = [credit]
-      }
+      // Wikimedia serves only its standard thumbnail widths; 640px answers 400.
+      var credit = Loci_Poi_POIImage()
+      credit.url = entry.photo
+      credit.attribution = "Wikimedia Commons"
+      credit.licence = "CC BY-SA 4.0"
+      poi.imageCredits = [credit]
       return poi
     }
     var extra = Loci_Poi_POIDetailedInfo()
@@ -544,9 +547,109 @@ extension SearchState {
     extra.longitude = 12.4760
     extra.rating = 4.5
     extra.descriptionPoi = "Where Romans actually eat lunch."
+    var market = Loci_Poi_POIImage()
+    market.url = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Porta_San_Paolo_-_Piramid_Cestius.JPG/330px-Porta_San_Paolo_-_Piramid_Cestius.JPG"
+    market.attribution = "Wikimedia Commons"
+    extra.imageCredits = [market]
     response.pointsOfInterest = response.itineraryResponse.pointsOfInterest + [extra]
     state.adopt(response)
     return state
+  }
+}
+
+extension Loci_Localcontext_LocalContext {
+  /// Rome's forecast around the 4 October holiday (San Francesco d'Assisi,
+  /// national in Italy from 2026 per Nager), with one wet day.
+  static var previewRome: Loci_Localcontext_LocalContext {
+    var utc = Calendar(identifier: .gregorian)
+    utc.timeZone = TimeZone(identifier: "UTC") ?? .current
+    func on(_ day: Int) -> Google_Protobuf_Timestamp {
+      Google_Protobuf_Timestamp(date: utc.date(from: DateComponents(year: 2026, month: 10, day: day, hour: 12)) ?? Date())
+    }
+    var context = Loci_Localcontext_LocalContext()
+    context.weather = [(2, 24.0, 15.0, "Sunny", 0.05), (3, 21.0, 14.0, "Rain", 0.8), (4, 23.0, 14.0, "Partly cloudy", 0.2), (5, 25.0, 16.0, "Sunny", 0.0)]
+      .map { day, high, low, condition, rain in
+        var weather = Loci_Localcontext_WeatherDay()
+        weather.date = on(day)
+        weather.highC = high
+        weather.lowC = low
+        weather.condition = condition
+        weather.precipProb = rain
+        return weather
+      }
+    var holiday = Loci_Localcontext_LocalAlert()
+    holiday.kind = .holiday
+    holiday.title = "Sun 4 Oct · Public holiday: San Francesco d'Assisi"
+    holiday.detail = "Many museums and shops close or keep Sunday hours."
+    holiday.date = on(4)
+    holiday.severity = 0.5
+    holiday.source = "nager"
+    context.alerts = [holiday]
+    return context
+  }
+}
+
+extension Loci_Localcontext_FxRate {
+  static var previewEurUsd: Loci_Localcontext_FxRate {
+    var rate = Loci_Localcontext_FxRate()
+    rate.base = "EUR"
+    rate.quote = "USD"
+    rate.rate = 1.17
+    rate.asOf = Google_Protobuf_Timestamp(date: Date())
+    return rate
+  }
+}
+
+extension Loci_Compare_V1_CompareWeekendResponse {
+  /// Porto → Évora or Beja for a sunny weekend; Évora wins on travel time.
+  static var previewPorto: Loci_Compare_V1_CompareWeekendResponse {
+    func weather(_ highs: [Double]) -> [Loci_Localcontext_WeatherDay] {
+      highs.map { high in
+        var day = Loci_Localcontext_WeatherDay()
+        day.highC = high
+        day.lowC = high - 11
+        day.condition = "Sunny"
+        return day
+      }
+    }
+    func column(
+      _ name: String, km: Double, mins: Int32, score: Int32, verdict: String, highs: [Double], pros: [String], cons: [String], stay: String, eat: String
+    ) -> Loci_Compare_V1_CityCompareColumn {
+      var column = Loci_Compare_V1_CityCompareColumn()
+      column.cityName = name
+      column.country = "Portugal"
+      column.distanceKm = km
+      column.travelMins = mins
+      column.goScore.score = score
+      column.goScore.verdict = verdict
+      column.weather = weather(highs)
+      column.pros = pros
+      column.cons = cons
+      column.staySnippet = stay
+      column.eatSnippet = eat
+      return column
+    }
+    var response = Loci_Compare_V1_CompareWeekendResponse()
+    response.originCity = "Porto"
+    response.recommendation = .first
+    response.recommendationReason = "Évora is an hour closer, dry both days, and its old town is walkable end to end. Beja is quieter but most of its sights close early on Sunday."
+    response.columns = [
+      column(
+        "Évora", km: 365, mins: 225, score: 84, verdict: "Go", highs: [27, 28],
+        pros: ["Roman temple and chapel of bones within a 10-minute walk", "Dry and warm both days"],
+        cons: ["Busy on Saturday afternoon"],
+        stay: "Stay inside the walls, near Praça do Giraldo.",
+        eat: "Book a table for Alentejo pork and migas."
+      ),
+      column(
+        "Beja", km: 470, mins: 290, score: 66, verdict: "Maybe", highs: [30, 31],
+        pros: ["Quiet streets and a castle keep with wide views"],
+        cons: ["Five hours each way", "Museums close early on Sunday"],
+        stay: "Small guesthouses near the castle.",
+        eat: "Try the local convent sweets."
+      ),
+    ]
+    return response
   }
 }
 
