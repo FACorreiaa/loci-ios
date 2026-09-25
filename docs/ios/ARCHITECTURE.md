@@ -1043,7 +1043,7 @@ the three Dynamic Island regions from that state. Known gap: never run on a
 real phone (no pedometer in the simulator).
 
 Tapping a place previews a walking route (`MKDirections`, `.walking`); **Go**
-starts the walk if needed and follows it (slice 15). `WalkNavigator` is owned
+starts the walk if needed and follows it (slice 20). `WalkNavigator` is owned
 by `NearbyWalk`, not a singleton, and is fed by the walk's `liveUpdates` loop,
 so there is still one location session. The geometry is pure and lives in
 `Core/Navigation/WalkingRoute.swift`: snap to the line, trim, off route at

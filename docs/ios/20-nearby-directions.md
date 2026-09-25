@@ -1,4 +1,4 @@
-# Slice 15: Near me directions (route line, walking figure, follow mode)
+# Slice 20: Near me directions (route line, walking figure, follow mode)
 
 The next step of "Near me like Pokémon Go", on top of the walk from slice 11. Tapping a place on the Near me map draws the walking route to it. Pressing **Go** starts the walk if it isn't already running, and the camera then follows a little walker figure while the line shrinks to what is left. Everything runs on the phone: no new RPCs, and Apple's directions are free and need no key.
 
