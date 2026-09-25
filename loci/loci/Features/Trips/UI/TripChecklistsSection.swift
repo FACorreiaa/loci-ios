@@ -13,12 +13,13 @@ struct TripChecklistsSection: View {
   @State private var expenseAmount = ""
 
   var body: some View {
+    // The error alert lives on TripEditorView: a modifier on this Group would
+    // attach one alert per section and only once the row scrolls into view.
     Group {
       if !store.openSuggestions.isEmpty { suggestionsSection }
       packingSection
       expensesSection
     }
-    .errorAlert($store.error)
   }
 
   // MARK: - Suggestions
@@ -79,7 +80,19 @@ struct TripChecklistsSection: View {
       if store.availability == .unavailable {
         Text("Your packing list and expenses will sync here once checklists are available on your account.")
           .font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+      } else if case .failed = store.availability {
+        VStack(alignment: .leading, spacing: 8) {
+          Text("Couldn't load your packing list and expenses.").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+          Button("Try again") { Task { await store.retry() } }.font(.lociCaption(13).weight(.semibold)).tint(Color.lociForest)
+        }
       } else {
+        if store.availability == .cached {
+          HStack(spacing: 8) {
+            Text("Showing the copy on this phone. Edits need a connection.").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+            Spacer(minLength: 4)
+            Button("Retry") { Task { await store.retry() } }.font(.lociCaption(13).weight(.semibold)).tint(Color.lociForest)
+          }
+        }
         ForEach(store.packing, id: \.id) { item in
           Button {
             Task { await store.toggle(item) }
@@ -127,7 +140,7 @@ struct TripChecklistsSection: View {
   // MARK: - Expenses
 
   @ViewBuilder private var expensesSection: some View {
-    if store.availability != .unavailable {
+    if store.availability != .unavailable, !store.isFailed {
       Section {
         ForEach(store.expenses, id: \.id) { item in
           HStack {

@@ -36,7 +36,7 @@ components are:
 - **Hero.** It shows "Route · N days", the title, the city and
   `TripFormat.tripDates` ("4 Oct", "4–6 Oct", "30 Sep – 2 Oct"). A day's date is
   a Timestamp at midnight UTC, so it is read as a calendar day
-  (`TripFormat.calendarDate`). Formatting it as an instant would print the
+  (`DayTimeline.localMidnight`). Formatting it as an instant would print the
   day before anywhere west of Greenwich. The day headers use the same helper now.
 - **Preferences.** Each control sends one `PreferencePatch`, and
   `TripFormat.merged` applies it to the current constraints. Optional fields
@@ -51,8 +51,12 @@ components are:
   and its Reload button fetches the trip again. This covers every stop edit,
   not just preferences.
 - **Export gate.** `TripExportGate` works like web's menu:
-  - `.ics` always exports. On a free plan with more than one day, the server
-    trims the file to Day 1, and the page shows "Day-1 calendar works free…".
+  - `.ics` always exports. On a free plan with more than one day the page
+    shows "Day-1 calendar works free…", **but the server does not trim the
+    .ics** (`trip/handler.go` returns `buildICS(t)` for every plan; only the
+    PDF is trimmed). Web makes the same claim. Open decision: trim on the
+    server or drop the notice on both clients. Until then the notice
+    under-promises.
   - PDF on a free plan with more than one day is locked: the server is not
     called, and the page says why.
   - Markdown is Pro only.
@@ -90,6 +94,18 @@ components are:
     hidden;
   - suggestions stay read-only;
   - nothing is sent.
+- **When the load fails for any other reason** (review follow-up to #31):
+  - the phone's last confirmed copy (`LocalCache.Kind.checklist`, written on
+    every successful load) is shown read-only as `.cached`, with a Retry;
+  - with no copy, the section is `.failed(message)` with a Retry, and the
+    expense section stays hidden;
+  - a refresh that fails on an already confirmed list keeps it editable and
+    raises the alert (which lives on `TripEditorView`, not on the section's
+    `Group`, so it is attached once);
+  - a failed edit only rolls back while the item on screen is still the one
+    that failed (`TripChecklist.shouldRollBack`), so a later edit that landed
+    is never undone by an older failure. There is no offline queue: a tick
+    made offline fails and reverts.
 
 ## Offline trip cache
 
@@ -137,7 +153,7 @@ UTC.
 | `TripFormatTests` | Eyebrow plural, `tripDates` for none, single, same month and cross month, a midnight-UTC day read in New York, a local-midnight day read in Athens, minutes ↔ HH:MM ↔ picker date, pace and budget labels, collapsed badges, the second tap clearing the budget, merges that clear empty optionals |
 | `TripExportGateTests` | ICS always (with a notice on a free multi-day trip), PDF Pro past one day, Markdown Pro only, no price or link in any copy, web's analytics names, filename sanitising |
 | `TripChecklistTests` | `openSuggestions` (case, trim, dismissed, expenses not counted, duplicates), packed summary, order and next position, `makeItem` trim, cap and UUID, amount parsing (both marks, JPY, rounding, rejects), default currency, per-currency totals |
-| `TripChecklistStoreTests` | Load, Unimplemented is quiet, adopt the server copy, and rollback for add, toggle, delete and dismiss; Add all order, expense minor units and rejects, nothing sent while unavailable |
+| `TripChecklistStoreTests` | Load, Unimplemented is quiet, failed load is retryable, cached copy read-only when unreachable, successful load cached, adopt the server copy, and rollback for add, toggle, delete and dismiss (never over a later edit); Add all order, expense minor units and rejects, nothing sent while unavailable |
 | `TripRPCErrorTests` | Conflict, unimplemented and cancelled codes |
 
 ## Design previews

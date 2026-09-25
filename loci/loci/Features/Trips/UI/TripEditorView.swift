@@ -120,6 +120,7 @@ struct TripEditorView: View {
       }
     }
     .errorAlert($error)
+    .errorAlert($checklist.error)
     .task { await load() }
   }
 
