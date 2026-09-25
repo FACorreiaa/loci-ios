@@ -238,3 +238,13 @@ private let origin = CLLocationCoordinate2D(latitude: 41.1460, longitude: -8.610
     #expect(StopWalk.nextIndex(after: -1, count: 2, skipped: [0]) == 1)
   }
 }
+
+struct WalkMapLayerTests {
+  @Test func movingMeansGPSSpeedOrARecentStep() {
+    let now = Date(timeIntervalSince1970: 100)
+    #expect(WalkMapLayer.isMoving(speed: 0.5, lastStepAt: .distantPast, now: now))
+    #expect(WalkMapLayer.isMoving(speed: nil, lastStepAt: now.addingTimeInterval(-2), now: now))
+    #expect(!WalkMapLayer.isMoving(speed: 0.1, lastStepAt: now.addingTimeInterval(-4), now: now))
+    #expect(!WalkMapLayer.isMoving(speed: -1, lastStepAt: .distantPast, now: now))
+  }
+}

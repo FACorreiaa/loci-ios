@@ -45,44 +45,14 @@ struct NearbyView: View {
   /// Where the walk starts from: the live fix while walking, else the search's.
   private var here: CLLocationCoordinate2D? { walk.location?.coordinate ?? coordinate }
 
-  private var walkerHeading: CLLocationDirection? {
-    guard let location = walk.location else { return nil }
-    return WalkingRoute.heading(
-      course: location.course,
-      speed: location.speed,
-      from: location.coordinate,
-      toward: navigator.remaining.dropFirst().first ?? navigator.destinationCoordinate
-    )
-  }
-
-  /// Moving by GPS, or the pedometer counted a step in the last few seconds.
-  private var isMoving: Bool {
-    (walk.location?.speed ?? 0) > 0.3 || Date().timeIntervalSince(lastStepAt) < 3
-  }
-
   var body: some View {
     Map(position: $camera, selection: $selectedID) {
-      if navigator.isNavigating, let location = walk.location {
-        Annotation("You", coordinate: location.coordinate, anchor: .bottom) {
-          WalkerFigure(
-            facesLeft: walkerHeading.map(WalkingRoute.facesLeft) ?? false,
-            isMoving: isMoving,
-            destinationName: navigator.destination?.name
-          )
-        }
-        .annotationTitles(.hidden)
-      } else {
-        UserAnnotation()
-      }
-      if navigator.remaining.count > 1 {
-        MapPolyline(coordinates: navigator.remaining)
-          .stroke(
-            Color.lociForest,
-            style: navigator.isNavigating && !navigator.isStraightLine
-              ? StrokeStyle(lineWidth: 7, lineCap: .round, lineJoin: .round)
-              : StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round, dash: [1, 10])
-          )
-      }
+      WalkMapLayer.content(
+        navigator: navigator,
+        location: walk.location,
+        heading: WalkMapLayer.heading(location: walk.location, navigator: navigator),
+        isMoving: WalkMapLayer.isMoving(speed: walk.location?.speed, lastStepAt: lastStepAt)
+      )
       ForEach(places, id: \.stableID) { poi in
         Marker(
           poi.name,
@@ -98,12 +68,7 @@ struct NearbyView: View {
       MapCompass()
     }
     .overlay(alignment: .top) {
-      if navigator.isNavigating, !following {
-        Button("Recenter", systemImage: "location.north.line.fill") { follow() }
-          .buttonStyle(.borderedProminent).tint(.lociForest)
-          .padding(.top, 8)
-          .transition(.move(edge: .top).combined(with: .opacity))
-      }
+      if navigator.isNavigating, !following { RecenterButton { follow() } }
     }
     .onChange(of: selectedID) { _, id in
       guard let id else {
@@ -121,7 +86,9 @@ struct NearbyView: View {
     }
     .onChange(of: walk.location) { _, location in
       guard navigator.isNavigating, following, let location else { return }
-      withAnimation(.easeInOut(duration: 0.8)) { camera = followCamera(at: location) }
+      withAnimation(.easeInOut(duration: 0.8)) {
+        camera = WalkMapLayer.followCamera(at: location, heading: WalkMapLayer.heading(location: location, navigator: navigator))
+      }
     }
     .onChange(of: camera) { _, position in
       if position.positionedByUser, navigator.isNavigating { withAnimation { following = false } }
@@ -199,12 +166,9 @@ struct NearbyView: View {
       camera = .userLocation(followsHeading: true, fallback: .automatic)
       return
     }
-    withAnimation(.easeInOut(duration: 0.8)) { camera = followCamera(at: location) }
-  }
-
-  /// Low and tilted behind the walker, looking the way they are heading.
-  private func followCamera(at location: CLLocation) -> MapCameraPosition {
-    .camera(MapCamera(centerCoordinate: location.coordinate, distance: 400, heading: walkerHeading ?? 0, pitch: 60))
+    withAnimation(.easeInOut(duration: 0.8)) {
+      camera = WalkMapLayer.followCamera(at: location, heading: WalkMapLayer.heading(location: location, navigator: navigator))
+    }
   }
 
   private func search() async {
