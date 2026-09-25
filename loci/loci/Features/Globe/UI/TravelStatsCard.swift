@@ -33,12 +33,17 @@ struct TravelStatsCard: View {
     return [cities, countries, places, distance]
   }
 
+  @Environment(\.dynamicTypeSize) private var typeSize
+
+  /// Two across, one at accessibility sizes so a value and its trend stay on a line.
+  private var columns: Int { typeSize.isAccessibilitySize ? 1 : 2 }
+
   private func count(_ value: Int) -> String { GlobeFormat.number(Double(value)) }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
       Text("Your travels").lociCoordStyle(10)
-      LazyVGrid(columns: [GridItem(.flexible(), alignment: .topLeading), GridItem(.flexible(), alignment: .topLeading)], spacing: 14) {
+      LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .topLeading), count: columns), spacing: 14) {
         ForEach(stats) { stat in StatCell(label: stat.id, value: stat.value, trend: stat.trend, hint: stat.hint, periodDays: summary.periodDays) }
       }
     }.frame(maxWidth: .infinity, alignment: .leading).lociCard()

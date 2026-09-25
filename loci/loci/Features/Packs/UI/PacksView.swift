@@ -193,7 +193,7 @@ struct PackCard: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      HStack(alignment: .top, spacing: 12) {
+      AdaptiveStack(alignment: .top, spacing: 12) {
         VStack(alignment: .leading, spacing: 3) {
           Text(pack.cityName).lociCoordStyle(10)
           Text(pack.title).font(.lociHeadline(17)).foregroundStyle(Color.lociInk).multilineTextAlignment(.leading)
@@ -225,12 +225,15 @@ struct PackBadgeChip: View {
 /// Theme, months, and "3 days · 12 stops".
 struct PackTags: View {
   let pack: PackSummary
+  var showsYours = false
 
   var body: some View {
-    HStack(spacing: 6) {
+    // Wraps rather than truncating each tag at large text sizes.
+    FlowLayout(spacing: 6) {
       Tag(text: PackTheme.label(for: pack.theme))
       Tag(text: PackMonths.label(pack.months))
       Label(pack.sizeLabel, systemImage: "mappin").font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk).lineLimit(1)
+      if showsYours { PackBadgeChip(badge: .yours) }
     }
   }
 

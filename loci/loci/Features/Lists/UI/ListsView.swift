@@ -127,6 +127,8 @@ private struct ListsChrome: ViewModifier {
 struct ListRow: View {
   let list: LociList
 
+  @Environment(\.dynamicTypeSize) private var typeSize
+
   private var meta: String {
     var parts: [String] = []
     if list.isItinerary { parts.append("Itinerary") }
@@ -145,14 +147,14 @@ struct ListRow: View {
         .accessibilityHidden(true)
       VStack(alignment: .leading, spacing: 3) {
         HStack(spacing: 6) {
-          Text(list.name).font(.lociHeadline(16)).foregroundStyle(Color.lociInk).lineLimit(1)
+          Text(list.name).font(.lociHeadline(16)).foregroundStyle(Color.lociInk).lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
           Image(systemName: list.isPublic ? "globe" : "lock")
             .font(.caption)
             .foregroundStyle(list.isPublic ? Color.lociForest : Color.lociMutedInk)
             .accessibilityLabel(list.isPublic ? "Public" : "Private")
         }
         if !list.description.isEmpty {
-          Text(list.description).font(.lociCaption()).foregroundStyle(Color.lociMutedInk).lineLimit(2)
+          Text(list.description).font(.lociCaption()).foregroundStyle(Color.lociMutedInk).lineLimit(typeSize.isAccessibilitySize ? 4 : 2)
         }
         if !meta.isEmpty { Text(meta).lociCoordStyle(10) }
       }
@@ -260,7 +262,7 @@ struct ListFormSheet: View {
       }
       .onAppear { if !isEditing { nameFocused = true } }
     }
-    .presentationDetents([.medium, .large])
+    .adaptiveDetents([.medium, .large])
     .interactiveDismissDisabled(saving)
   }
 
@@ -297,7 +299,7 @@ struct EntitlementSheet: View {
     .padding(24)
     .frame(maxWidth: .infinity)
     .background(Color.lociPaper.ignoresSafeArea())
-    .presentationDetents([.height(340), .medium])
+    .adaptiveDetents([.height(340), .medium])
     .presentationDragIndicator(.visible)
   }
 }

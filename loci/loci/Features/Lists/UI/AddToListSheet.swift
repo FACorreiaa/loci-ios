@@ -61,7 +61,7 @@ struct AddToListSheet: View {
       .sensoryFeedback(.success, trigger: added)
       .onAppear { Analytics.screen("add_to_list") }
     }
-    .presentationDetents([.medium, .large])
+    .adaptiveDetents([.medium, .large])
     .presentationDragIndicator(.visible)
   }
 

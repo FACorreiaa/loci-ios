@@ -52,7 +52,7 @@ struct AddToTripSheet: View {
       .sensoryFeedback(.success, trigger: store.added != nil)
       .onAppear { Analytics.screen("add_to_trip") }
     }
-    .presentationDetents([.medium, .large])
+    .adaptiveDetents([.medium, .large])
     .presentationDragIndicator(.visible)
   }
 

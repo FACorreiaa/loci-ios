@@ -270,6 +270,8 @@ struct ActivityRow: View {
   let entry: ActivityEntry
   let now: Date
 
+  @Environment(\.dynamicTypeSize) private var typeSize
+
   private var badge: ActivityBadge { ActivityBadge(entry) }
 
   var body: some View {
@@ -279,25 +281,26 @@ struct ActivityRow: View {
         Text(entry.label.isEmpty ? badge.label : entry.label)
           .font(.lociHeadline(16))
           .foregroundStyle(Color.lociInk)
-          .lineLimit(2)
-        HStack(spacing: 6) {
-          Text(badge.label)
-          if !entry.cityName.isEmpty {
-            Text("·").accessibilityHidden(true)
-            Text(entry.cityName).lineLimit(1)
-          }
-        }
-        .lociCoordStyle(10)
+          .lineLimit(typeSize.isAccessibilitySize ? 4 : 2)
+        MetaLine(badge.label, entry.cityName).lociCoordStyle(10)
+        // At accessibility sizes the time drops under the text, so the title keeps the width.
+        if typeSize.isAccessibilitySize { time }
       }
-      Spacer(minLength: 8)
-      Text(DayBuckets.relativeTime(entry.occurredAt, now: now))
-        .font(.lociCaption())
-        .foregroundStyle(Color.lociMutedInk)
-        .lineLimit(1)
-        .fixedSize()
+      if !typeSize.isAccessibilitySize {
+        Spacer(minLength: 8)
+        time
+      }
     }
     .padding(.vertical, 2)
     .accessibilityElement(children: .combine)
+  }
+
+  private var time: some View {
+    Text(DayBuckets.relativeTime(entry.occurredAt, now: now))
+      .font(.lociCaption())
+      .foregroundStyle(Color.lociMutedInk)
+      .lineLimit(1)
+      .fixedSize()
   }
 }
 
@@ -306,30 +309,36 @@ private struct CityRow: View {
   let city: RecentCity
   let now: Date
 
+  @Environment(\.dynamicTypeSize) private var typeSize
+
   var body: some View {
     HStack(alignment: .top, spacing: 12) {
       RecentsBadgeIcon(systemImage: city.level.systemImage)
       VStack(alignment: .leading, spacing: 3) {
         Text(city.name).font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
-        HStack(spacing: 6) {
-          Text(city.interactionCount == 1 ? "1 interaction" : "\(city.interactionCount) interactions")
-          Text("·").accessibilityHidden(true)
-          Text(city.level.label)
-        }
-        .lociCoordStyle(10)
+        MetaLine(city.interactionCount == 1 ? "1 interaction" : "\(city.interactionCount) interactions", city.level.label)
+          .lociCoordStyle(10)
         if let latest = city.interactions.first {
-          Text("Latest: \(latest.prompt)").font(.lociCaption()).foregroundStyle(Color.lociMutedInk).lineLimit(2)
+          Text("Latest: \(latest.prompt)").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+            .lineLimit(typeSize.isAccessibilitySize ? 4 : 2)
         }
+        if typeSize.isAccessibilitySize { time }
       }
-      Spacer(minLength: 8)
-      Text(DayBuckets.relativeTime(city.lastActivity, now: now))
-        .font(.lociCaption())
-        .foregroundStyle(Color.lociMutedInk)
-        .lineLimit(1)
-        .fixedSize()
+      if !typeSize.isAccessibilitySize {
+        Spacer(minLength: 8)
+        time
+      }
     }
     .padding(.vertical, 2)
     .accessibilityElement(children: .combine)
+  }
+
+  private var time: some View {
+    Text(DayBuckets.relativeTime(city.lastActivity, now: now))
+      .font(.lociCaption())
+      .foregroundStyle(Color.lociMutedInk)
+      .lineLimit(1)
+      .fixedSize()
   }
 }
 

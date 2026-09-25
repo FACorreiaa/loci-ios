@@ -19,9 +19,9 @@ struct PlaceReviewsSection: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
-      HStack(alignment: .firstTextBaseline) {
+      AdaptiveStack(alignment: .firstTextBaseline) {
         Text("Reviews").lociCoordStyle(10)
-        Spacer()
+        Spacer(minLength: 0)
         if store.phase == .loaded { WriteReviewButton(store: store, composer: $composer) }
       }
       switch store.phase {
@@ -108,7 +108,8 @@ struct ReviewSummary: View {
   let stats: ReviewStats
 
   var body: some View {
-    HStack(alignment: .center, spacing: 16) {
+    // The bars get the full width under the average at accessibility sizes.
+    AdaptiveStack(alignment: .center, spacing: 16) {
       VStack(spacing: 4) {
         Text(stats.averageText).font(.lociDisplay(40)).foregroundStyle(Color.lociInk).monospacedDigit()
         ReviewStars(rating: stats.average, size: 12)
@@ -134,7 +135,7 @@ private struct DistributionBar: View {
 
   var body: some View {
     HStack(spacing: 6) {
-      Text("\(stars)").font(.lociCaption(11)).foregroundStyle(Color.lociMutedInk).monospacedDigit().frame(width: 10)
+      Text("\(stars)").font(.lociCaption(11)).foregroundStyle(Color.lociMutedInk).monospacedDigit().fixedSize().frame(minWidth: 10)
       GeometryReader { proxy in
         ZStack(alignment: .leading) {
           Capsule().fill(Color.lociBorder.opacity(0.5))

@@ -16,6 +16,7 @@ struct ReviewCard: View {
   var onDelete: (() -> Void)?
 
   @State private var expanded = false
+  @Environment(\.dynamicTypeSize) private var typeSize
 
   private var dateLine: String {
     var parts: [String] = []
@@ -56,18 +57,21 @@ struct ReviewCard: View {
       VStack(alignment: .leading, spacing: 3) {
         HStack(spacing: 4) {
           Text(showsPlace ? (review.placeName.isEmpty ? "A place" : review.placeName) : review.displayName)
-            .font(.lociHeadline(15)).foregroundStyle(Color.lociInk).lineLimit(1)
+            .font(.lociHeadline(15)).foregroundStyle(Color.lociInk).lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
           if review.isVerified, !showsPlace {
             Image(systemName: "checkmark.seal.fill").font(.caption).foregroundStyle(Color.lociForest).accessibilityLabel("Verified reviewer")
           }
         }
-        HStack(spacing: 6) {
+        AdaptiveStack(spacing: 6) {
           ReviewStars(rating: Double(review.rating), size: 11)
           if !dateLine.isEmpty { Text(dateLine).font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk).lineLimit(1).minimumScaleFactor(0.8) }
         }
       }
-      Spacer(minLength: 4)
-      RatingBadge(rating: review.rating)
+      // The stars already carry the rating; at accessibility sizes the badge's width goes to the name.
+      if !typeSize.isAccessibilitySize {
+        Spacer(minLength: 4)
+        RatingBadge(rating: review.rating)
+      }
     }
   }
 
