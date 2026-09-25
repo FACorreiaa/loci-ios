@@ -36,7 +36,7 @@ import SwiftUI
           isAuthenticated = restored
           isCheckingAuth = false
         }
-      }.onReceive(NotificationCenter.default.publisher(for: .authSessionDidAuthenticate)) { _ in
+      }.onReceive(NotificationCenter.default.publisher(for: .authSessionDidAuthenticate)) { note in
         withAnimation {
           isAuthenticated = true
           isCheckingAuth = false
@@ -45,7 +45,9 @@ import SwiftUI
         // The APNs token often arrives before the first sign-in; register it now.
         Task { await PushRegistration.shared.registerIfNeeded() }
         // A brand-new account gets the four-question profile wizard, once.
-        Task { await TripSetupOffer.shared.offerIfNeeded() }
+        let isNewUser = note.userInfo?[AuthSessionUserInfo.isNewUser] as? Bool ?? false
+        let userID = AuthSessionManager.shared.currentUserID
+        Task { await TripSetupOffer.shared.offerIfNeeded(isNewUser: isNewUser, userID: userID) }
       }.onReceive(NotificationCenter.default.publisher(for: .authSessionDidInvalidate)) { _ in
         Analytics.reset()
         withAnimation {

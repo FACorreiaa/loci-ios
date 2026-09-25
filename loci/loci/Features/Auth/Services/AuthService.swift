@@ -12,7 +12,9 @@ import LociConnectProto
     self.sessionManager = sessionManager ?? .shared
   }
 
-  public func login(email: String, password: String) async throws -> Loci_Auth_LoginResponse {
+  /// `isNewUser` is true only for the sign-in straight after `register`
+  /// (register issues no tokens); it lets the first-run wizard know.
+  public func login(email: String, password: String, isNewUser: Bool = false) async throws -> Loci_Auth_LoginResponse {
     var req = Loci_Auth_LoginRequest()
     req.email = email
     req.password = password
@@ -26,7 +28,8 @@ import LociConnectProto
         accessToken: message.accessToken,
         refreshToken: message.refreshToken,
         userId: message.userID,
-        username: message.username
+        username: message.username,
+        isNewUser: isNewUser
       )
     }
     return message

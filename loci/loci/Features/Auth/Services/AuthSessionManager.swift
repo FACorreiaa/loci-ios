@@ -1,16 +1,23 @@
 import Foundation
 
 public extension Notification.Name {
+  /// A session was stored. `userInfo[AuthSessionUserInfo.isNewUser]` is true
+  /// when this sign-in created the account (email sign-up, or a native sign-in
+  /// the server reported as new).
   static let authSessionDidAuthenticate = Notification.Name("loci.authSessionDidAuthenticate")
   static let authSessionWillInvalidate = Notification.Name("loci.authSessionWillInvalidate")
   static let authSessionDidInvalidate = Notification.Name("loci.authSessionDidInvalidate")
+}
+
+public enum AuthSessionUserInfo {
+  public static let isNewUser = "isNewUser"
 }
 
 public protocol AuthSessionManaging: Sendable {
   func restoreSessionIfNeeded() async -> Bool
   func validAccessToken() async throws -> String?
   func getRefreshToken() async throws -> String?
-  func storeSession(accessToken: String, refreshToken: String?, userId: String?, username: String?) async throws
+  func storeSession(accessToken: String, refreshToken: String?, userId: String?, username: String?, isNewUser: Bool) async throws
   func logout() async
   func invalidateSession() async
 
@@ -49,7 +56,13 @@ public final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable 
 
   public func getRefreshToken() async throws -> String? { try secureStore.string(for: refreshTokenKey) }
 
-  public func storeSession(accessToken: String, refreshToken: String?, userId: String?, username: String?) async throws {
+  public func storeSession(
+    accessToken: String,
+    refreshToken: String?,
+    userId: String?,
+    username: String?,
+    isNewUser: Bool = false
+  ) async throws {
     try secureStore.setString(accessToken, for: accessTokenKey)
     if let refreshToken, !refreshToken.isEmpty { try secureStore.setString(refreshToken, for: refreshTokenKey) }
     if let userId, !userId.isEmpty {
@@ -61,7 +74,9 @@ public final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable 
       self.currentUsername = username
     }
 
-    await MainActor.run { NotificationCenter.default.post(name: .authSessionDidAuthenticate, object: nil) }
+    await MainActor.run {
+      NotificationCenter.default.post(name: .authSessionDidAuthenticate, object: nil, userInfo: [AuthSessionUserInfo.isNewUser: isNewUser])
+    }
   }
 
   public func logout() async { await invalidateSession() }
