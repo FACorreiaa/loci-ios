@@ -25,6 +25,11 @@ enum AnalyticsEvent: String {
   case tripExported = "trip_exported"
   /// ShareTrip returned a public link. Properties: content_type ("trip").
   case shareLinkCreated = "share_link_created"
+  /// A field report was filed (`field` as the proto enum name, `status`,
+  /// `poiId`, `answers`), as web's ClaimForm sends it. Metric: contributions per active user.
+  case placeClaimSubmitted = "place_claim_submitted"
+  /// A missing place was proposed (`city`), as web's AddPlaceForm sends it.
+  case placeSubmitted = "place_submitted"
 }
 
 @MainActor enum Analytics {

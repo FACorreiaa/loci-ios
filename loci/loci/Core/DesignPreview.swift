@@ -85,6 +85,13 @@ enum DesignPreview: String {
   case tripExtras
   /// The same page scrolled to the checklists.
   case tripChecklists
+  /// Profile › Contribute: scout hero with a badge, missing-place search, two
+  /// pending places, the first page of twelve tasks and the pager.
+  case contribute
+  /// A field report on a multi-answer field (Vibe, two picked) just after it was filed: "Recorded." with the scouts bar.
+  case claimForm
+  /// The same form on Opening hours: the week editor and the "Sent as" line.
+  case openingHours
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -164,6 +171,9 @@ enum DesignPreview: String {
       NavigationStack {
         List { TripChecklistsSection(store: .preview(tripID: Loci_Trip_TripDraft.previewLisbon.id)) }.settingsStyle("Checklists")
       }
+    case .contribute: NavigationStack { ContributeView(store: ContributeStore(service: PreviewContributeService())) }
+    case .claimForm: NavigationStack { ClaimFormPreview(field: .vibe, tokens: ["cosy", "local"], submits: true) }
+    case .openingHours: NavigationStack { ClaimFormPreview(field: .openingHours) }
     }
   }
 }
@@ -655,5 +665,27 @@ extension Loci_Favorites_V1_FavoriteItem {
     item.description_p = "The highest viewpoint in Lisbon, best just before sunset."
     item.notes = "Go on the way back from Graça."
     return item
+  }
+}
+
+/// A field report opened on one field, with answers picked and, for
+/// `submits`, already filed against the offline service.
+private struct ClaimFormPreview: View {
+  @State private var store: ClaimFormStore
+  private let submits: Bool
+
+  init(field: Loci_Place_PlaceFactField, tokens: [String] = [], submits: Bool = false) {
+    let task = VerificationTask.fromPlace(id: VerificationTask.previewTasks[0].poiID, name: VerificationTask.previewTasks[0].poiName)
+    let store = ClaimFormStore(task: task, service: PreviewContributeService(), field: field)
+    for token in tokens { store.toggle(token) }
+    _store = State(initialValue: store)
+    self.submits = submits
+  }
+
+  var body: some View {
+    ClaimFormView(store: store)
+      .task {
+        if submits { await store.submit() }
+      }
   }
 }

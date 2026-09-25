@@ -51,7 +51,7 @@ Web's signed-in pages that have no iOS screen. Five tabs stay; Profile becomes t
 | 3c | Add a result to a trip | | |
 | 4 | City Packs (browse, detail, claim; no purchase on iOS) | `18-city-packs.md` | #33 |
 | 5 | Reviews, place-centric: place section, write/edit sheet, See all, My reviews (server api #90 first) | `19-reviews.md` | #34 |
-| 6 | Contribute (claims, opening hours, pending and missing places) | | |
+| 6 | Contribute: field reports (vocabulary, opening-hours editor), pending places, missing-place search, add a place, Report a fact on place detail | `20-contribute.md` | this PR |
 | 7 | Globe / Where you've been | | |
 | 8 | Web fixes, incl. AASA paths for the Phase 0 links | | |
 
