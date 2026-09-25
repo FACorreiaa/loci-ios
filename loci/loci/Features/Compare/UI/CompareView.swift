@@ -169,57 +169,15 @@ struct CompareView: View {
     } catch { self.error = error.userMessage }
   }
 
-  /// web: routes/compare/index.tsx save handlers. A day of stops per city.
+  /// web: routes/compare/index.tsx save handlers (CompareTripBuilder).
   private func save(column: Loci_Compare_V1_CityCompareColumn, dual: Bool, columns: [Loci_Compare_V1_CityCompareColumn]) async {
-    var trip = Loci_Trip_TripDraft()
-    trip.cityName = column.cityName
-    trip.cityID = column.cityID
-    trip.title = dual ? "Weekend: \(columns[0].cityName) + \(columns[1].cityName)" : "\(column.cityName) weekend"
-    trip.constraints.pace = .moderate
-    let stops = (dual ? Array(columns.prefix(2)) : [column]).flatMap { col in
-      col.topPois.prefix(2).enumerated().map { index, poi in
-        var stop = Loci_Trip_TripStop()
-        stop.poiID = poi.id
-        stop.orderIndex = Int32(index)
-        stop.name = poi.name
-        stop.notes = ""
-        return stop
-      }
-    }
-    if dual {
-      trip.days = [Self.day(1, Array(stops.prefix(2))), Self.day(2, Array(stops.dropFirst(2).prefix(2)))]
-    } else {
-      trip.days = [Self.day(1, stops)]
-    }
-    await saveTrip(trip)
+    let userID = AuthSessionManager.shared.currentUserID
+    await saveTrip(CompareTripBuilder.weekend(column: column, dual: dual, columns: columns, userID: userID))
   }
 
   private func save(plan: Loci_Compare_V1_MultiCityPlan) async {
-    guard let first = plan.cities.first else { return }
-    var trip = Loci_Trip_TripDraft()
-    trip.cityName = first.cityName
-    if first.hasCityID { trip.cityID = first.cityID }
-    trip.title = plan.cities.map(\.cityName).joined(separator: " + ")
-    trip.constraints.pace = .moderate
-    trip.days = plan.cities.flatMap { city in
-      city.dayNumbers.map { number in
-        var day = Self.day(Int(number), [])
-        day.cityName = city.cityName
-        if city.hasCityID { day.cityID = city.cityID }
-        day.cityLat = city.lat
-        day.cityLon = city.lon
-        return day
-      }
-    }.sorted { $0.dayNumber < $1.dayNumber }
-    trip.legs = plan.legs
+    guard let trip = CompareTripBuilder.multiCity(plan: plan, userID: AuthSessionManager.shared.currentUserID) else { return }
     await saveTrip(trip)
-  }
-
-  private static func day(_ number: Int, _ stops: [Loci_Trip_TripStop]) -> Loci_Trip_TripDay {
-    var day = Loci_Trip_TripDay()
-    day.dayNumber = Int32(number)
-    day.stops = stops
-    return day
   }
 
   private func saveTrip(_ trip: Loci_Trip_TripDraft) async {
