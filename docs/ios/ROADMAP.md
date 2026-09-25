@@ -52,6 +52,7 @@ Web's signed-in pages that have no iOS screen. Five tabs stay; Profile becomes t
 | 4 | City Packs (browse, detail, claim; no purchase on iOS) | `18-city-packs.md` | #33 |
 | 5 | Reviews, place-centric: place section, write/edit sheet, See all, My reviews (server api #90 first) | `19-reviews.md` | #34 |
 | 6 | Contribute: field reports (vocabulary, opening-hours editor), pending places, missing-place search, add a place, Report a fact on place detail | `20-contribute.md` | #35 |
+| 6b | First-run profile wizard: budget, pace, getting around, interests → one default travel profile, offered once after sign-in (web: /trip-setup) | `31-first-run-profile.md` | this PR |
 | 7 | Globe / Where you've been (MapKit globe, great-circle legs, stats, legs sheet, city → Recents) | `21-globe.md` | this PR |
 | 8 | Web fixes, incl. AASA paths for the Phase 0 links (reviews rebuild + trip setup still to do) | loci-client | loci-client #78 |
 

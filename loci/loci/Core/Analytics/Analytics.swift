@@ -30,6 +30,8 @@ enum AnalyticsEvent: String {
   case placeClaimSubmitted = "place_claim_submitted"
   /// A missing place was proposed (`city`), as web's AddPlaceForm sends it.
   case placeSubmitted = "place_submitted"
+  /// The first-run questionnaire wrote the default travel profile.
+  case tripSetupCompleted = "trip_setup_completed"
   /// A place went into a trip from its detail (`source: "place_detail"`, and
   /// `new_trip` when it started one). Web's AddToTripButton sends nothing yet.
   case tripStopAdded = "trip_stop_added"

@@ -100,6 +100,8 @@ enum DesignPreview: String {
   case globe
   /// Where you've been with nothing recorded (backfilled, so "No travels recorded yet").
   case globeEmpty
+  /// The first-run profile wizard on its last step, three interests picked.
+  case tripSetup
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -187,6 +189,7 @@ enum DesignPreview: String {
     case .globe: NavigationStack { GlobeView(store: GlobeStore(service: PreviewTravelHistoryService()), recents: PreviewRecentsService()) }
     case .globeEmpty:
       NavigationStack { GlobeView(store: GlobeStore(service: PreviewTravelHistoryService(data: .previewEmpty)), recents: PreviewRecentsService()) }
+    case .tripSetup: TripSetupPreview()
     }
   }
 }
