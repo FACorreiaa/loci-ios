@@ -8,7 +8,7 @@ import SwiftUI
 nonisolated extension Loci_Poi_POIDetailedInfo: @retroactive Identifiable {}
 
 /// Web's `DetailedItemModal`: a credited gallery, stat tiles, the grounded
-/// badge, verified facts, contact rows, reviews, and Save / Add to list / Share / Maps at the bottom.
+/// badge, verified facts, contact rows, reviews, and Save / Add to list / Add to trip / Share / Maps at the bottom.
 struct PlaceDetailSheet: View {
   let stop: Loci_Poi_POIDetailedInfo
   let destination: SearchDestination
@@ -44,6 +44,7 @@ struct PlaceDetailView: View {
   @State private var saved: Bool
   @State private var saving = false
   @State private var addingToList = false
+  @State private var addingToTrip = false
   @State private var reporting = false
   @State private var error: String?
 
@@ -111,6 +112,7 @@ struct PlaceDetailView: View {
     .background(Color.lociPaper.ignoresSafeArea())
     .safeAreaInset(edge: .bottom) { footer }
     .sheet(isPresented: $addingToList) { AddToListSheet(stop: stop, destination: destination) }
+    .sheet(isPresented: $addingToTrip) { AddToTripSheet(stop: stop, cityName: cityName) }
     .sheet(isPresented: $reporting) { ReportFactSheet(stop: stop) { Task { await loadFacts() } } }
     .errorAlert($error)
     .task(id: stop.id) {
@@ -183,6 +185,8 @@ struct PlaceDetailView: View {
         .accessibilityHint(savedItem != nil && saved ? "Removes it from Saved" : "")
       // Lists key on the stored POI id; a name-keyed place cannot go in one.
       if ListPayload.canAdd(stop) { Button("Add to list", systemImage: "text.badge.plus") { addingToList = true } }
+      // A trip stop needs only a name, so any place can go in one.
+      Button("Add to trip", systemImage: "calendar.badge.plus") { addingToTrip = true }
       ShareLink(item: shareText) { Label("Share", systemImage: "square.and.arrow.up") }
       if GoogleMapsRoute.hasCoordinate(stop) {
         Button("Apple Maps", systemImage: "map") { openInAppleMaps() }

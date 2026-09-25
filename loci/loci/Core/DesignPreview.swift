@@ -92,6 +92,10 @@ enum DesignPreview: String {
   case claimForm
   /// The same form on Opening hours: the week editor and the "Sent as" line.
   case openingHours
+  /// A place's Add to trip sheet over its detail: two trips, Lisbon's three dated days, Day 1 picked.
+  case addToTrip
+  /// The Rome results page after COMPLETE named a saved trip: "Trip saved · Rome — Edit trip".
+  case resultsTripSaved
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -174,6 +178,8 @@ enum DesignPreview: String {
     case .contribute: NavigationStack { ContributeView(store: ContributeStore(service: PreviewContributeService())) }
     case .claimForm: NavigationStack { ClaimFormPreview(field: .vibe, tokens: ["cosy", "local"], submits: true) }
     case .openingHours: NavigationStack { ClaimFormPreview(field: .openingHours) }
+    case .addToTrip: AddToTripPreview()
+    case .resultsTripSaved: MuseChatPreview(state: .resultsSample.with { $0.savedTripID = "preview-rome" }, caption: "Rome · 12 places")
     }
   }
 }
