@@ -63,6 +63,9 @@ nonisolated struct SearchState: Equatable, Sendable {
   var isMultiCity: Bool { stops.count >= 2 }
   /// COMPLETE said the result is not on the stream: fetch it with GetChatSession.
   var needsSessionFetch = false
+  /// The trip the server saved this itinerary as, from COMPLETE's navigation
+  /// (web: chatStream.ts tripIdFromNavigation). Drives "Trip saved · Edit trip".
+  var savedTripID: String?
 
   var isActive: Bool { status == .streaming || status == .detached }
 
@@ -212,12 +215,27 @@ nonisolated extension SearchState {
         adopt(complete.result)
       }
       needsSessionFetch = complete.loadFromSession && !hasResult
+      savedTripID = Self.tripID(from: event) ?? savedTripID
       status = .completed
       return .completed
     case .route:
       break  // handled above
     }
     return nil
+  }
+
+  /// web: tripIdFromNavigation. `queryParams.tripId` first, else the id in a
+  /// `/trips/:id` URL. CompletePayload itself has no trip id; the server puts
+  /// it on the event's navigation when it auto-saved the itinerary.
+  static func tripID(from event: Loci_Chat_StreamEvent) -> String? {
+    event.hasNavigation ? tripID(from: event.navigation) : nil
+  }
+
+  static func tripID(from navigation: Loci_Chat_NavigationData) -> String? {
+    if let query = navigation.queryParams["tripId"]?.trimmingCharacters(in: .whitespaces), !query.isEmpty { return query }
+    guard let range = navigation.url.range(of: "/trips/") else { return nil }
+    let id = navigation.url[range.upperBound...].prefix { !"/?#".contains($0) }
+    return id.isEmpty ? nil : String(id)
   }
 
   /// Take a full AiCityResponse, from the stream, the phone's copy or GetChatSession.

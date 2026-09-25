@@ -21,6 +21,7 @@ struct ResultsPage: View {
   @State private var detail: Loci_Poi_POIDetailedInfo?
   @State private var showFullMap = false
   @State private var showAllDays = false
+  @State private var editingTrip = false
 
   private var groups: [DayGroup] { state.dayGroups }
   private var extras: [Loci_Poi_POIDetailedInfo] { state.extras }
@@ -87,6 +88,10 @@ struct ResultsPage: View {
         if !summary.isEmpty { Text(summary).font(.lociBody(15)).foregroundStyle(Color.lociMutedInk) }
       }
     }
+    if let tripID = state.savedTripID, !state.isActive {
+      TripSavedBanner(cityName: cityName) { editingTrip = true }
+        .sheet(isPresented: $editingTrip) { TripEditorSheet(tripID: tripID) }
+    }
     if !mapData.isEmpty {
       ResultsMapCard(data: mapData, selectedID: selectedID) { showFullMap = true }
     }
@@ -119,6 +124,41 @@ struct ResultsPage: View {
     }
     if !state.isActive, !groups.isEmpty {
       TripKitView(groups: groups, cityName: cityName, title: title, summary: summary, side: side).id(Anchor.kit)
+    }
+  }
+}
+
+/// Web's "Trip saved · Edit trip" CTA: the server kept this itinerary as a trip.
+struct TripSavedBanner: View {
+  let cityName: String
+  let onEdit: () -> Void
+
+  var body: some View {
+    HStack(spacing: 10) {
+      Image(systemName: "suitcase.fill").foregroundStyle(Color.lociForest).accessibilityHidden(true)
+      Text(cityName.isEmpty ? "Trip saved" : "Trip saved · \(cityName)")
+        .font(.lociCaption(14).weight(.semibold)).foregroundStyle(Color.lociInk)
+      Spacer(minLength: 8)
+      Button("Edit trip", action: onEdit)
+        .font(.lociCaption(14).weight(.semibold))
+        .buttonStyle(.bordered)
+        .tint(Color.lociForest)
+    }
+    .padding(12)
+    .background(Color.lociSage.opacity(0.5), in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
+    .accessibilityElement(children: .combine)
+  }
+}
+
+/// The trip editor in its own stack, over a results page.
+private struct TripEditorSheet: View {
+  let tripID: String
+  @Environment(\.dismiss) private var dismiss
+
+  var body: some View {
+    NavigationStack {
+      TripEditorView(tripID: tripID)
+        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
     }
   }
 }

@@ -48,7 +48,7 @@ Web's signed-in pages that have no iOS screen. Five tabs stay; Profile becomes t
 | 2 | Lists (list detail, add to list, entitlement sheet); server gaps fixed in api #95 | `16-lists.md` | #32 |
 | 3a | Trip checklists on the server (proto v5.27.0 + api) | server repos | live |
 | 3b | Trip page parity: hero, preferences, export gate, synced checklists (offline via #29's cache) | `17-trip-extras.md` | this PR |
-| 3c | Add a result to a trip | | |
+| 3c | Add to trip from place detail (fresh-version AddStop with one retry, day by number, create a trip), Edit trip banner on results | `22-add-to-trip.md` | this PR |
 | 4 | City Packs (browse, detail, claim; no purchase on iOS) | `18-city-packs.md` | #33 |
 | 5 | Reviews, place-centric: place section, write/edit sheet, See all, My reviews (server api #90 first) | `19-reviews.md` | #34 |
 | 6 | Contribute: field reports (vocabulary, opening-hours editor), pending places, missing-place search, add a place, Report a fact on place detail | `20-contribute.md` | this PR |
