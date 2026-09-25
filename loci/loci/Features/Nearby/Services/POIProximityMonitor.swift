@@ -13,12 +13,17 @@ import UserNotifications
   nonisolated static let radiusMeters: CLLocationDistance = 60
 
   /// Each CLMonitor name keeps its own conditions, so the Near me walk and a
-  /// trip day do not clear each other's fences.
+  /// trip day do not clear each other's fences. Letters and digits only:
+  /// CLMonitor aborts the app on anything else ("Monitor name is not valid";
+  /// "loci-nearby-walk" crashed every Start on TestFlight 1.0 (28)).
+  nonisolated static let nearbyWalkName = "lociNearbyWalk"
+  nonisolated static let tripDayName = "lociTripDay"
+
   private let name: String
   /// Called with the place's `stableID` on arrival, besides the notification.
   var onArrive: ((String) -> Void)?
 
-  init(name: String = "loci-nearby-walk") {
+  init(name: String = POIProximityMonitor.nearbyWalkName) {
     self.name = name
   }
 
