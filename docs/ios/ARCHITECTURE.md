@@ -237,6 +237,8 @@ loci/loci
 │   ├── Discover/                    DiscoverView, HereBriefSection, InSeasonBand, SeasonalPicks
 │   ├── Lists/                       Model (LociList, ListPayload, EntitlementLimit), Services (ListsAPI + ListsService),
 │   │                                UI (ListsView/ListsRows, ListDetailView, AddToListSheet, ListsStore)
+│   ├── Globe/                       Model (GreatCircle, GlobeData + GlobeFormat), Services (TravelHistoryAPI +
+│   │                                TravelHistoryService), UI (GlobeView, TravelStatsCard, LegsSheet); 21-globe.md
 │   ├── Main/UI/MainTabView.swift    the five tabs
 │   ├── Nearby/                      NearbyView, NearbyWalk, POIProximityMonitor
 │   ├── Packs/                       Model (PackTheme, PackDetail), Services (PacksAPI + PacksService),
@@ -1506,6 +1508,7 @@ All unit tests are Swift Testing (`import Testing`, `@Test`, `#expect`,
 | `loci/lociTests/ReviewModelTests.swift` | Reviews: web's labels and colour bands, form rules (rating, 10–1000, title ≤100), the 200-character fold, helpful toggle/settle, summary maths, proto mapping; every ReviewService request builder (no `user_id`, visit day at noon UTC); the place store's vote rollback, AlreadyExists → edit, and delete |
 | `loci/lociTests/ContributeModelTests.swift` | Contribute: web's `place-facts.test.ts` and `paginate.test.ts` one to one (claim values, vocabulary vs the server's `values.go`, opening-hours encode/parse/validity), FieldPicker's "none" and Vibe-cap rules, `resolveTask`, best claim status, request builders (25 km hybrid vs semantic search, fresh claim ids), stable draft ids, and the stores against the offline service |
 | `loci/lociTests/AddToTripTests.swift` | Add to trip: `TripStopBuilder` (stored vs name-keyed, notes order, proto limits, trace), the ListTrips/AddStop/SaveTrip builders, the UTC day label, the stale-version retry (re-read, new version and new day id, gives up on a second refusal), the store, and the trip id COMPLETE's navigation carries |
+| `loci/lociTests/GreatCircleTests.swift` | Great-circle segment count, path ends and length, antimeridian splits both ways and a vertex on the seam, centroid; `trendPercent`/`trendText`, `formatLegLabel` in two locales, node radius; stable leg keys, proto defaults, Recents city match; `GlobeStore` phases |
 | `loci/lociTests/AppLinkTests.swift` | `AppLink` parsing for every route and its rejections, SessionLink parsed first, the tab that owns each link and `takeLink` clearing it once |
 | `loci/lociTests/ParityPayloadTests.swift` | Nearby sentence byte-for-byte, default weekend, `allPlaces` dedup |
 | `loci/lociTests/SettingsPayloadTests.swift` | Empty-string omission in profile updates, web defaults on a new travel profile, ids and full lists on update, Telegram deep link |

@@ -47,13 +47,13 @@ Web's signed-in pages that have no iOS screen. Five tabs stay; Profile becomes t
 | 1 | Recents (feed, cities, day buckets) | `15-recents.md` | #30 |
 | 2 | Lists (list detail, add to list, entitlement sheet); server gaps fixed in api #95 | `16-lists.md` | #32 |
 | 3a | Trip checklists on the server (proto v5.27.0 + api) | server repos | live |
-| 3b | Trip page parity: hero, preferences, export gate, synced checklists (offline via #29's cache) | `17-trip-extras.md` | this PR |
-| 3c | Add to trip from place detail (fresh-version AddStop with one retry, day by number, create a trip), Edit trip banner on results | `22-add-to-trip.md` | this PR |
+| 3b | Trip page parity: hero, preferences, export gate, synced checklists (offline via #29's cache) | `17-trip-extras.md` | #31 |
+| 3c | Add to trip from place detail (fresh-version AddStop with one retry, day by number, create a trip), Edit trip banner on results | `22-add-to-trip.md` | #38 |
 | 4 | City Packs (browse, detail, claim; no purchase on iOS) | `18-city-packs.md` | #33 |
 | 5 | Reviews, place-centric: place section, write/edit sheet, See all, My reviews (server api #90 first) | `19-reviews.md` | #34 |
-| 6 | Contribute: field reports (vocabulary, opening-hours editor), pending places, missing-place search, add a place, Report a fact on place detail | `20-contribute.md` | this PR |
-| 7 | Globe / Where you've been | | |
-| 8 | Web fixes, incl. AASA paths for the Phase 0 links | | |
+| 6 | Contribute: field reports (vocabulary, opening-hours editor), pending places, missing-place search, add a place, Report a fact on place detail | `20-contribute.md` | #35 |
+| 7 | Globe / Where you've been (MapKit globe, great-circle legs, stats, legs sheet, city → Recents) | `21-globe.md` | this PR |
+| 8 | Web fixes, incl. AASA paths for the Phase 0 links (reviews rebuild + trip setup still to do) | loci-client | loci-client #78 |
 
 ## Phase 1.6 — Parity pass 3 (the RPCs iOS still never calls)
 Plan: [`docs/superpowers/plans/2026-09-25-ios-parity-pass3.md`](../superpowers/plans/2026-09-25-ios-parity-pass3.md). Audit of 2026-09-25: 238 RPCs in the proto, 136 called from iOS `main`, 102 not (PRs #31, #35, #36 close trip extras, Contribute and Globe). One PR per phase; 2, 3, 6 and 8 can run in parallel.
