@@ -204,9 +204,14 @@ its own four-colour `Palette` (NATIVE_DESIGN light values).
 - `ci.yml`: a `lint` job (SwiftLint 0.65.1) and a `test` job that resolves
   packages with retries, builds the `loci Beta` scheme for the simulator, then
   runs `bundle exec fastlane test` (`lociTests` only; UI tests are not in CI).
-- `release.yml`: a green "iOS CI" on `main` triggers the `beta` lane
-  (TestFlight, `com.fernandocorreia.loci.beta`); `workflow_dispatch` can run
-  `beta` or `release` (App Store, phased rollout) with an optional version.
+- `release.yml`: the `beta` lane (TestFlight, `com.fernandocorreia.loci.beta`)
+  runs nightly at 02:00 UTC, and only if `main` moved since the tag
+  `testflight-latest` (the last commit uploaded) and "Build and Test" is green
+  on it. It no longer runs on every merge: App Store Connect caps uploads per
+  app per day, and parallel merges hit that cap on 2026-09-25 ("409 Upload
+  limit reached"). `workflow_dispatch` runs `beta` now, or `release` (App
+  Store, phased rollout) with an optional version:
+  `gh workflow run release.yml -f lane=beta`.
 - `seed-signing.yml`: manual. Runs `match` read-write to (re)create
   certificates and profiles in the private `loci-certificates` repo. It has to
   run whenever an entitlement or a bundle id is added; both the Sign in with
