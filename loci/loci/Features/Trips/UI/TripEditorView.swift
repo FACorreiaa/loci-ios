@@ -22,7 +22,6 @@ struct TripEditorView: View {
   @State private var renaming: Loci_Trip_TripStop?
   @State private var renameText = ""
   @State private var picking: PickerTarget?
-  @State private var shareURL: URL?
   @State private var error: String?
   @State private var hasConflict = false
   @State private var side = ResultsSideData()
@@ -93,12 +92,8 @@ struct TripEditorView: View {
     .onChange(of: canEdit) { _, ok in if !ok { isEditing = false } }
     .toolbar {
       ToolbarItem(placement: .primaryAction) { Button(isEditing ? "Done" : "Edit") { isEditing.toggle() }.disabled(!canEdit) }
-      ToolbarItem(placement: .secondaryAction) {
-        if let shareURL {
-          ShareLink(item: shareURL) { Label("Share link", systemImage: "square.and.arrow.up") }
-        } else {
-          Button("Share", systemImage: "square.and.arrow.up") { Task { await share() } }
-        }
+      if let trip, !isOffline {
+        ToolbarItem(placement: .secondaryAction) { TripShareMenu(trip: trip).id(trip.id) }
       }
     }
     .alert("Rename stop", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
@@ -339,16 +334,5 @@ struct TripEditorView: View {
     request.stopID = stop.id
     request.baseVersion = trip.version
     await apply("Could not remove the stop.", request) { await TripAPI.client.removeStop(request: $0, headers: [:]) }
-  }
-
-  /// web: routes/trips/[id].tsx share, which also sends share_link_created.
-  private func share() async {
-    do {
-      let response = try await TripAPI.share(tripID: tripID)
-      shareURL = URL(string: response.shareURL)
-      Analytics.capture(.shareLinkCreated, ["content_type": "trip"])
-    } catch {
-      if !error.isCancelled { self.error = error.message }
-    }
   }
 }

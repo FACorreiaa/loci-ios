@@ -23,7 +23,7 @@ enum AnalyticsEvent: String {
   case reviewSubmitted = "review_submitted"
   /// A trip export reached the share sheet. Properties: format (ics|pdf|markdown), day_count.
   case tripExported = "trip_exported"
-  /// ShareTrip returned a public link. Properties: content_type ("trip").
+  /// A trip got a link (SetTripVisibility to friends, link or public). Properties: content_type ("trip").
   case shareLinkCreated = "share_link_created"
   /// A field report was filed (`field` as the proto enum name, `status`,
   /// `poiId`, `answers`), as web's ClaimForm sends it. Metric: contributions per active user.
@@ -37,6 +37,10 @@ enum AnalyticsEvent: String {
   /// A place went into a trip from its detail (`source: "place_detail"`, and
   /// `new_trip` when it started one). Web's AddToTripButton sends nothing yet.
   case tripStopAdded = "trip_stop_added"
+  /// A shared trip was saved as the caller's own (`via`: link | friend), as web's useCopyTrip sends it.
+  case tripCopied = "trip_copied"
+  /// A friendship started (`via`: request | invite | contacts | profile).
+  case friendAdded = "friend_added"
 }
 
 @MainActor enum Analytics {

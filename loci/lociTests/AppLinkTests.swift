@@ -15,6 +15,13 @@ struct AppLinkTests {
     ("https://lociai.fyi/trips/t1?tab=days", .trip(id: "t1")),
     ("https://lociai.fyi/recents", .recents),
     ("https://LOCIAI.FYI/contribute/", .contribute),
+    ("https://lociai.fyi/t/abc123", .sharedTrip(code: "abc123")),
+    ("https://lociai.fyi/invite/inv1", .invite(code: "inv1")),
+    ("https://lociai.fyi/u/ana", .user(username: "ana")),
+    ("https://lociai.fyi/friends", .friends),
+    ("https://lociai.fyi/friends?tab=add", .friends),
+    ("https://lociai.fyi/friends/trips/t2", .friendTrip(id: "t2")),
+    ("loci://u/ana", .user(username: "ana")),
   ])
   func parsesEveryRoute(_ string: String, _ expected: AppLink) throws {
     #expect(AppLink(url: try #require(URL(string: string))) == expected)
@@ -32,6 +39,9 @@ struct AppLinkTests {
     "https://lociai.fyi/packs/a/b",
     "https://lociai.fyi/pricing",
     "http://lociai.fyi/lists/l1",
+    "https://lociai.fyi/t",
+    "https://lociai.fyi/u/ana/trips",
+    "https://lociai.fyi/friends/feed/t2",
     "mailto:hi@lociai.fyi",
   ])
   func rejectsIncompleteAndForeignLinks(_ string: String) throws {
@@ -51,6 +61,11 @@ struct AppLinkTests {
     (.trip(id: "t1"), .calendar),
     (.recents, .profile),
     (.contribute, .profile),
+    (.sharedTrip(code: "c"), .profile),
+    (.invite(code: "c"), .profile),
+    (.user(username: "ana"), .profile),
+    (.friends, .profile),
+    (.friendTrip(id: "t2"), .profile),
   ])
   func routesToTheOwningTab(_ link: AppLink, _ tab: AppRouter.Tab) {
     let router = AppRouter()

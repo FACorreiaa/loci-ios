@@ -102,7 +102,9 @@ public nonisolated struct SessionLink: Sendable, Equatable, Hashable {
 }
 
 /// A signed-in page to open from a link: web's `/lists/:id`, `/packs/:slug`,
-/// `/trips/:id`, `/recents` and `/contribute`. Parsed after `SessionLink`, so a
+/// `/trips/:id`, `/recents`, `/contribute`, and the social pages — `/t/:code`
+/// (a shared trip), `/invite/:code`, `/u/:username`, `/friends` and
+/// `/friends/trips/:id`. Parsed after `SessionLink`, so a
 /// result link keeps its meaning. The AASA entries for the https form ship
 /// with the web side (plan Phase 8); until then only `loci://` reaches the app.
 public nonisolated enum AppLink: Sendable, Equatable, Hashable {
@@ -111,6 +113,11 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   case trip(id: String)
   case recents
   case contribute
+  case sharedTrip(code: String)
+  case invite(code: String)
+  case user(username: String)
+  case friends
+  case friendTrip(id: String)
 
   /// `loci://lists/abc` (the host is the route, as in `SessionLink`) or
   /// `https://lociai.fyi/lists/abc`. Anything with a missing id or extra
@@ -134,6 +141,11 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
     case ("trips", 2): self = .trip(id: segments[1])
     case ("recents", 1): self = .recents
     case ("contribute", 1): self = .contribute
+    case ("t", 2): self = .sharedTrip(code: segments[1])
+    case ("invite", 2): self = .invite(code: segments[1])
+    case ("u", 2): self = .user(username: segments[1])
+    case ("friends", 1): self = .friends
+    case ("friends", 3) where segments[1].lowercased() == "trips": self = .friendTrip(id: segments[2])
     default: return nil
     }
   }
@@ -173,13 +185,14 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
     pendingLink = link
   }
 
-  /// The tab that owns a page. Trips hang off Calendar; the You hub is Profile.
+  /// The tab that owns a page. Trips hang off Calendar; the You hub is Profile,
+  /// which also holds Friends and everything reached from it.
   static func tab(for link: AppLink) -> Tab {
     switch link {
     case .list: .saved
     case .pack: .discover
     case .trip: .calendar
-    case .recents, .contribute: .profile
+    case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip: .profile
     }
   }
 

@@ -89,11 +89,15 @@ nonisolated enum PushRoute: Equatable {
   case open(SessionLink)
   /// Open the session's page and show the new message on it.
   case openThread(SessionLink, ThreadRefresh)
+  /// Open a page by the payload's `url` (a friend request opens Friends, an
+  /// acceptance the friend's profile).
+  case openLink(AppLink)
 
   /// A tap on the notification, cold or warm start.
   static func tap(userInfo: [AnyHashable: Any]) -> PushRoute {
     if let push = ChatPush(userInfo: userInfo) { return .openThread(push.link, push.refresh) }
     if let link = SessionLink(userInfo: userInfo) { return .open(link) }
+    if let string = userInfo["url"] as? String, let url = URL(string: string), let link = AppLink(url: url) { return .openLink(link) }
     return .nothing
   }
 

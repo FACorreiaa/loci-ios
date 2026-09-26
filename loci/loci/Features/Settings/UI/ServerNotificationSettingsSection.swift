@@ -2,8 +2,9 @@ import LociConnectProto
 import SwiftUI
 
 /// The account's notification preferences (web: settings tab "notifications").
-/// UserService.GetNotificationSettings / UpdateNotificationSettings{recommendations, tripReminders, searchFinished}.
-/// Search finished is the one the server acts on: it gates the push (web and APNs) for a run that ends.
+/// UserService.GetNotificationSettings / UpdateNotificationSettings{recommendations, tripReminders, searchFinished, friendActivity}.
+/// Search finished and Friends are the ones the server acts on: they gate the push (web and APNs) for a
+/// run that ends and for friend requests and acceptances.
 struct ServerNotificationSettingsSection: View {
   @State private var settings: Loci_User_NotificationSettings?
   @State private var error: String?
@@ -14,13 +15,17 @@ struct ServerNotificationSettingsSection: View {
         Toggle("Recommendations", isOn: binding(settings.recommendations) { $0.recommendations = $1 })
         Toggle("Trip reminders", isOn: binding(settings.tripReminders) { $0.tripReminders = $1 })
         Toggle("Search finished", isOn: binding(settings.searchFinished) { $0.searchFinished = $1 })
+        Toggle("Friends", isOn: binding(settings.friendActivity) { $0.friendActivity = $1 })
       } else {
         ProgressView()
       }
     } header: {
       Text("Your account")
     } footer: {
-      Text("Saved to your account, so they apply on the web too. Search finished is the push you get when a search you left running ends.")
+      Text(
+        "Saved to your account, so they apply on the web too. Search finished is the push you get when a search you left running ends; "
+          + "Friends, when someone sends or accepts a friend request."
+      )
     }
     .listRowBackground(Color.lociCard)
     .errorAlert($error)
@@ -42,6 +47,7 @@ struct ServerNotificationSettingsSection: View {
         request.recommendations = settings.recommendations
         request.tripReminders = settings.tripReminders
         request.searchFinished = settings.searchFinished
+        request.friendActivity = settings.friendActivity
         apply(&request, newValue)
         let sent = request
         Task {

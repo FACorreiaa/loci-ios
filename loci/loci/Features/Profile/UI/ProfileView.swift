@@ -63,7 +63,7 @@ public struct ProfileView: View {
     }
   }
 
-  /// `/recents` and `/contribute` links land here (`AppRouter.tab(for:)`).
+  /// `/recents`, `/contribute` and the social links land here (`AppRouter.tab(for:)`).
   private func openPending() {
     if let link = router.takeLink(for: .profile) { linked = link }
   }
