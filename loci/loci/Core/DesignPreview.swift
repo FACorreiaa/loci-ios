@@ -572,16 +572,21 @@ extension Loci_Localcontext_LocalContext {
       Google_Protobuf_Timestamp(date: utc.date(from: DateComponents(year: 2026, month: 10, day: day, hour: 12)) ?? Date())
     }
     var context = Loci_Localcontext_LocalContext()
-    context.weather = [(2, 24.0, 15.0, "Sunny", 0.05), (3, 21.0, 14.0, "Rain", 0.8), (4, 23.0, 14.0, "Partly cloudy", 0.2), (5, 25.0, 16.0, "Sunny", 0.0)]
-      .map { day, high, low, condition, rain in
-        var weather = Loci_Localcontext_WeatherDay()
-        weather.date = on(day)
-        weather.highC = high
-        weather.lowC = low
-        weather.condition = condition
-        weather.precipProb = rain
-        return weather
-      }
+    context.weather = [
+      (2, 24.0, 15.0, "Sunny", 0.05),
+      (3, 21.0, 14.0, "Rain", 0.8),
+      (4, 23.0, 14.0, "Partly cloudy", 0.2),
+      (5, 25.0, 16.0, "Sunny", 0.0),
+    ]
+    .map { day, high, low, condition, rain in
+      var weather = Loci_Localcontext_WeatherDay()
+      weather.date = on(day)
+      weather.highC = high
+      weather.lowC = low
+      weather.condition = condition
+      weather.precipProb = rain
+      return weather
+    }
     var holiday = Loci_Localcontext_LocalAlert()
     holiday.kind = .holiday
     holiday.title = "Sun 4 Oct · Public holiday: San Francesco d'Assisi"
@@ -617,42 +622,66 @@ extension Loci_Compare_V1_CompareWeekendResponse {
         return day
       }
     }
-    func column(
-      _ name: String, km: Double, mins: Int32, score: Int32, verdict: String, highs: [Double], pros: [String], cons: [String], stay: String, eat: String
-    ) -> Loci_Compare_V1_CityCompareColumn {
-      var column = Loci_Compare_V1_CityCompareColumn()
-      column.cityName = name
-      column.country = "Portugal"
-      column.distanceKm = km
-      column.travelMins = mins
-      column.goScore.score = score
-      column.goScore.verdict = verdict
-      column.weather = weather(highs)
-      column.pros = pros
-      column.cons = cons
-      column.staySnippet = stay
-      column.eatSnippet = eat
-      return column
+    struct ColumnSeed {
+      var name: String
+      var km: Double
+      var mins: Int32
+      var score: Int32
+      var verdict: String
+      var highs: [Double]
+      var pros: [String]
+      var cons: [String]
+      var stay: String
+      var eat: String
+
+      func build(weather: [Loci_Localcontext_WeatherDay]) -> Loci_Compare_V1_CityCompareColumn {
+        var column = Loci_Compare_V1_CityCompareColumn()
+        column.cityName = name
+        column.country = "Portugal"
+        column.distanceKm = km
+        column.travelMins = mins
+        column.goScore.score = score
+        column.goScore.verdict = verdict
+        column.weather = weather
+        column.pros = pros
+        column.cons = cons
+        column.staySnippet = stay
+        column.eatSnippet = eat
+        return column
+      }
     }
     var response = Loci_Compare_V1_CompareWeekendResponse()
     response.originCity = "Porto"
     response.recommendation = .first
-    response.recommendationReason = "Évora is an hour closer, dry both days, and its old town is walkable end to end. Beja is quieter but most of its sights close early on Sunday."
+    response.recommendationReason = [
+      "Évora is an hour closer, dry both days, and its old town is walkable end to end.",
+      "Beja is quieter but most of its sights close early on Sunday.",
+    ].joined(separator: " ")
     response.columns = [
-      column(
-        "Évora", km: 365, mins: 225, score: 84, verdict: "Go", highs: [27, 28],
+      ColumnSeed(
+        name: "Évora",
+        km: 365,
+        mins: 225,
+        score: 84,
+        verdict: "Go",
+        highs: [27, 28],
         pros: ["Roman temple and chapel of bones within a 10-minute walk", "Dry and warm both days"],
         cons: ["Busy on Saturday afternoon"],
         stay: "Stay inside the walls, near Praça do Giraldo.",
         eat: "Book a table for Alentejo pork and migas."
-      ),
-      column(
-        "Beja", km: 470, mins: 290, score: 66, verdict: "Maybe", highs: [30, 31],
+      ).build(weather: weather([27, 28])),
+      ColumnSeed(
+        name: "Beja",
+        km: 470,
+        mins: 290,
+        score: 66,
+        verdict: "Maybe",
+        highs: [30, 31],
         pros: ["Quiet streets and a castle keep with wide views"],
         cons: ["Five hours each way", "Museums close early on Sunday"],
         stay: "Small guesthouses near the castle.",
         eat: "Try the local convent sweets."
-      ),
+      ).build(weather: weather([30, 31])),
     ]
     return response
   }
