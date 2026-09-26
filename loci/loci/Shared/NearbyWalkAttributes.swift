@@ -17,6 +17,8 @@ public nonisolated struct NearbyWalkAttributes: ActivityAttributes {
     public var destinationName: String?
     public var destinationMeters: Double?
     public var etaSeconds: Double?
+    /// "3 of 6" while walking a day; nil on a Near me walk.
+    public var stopProgress: String?
 
     public init(
       steps: Int,
@@ -26,7 +28,8 @@ public nonisolated struct NearbyWalkAttributes: ActivityAttributes {
       nearestMeters: Double? = nil,
       destinationName: String? = nil,
       destinationMeters: Double? = nil,
-      etaSeconds: Double? = nil
+      etaSeconds: Double? = nil,
+      stopProgress: String? = nil
     ) {
       self.steps = steps
       self.distanceMeters = distanceMeters
@@ -36,15 +39,19 @@ public nonisolated struct NearbyWalkAttributes: ActivityAttributes {
       self.destinationName = destinationName
       self.destinationMeters = destinationMeters
       self.etaSeconds = etaSeconds
+      self.stopProgress = stopProgress
     }
   }
 
   public var startedAt: Date
   public var radiusKm: Int
+  /// The card's header, e.g. "Day 2 · Sintra"; nil shows "Near me walk".
+  public var title: String?
 
-  public init(startedAt: Date, radiusKm: Int) {
+  public init(startedAt: Date, radiusKm: Int, title: String? = nil) {
     self.startedAt = startedAt
     self.radiusKm = radiusKm
+    self.title = title
   }
 }
 
@@ -58,6 +65,12 @@ public nonisolated extension NearbyWalkAttributes.ContentState {
     guard let nearestName else { return nil }
     if let nearestMeters { return "\(nearestName) · \(Self.format(meters: nearestMeters))" }
     return nearestName
+  }
+
+  /// "3 of 6 · Café X · 400 m · 5 min": what the card says about the route.
+  var routeText: String? {
+    let parts = [stopProgress, destinationText].compactMap { $0 }
+    return parts.isEmpty ? nil : parts.joined(separator: " · ")
   }
 
   /// "Bolhão · 400 m · 5 min" while following a route.

@@ -28,6 +28,8 @@ struct TripEditorView: View {
   @State private var side = ResultsSideData()
   @State private var checklist: TripChecklistStore
   @State private var preferenceQueue: Task<Void, Never>?
+  /// The day being walked stop by stop (pushed as WalkDayView).
+  @State private var walkingDay: WalkDay?
 
   /// Design previews pass a trip and a checklist and never touch the network.
   private let isOffline: Bool
@@ -109,6 +111,7 @@ struct TripEditorView: View {
     } message: {
       Text("Your last change wasn't saved. Reload to see the latest version, then try again.")
     }
+    .navigationDestination(item: $walkingDay) { WalkDayView(day: $0) }
     .sheet(item: $picking) { target in
       PlacePicker(cityName: trip?.cityName ?? "") { poi in
         Task {
@@ -160,6 +163,12 @@ struct TripEditorView: View {
       HStack {
         Circle().fill(LociTheme.dayColor(Int(day.dayNumber))).frame(width: 10, height: 10)
         Text("Day \(day.dayNumber)" + (day.cityName.isEmpty || day.cityName == trip.cityName ? "" : " · \(day.cityName)"))
+        let walkDay = WalkDay.from(trip: trip, day: day)
+        Button("Walk", systemImage: "figure.walk") { walkingDay = walkDay }
+          .labelStyle(.iconOnly)
+          .buttonStyle(.borderless)
+          .disabled(walkDay.stops.isEmpty)
+          .accessibilityLabel("Walk day \(day.dayNumber)")
         if DayTimeline.today(in: trip)?.id == day.id {
           Spacer()
           TodayControls(trip: trip, day: day).textCase(nil)

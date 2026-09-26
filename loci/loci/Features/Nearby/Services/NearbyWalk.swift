@@ -32,6 +32,8 @@ import Observation
 
   func start(places: [Loci_Poi_POIDetailedInfo], radiusKm: Int) async {
     guard !isActive else { return }
+    // One walker at a time: a day being walked stops when Near me starts.
+    await StopWalk.shared.end()
     isActive = true
     startedAt = Date()
     self.places = places

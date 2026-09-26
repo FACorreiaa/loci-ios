@@ -1,3 +1,4 @@
+import CoreLocation
 import LociConnectProto
 import SwiftProtobuf
 import SwiftUI
@@ -104,6 +105,9 @@ enum DesignPreview: String {
   case tripSetup
   /// Weekend compare after Porto → Évora or Beja came back: Loci's pick, two columns.
   case compare
+  /// Walking a day stop by stop: four stops in Lisbon's Baixa. Starts a real
+  /// walk from the simulator's location (set it with `simctl location`).
+  case walkDay
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -193,6 +197,7 @@ enum DesignPreview: String {
       NavigationStack { GlobeView(store: GlobeStore(service: PreviewTravelHistoryService(data: .previewEmpty)), recents: PreviewRecentsService()) }
     case .tripSetup: TripSetupPreview()
     case .compare: NavigationStack { CompareView(preview: .previewPorto, origin: "Porto", candidates: ["Évora", "Beja"]) }
+    case .walkDay: NavigationStack { WalkDayView(day: .previewBaixa) }
     }
   }
 }
@@ -806,5 +811,30 @@ private struct ClaimFormPreview: View {
       .task {
         if submits { await store.submit() }
       }
+  }
+}
+
+extension WalkDay {
+  /// Praça do Comércio → Rua Augusta arch → Santa Justa lift → Rossio.
+  static var previewBaixa: WalkDay {
+    func stop(_ name: String, _ lat: Double, _ lon: Double) -> WalkStop {
+      var poi = Loci_Poi_POIDetailedInfo()
+      poi.id = name
+      poi.name = name
+      poi.latitude = lat
+      poi.longitude = lon
+      return WalkStop(id: name, name: name, poi: poi, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon))
+    }
+    return WalkDay(
+      id: "preview:baixa",
+      title: "Day 1 · Lisbon",
+      stops: [
+        stop("Praça do Comércio", 38.7075, -9.1364),
+        stop("Arco da Rua Augusta", 38.7087, -9.1366),
+        stop("Elevador de Santa Justa", 38.7121, -9.1394),
+        stop("Rossio", 38.7139, -9.1394),
+      ],
+      withoutLocation: 1
+    )
   }
 }
