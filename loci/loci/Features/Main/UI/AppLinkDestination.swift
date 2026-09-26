@@ -13,6 +13,11 @@ struct AppLinkDestination: View {
     case .pack(let slug): PackDetailView(slug: slug)
     case .recents: YouDestination.recents.screen
     case .contribute: YouDestination.contribute.screen
+    case .sharedTrip(let code): SharedTripView(source: .code(code))
+    case .invite(let code): InviteView(code: code)
+    case .user(let username): UserProfileView(username: username)
+    case .friends: YouDestination.friends.screen
+    case .friendTrip(let id): SharedTripView(source: .tripID(id))
     }
   }
 }

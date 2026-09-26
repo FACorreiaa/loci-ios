@@ -103,12 +103,4 @@ nonisolated enum TripAPI {
     request.format = format
     return try await call("Could not export the trip.", request) { await client.exportTrip(request: $0, headers: [:]) }
   }
-
-  /// web: routes/trips/[id].tsx share → ShareTrip{tripId, isPublic: true}
-  static func share(tripID: String) async throws(TripRPCError) -> Loci_Trip_ShareTripResponse {
-    var request = Loci_Trip_ShareTripRequest()
-    request.tripID = tripID
-    request.isPublic = true
-    return try await call("Could not create a share link.", request) { await client.shareTrip(request: $0, headers: [:]) }
-  }
 }

@@ -67,6 +67,8 @@
 	<string>Loci shows your trips next to events already on this iPhone, and can add a trip to the Calendar app.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Loci shows your trips next to events already on this iPhone, and can add a trip to the Calendar app.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Loci checks which of your contacts are on Loci so you can add them as friends. Only scrambled fingerprints of numbers and emails leave your iPhone, and nothing is kept for people who aren't on Loci.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Loci uses your location to find places near you and to plan from where you are.</string>
 	<key>NSMicrophoneUsageDescription</key>

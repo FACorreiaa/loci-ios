@@ -137,6 +137,15 @@ struct ChatPushTests {
     #expect(PushRoute.tap(userInfo: Self.searchFinished()) == .open(link))
   }
 
+  /// Friend pushes carry no session, only the web address of the page to open.
+  @Test func tappingAFriendPushOpensItsPage() {
+    let request: [AnyHashable: Any] = ["sessionId": "", "url": "https://lociai.fyi/friends", "origin": "friend_request"]
+    #expect(PushRoute.tap(userInfo: request) == .openLink(.friends))
+    let accepted: [AnyHashable: Any] = ["url": "https://lociai.fyi/u/ana", "origin": "friend_accepted"]
+    #expect(PushRoute.tap(userInfo: accepted) == .openLink(.user(username: "ana")))
+    #expect(PushRoute.tap(userInfo: ["url": "https://lociai.fyi/pricing"]) == .nothing)
+  }
+
   @Test func tappingSomethingElseDoesNothing() {
     #expect(PushRoute.tap(userInfo: ["poi": "Sé"]) == .nothing)
     #expect(PushRoute.tap(userInfo: [:]) == .nothing)

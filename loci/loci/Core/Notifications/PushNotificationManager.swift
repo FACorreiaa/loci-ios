@@ -119,6 +119,7 @@ import UserNotifications
     case .nothing: break
     case .open(let link): AppRouter.shared.open(link)
     case let .openThread(link, refresh): AppRouter.shared.open(link, refresh: refresh)
+    case .openLink(let link): AppRouter.shared.open(link)
     }
     completionHandler()
   }
