@@ -45,6 +45,9 @@ nonisolated struct SearchState: Equatable, Sendable {
   var hotels: [Loci_Poi_POIDetailedInfo] = []
   var restaurants: [Loci_Poi_POIDetailedInfo] = []
   var activities: [Loci_Poi_POIDetailedInfo] = []
+  /// The city's typical gastronomy: a section under itinerary and general
+  /// results, and the whole answer of a gastronomy search ("food in Madeira").
+  var gastronomy: Loci_Gastronomy_CityGastronomy?
 
   /// The newest event id: the `resume_token` for a reattach.
   var lastEventId: String?
@@ -122,7 +125,10 @@ nonisolated struct SearchState: Equatable, Sendable {
     return generalPOIs
   }
 
-  var hasResult: Bool { !places.isEmpty || itinerary != nil }
+  var hasResult: Bool { !places.isEmpty || itinerary != nil || gastronomy != nil }
+
+  /// A "food in Madeira" search: the answer is the gastronomy, not places.
+  var isGastronomySearch: Bool { domain == "gastronomy" }
 
   /// Every place from every event, without repeats: what web's /nearme shows
   /// (general POIs, restaurants, hotels and activities together).
@@ -204,6 +210,9 @@ nonisolated extension SearchState {
     case .activities(let payload):
       activities = payload.activities
       absorb(city: payload.hasGeneralCityData ? payload.generalCityData : nil)
+    case .gastronomy(let payload):
+      // Sent as soon as it is ready, before the itinerary that carries it again.
+      if payload.hasGastronomy, !payload.gastronomy.dishes.isEmpty { gastronomy = payload.gastronomy }
     case .error(let error):
       let message = error.userMessage.isEmpty ? "The search failed." : error.userMessage
       status = hasResult ? .completedWithError(message) : .failed(message)
@@ -245,6 +254,7 @@ nonisolated extension SearchState {
     if !result.hotels.isEmpty { hotels = result.hotels }
     if !result.restaurants.isEmpty { restaurants = result.restaurants }
     if !result.activities.isEmpty { activities = result.activities }
+    if result.hasGastronomy, !result.gastronomy.dishes.isEmpty { gastronomy = result.gastronomy }
     absorb(city: result.hasGeneralCityData ? result.generalCityData : nil)
   }
 
@@ -303,6 +313,7 @@ nonisolated extension SearchState {
     if !first.hotels.isEmpty { hotels = first.hotels }
     if !first.restaurants.isEmpty { restaurants = first.restaurants }
     if !first.activities.isEmpty { activities = first.activities }
+    if let gastronomy = first.gastronomy { self.gastronomy = gastronomy }
     if let city = first.cityData { cityData = city }
     if first.plannedDays > 0 { plannedDays = first.plannedDays }
   }
@@ -330,6 +341,7 @@ nonisolated extension Loci_Chat_StreamEvent.OneOf_Payload {
     case .error: "error"
     case .complete: "complete"
     case .route: "route"
+    case .gastronomy: "gastronomy"
     }
   }
 }
@@ -343,6 +355,7 @@ nonisolated extension Loci_Chat_DomainType {
     case .activities: "activities"
     case .itinerary: "itinerary"
     case .transport: "transport"
+    case .gastronomy: "gastronomy"
     default: "general"
     }
   }
@@ -360,5 +373,6 @@ nonisolated extension Loci_Chat_AiCityResponse {
   var hasContent: Bool {
     !pointsOfInterest.isEmpty || !hotels.isEmpty || !restaurants.isEmpty || !activities.isEmpty
       || (hasItineraryResponse && !itineraryResponse.pointsOfInterest.isEmpty)
+      || (hasGastronomy && !gastronomy.dishes.isEmpty)
   }
 }

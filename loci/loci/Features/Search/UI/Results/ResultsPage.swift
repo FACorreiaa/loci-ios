@@ -31,6 +31,8 @@ struct ResultsPage: View {
   private var hiddenDays: Int { max(groups.count - DayGrouping.initialDays, 0) }
   private var cityName: String { state.cityData?.city ?? state.cityName ?? "" }
   private var title: String {
+    // A gastronomy search's heading is the section's own.
+    if state.isGastronomySearch { return "" }
     if let name = state.itinerary?.itineraryResponse.itineraryName, !name.isEmpty { return name }
     return state.destination.bookmarkTitle(city: cityName)
   }
@@ -122,6 +124,9 @@ struct ResultsPage: View {
         }
       }
     }
+    if let gastronomy = state.gastronomy {
+      GastronomySection(gastronomy: gastronomy, compact: !state.isGastronomySearch)
+    }
     if !state.isActive, !groups.isEmpty {
       TripKitView(groups: groups, cityName: cityName, title: title, summary: summary, side: side).id(Anchor.kit)
     }
@@ -178,6 +183,10 @@ struct StatusRail: View {
 
   private var text: String {
     let count = state.places.count
+    if state.isGastronomySearch {
+      if let dishes = state.gastronomy?.dishes.count { return "Local food ready · \(dishes) dishes" }
+      return state.isActive ? "Tasting the local food…" : "No typical food found"
+    }
     switch state.phase {
     case .skeleton:
       if let stage = state.progressStage, !stage.isEmpty { return stage }

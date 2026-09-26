@@ -102,10 +102,30 @@ struct DiscoverView: View {
       .buttonStyle(.bordered)
       .tint(.lociForest)
       packsEntry
+      gastronomyEntry
     }
   }
 
   /// City Packs (web: /packs): ready-made itineraries (`18-city-packs.md`).
+  /// Typical gastronomy (web: /gastronomy), styled like the City Packs card.
+  private var gastronomyEntry: some View {
+    NavigationLink {
+      GastronomyView()
+    } label: {
+      HStack(spacing: 12) {
+        Image(systemName: GastronomyView.symbol).font(.title3).foregroundStyle(Color.lociForest).accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 2) {
+          Text("Local food").font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
+          Text("Typical dishes and where to eat them").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+        }
+        Spacer()
+        Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Color.lociMutedInk).accessibilityHidden(true)
+      }
+      .lociCard(padding: 12)
+    }
+    .buttonStyle(.plain)
+  }
+
   private var packsEntry: some View {
     NavigationLink {
       PacksView()
