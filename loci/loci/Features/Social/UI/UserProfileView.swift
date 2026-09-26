@@ -1,4 +1,5 @@
 import LociConnectProto
+import SwiftProtobuf
 import SwiftUI
 
 /// Someone's travel profile (web: /u/:username): who they are, where they've
