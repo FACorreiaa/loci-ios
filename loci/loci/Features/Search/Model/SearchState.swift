@@ -172,7 +172,7 @@ nonisolated extension SearchState {
       lastEventId = event.eventID
     }
 
-    if applyMultiCity(event, payload) { return nil }
+    if applyMultiCity(event, payload) || applyGastronomy(payload) { return nil }
 
     switch payload {
     case .start(let start):
@@ -210,9 +210,6 @@ nonisolated extension SearchState {
     case .activities(let payload):
       activities = payload.activities
       absorb(city: payload.hasGeneralCityData ? payload.generalCityData : nil)
-    case .gastronomy(let payload):
-      // Sent as soon as it is ready, before the itinerary that carries it again.
-      if payload.hasGastronomy, !payload.gastronomy.dishes.isEmpty { gastronomy = payload.gastronomy }
     case .error(let error):
       let message = error.userMessage.isEmpty ? "The search failed." : error.userMessage
       status = hasResult ? .completedWithError(message) : .failed(message)
@@ -227,7 +224,7 @@ nonisolated extension SearchState {
       savedTripID = Self.tripID(from: event) ?? savedTripID
       status = .completed
       return .completed
-    case .route:
+    case .route, .gastronomy:
       break  // handled above
     }
     return nil
@@ -256,6 +253,14 @@ nonisolated extension SearchState {
     if !result.activities.isEmpty { activities = result.activities }
     if result.hasGastronomy, !result.gastronomy.dishes.isEmpty { gastronomy = result.gastronomy }
     absorb(city: result.hasGeneralCityData ? result.generalCityData : nil)
+  }
+
+  /// The gastronomy section, sent as soon as it is ready, before the itinerary
+  /// that carries it again. Its own function so `apply` stays one switch.
+  private mutating func applyGastronomy(_ payload: Loci_Chat_StreamEvent.OneOf_Payload) -> Bool {
+    guard case .gastronomy(let section) = payload else { return false }
+    if section.hasGastronomy, !section.gastronomy.dishes.isEmpty { gastronomy = section.gastronomy }
+    return true
   }
 
   /// A multi-city event: the ROUTE, or one city's event, which builds that

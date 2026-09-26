@@ -32,5 +32,6 @@ Web: `/gastronomy` and `components/gastronomy/GastronomySection.tsx`.
 
 ## Tests
 
-`lociTests/GastronomyTests.swift`: the filter, the stream event, a
-gastronomy-domain search and restore from a saved result.
+`lociTests/GastronomyFilterTests.swift` (the filter) and
+`lociTests/GastronomySearchStateTests.swift` (the stream event, a
+gastronomy-domain search and restore from a saved result).
