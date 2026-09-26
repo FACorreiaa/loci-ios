@@ -31,25 +31,10 @@ struct FriendsView: View {
 
   var body: some View {
     List {
-      if query.trimmingCharacters(in: .whitespaces).count >= 2 {
+      if isSearching {
         searchResults
       } else {
-        Section {
-          Picker("Show", selection: $tab) {
-            ForEach(Tab.allCases) { tab in
-              Text(tab == .requests && !incoming.isEmpty ? "Requests (\(incoming.count))" : tab.rawValue).tag(tab)
-            }
-          }
-          .pickerStyle(.segmented)
-        }
-        .listRowBackground(Color.clear).listRowInsets(EdgeInsets())
-
-        switch tab {
-        case .trips: tripsSection
-        case .friends: friendsSection
-        case .requests: requestsSection
-        }
-        addSection
+        browsing
       }
     }
     .settingsStyle("Friends")
@@ -66,7 +51,33 @@ struct FriendsView: View {
     .task { await load() }
   }
 
+  private var isSearching: Bool { query.trimmingCharacters(in: .whitespaces).count >= 2 }
+
   // MARK: Sections
+
+  @ViewBuilder private var browsing: some View {
+    Section {
+      Picker("Show", selection: $tab) {
+        ForEach(Tab.allCases) { tab in
+          Text(label(for: tab)).tag(tab)
+        }
+      }
+      .pickerStyle(.segmented)
+    }
+    .listRowBackground(Color.clear)
+    .listRowInsets(EdgeInsets())
+
+    switch tab {
+    case .trips: tripsSection
+    case .friends: friendsSection
+    case .requests: requestsSection
+    }
+    addSection
+  }
+
+  private func label(for tab: Tab) -> String {
+    tab == .requests && !incoming.isEmpty ? "Requests (\(incoming.count))" : tab.rawValue
+  }
 
   @ViewBuilder private var tripsSection: some View {
     Section {
