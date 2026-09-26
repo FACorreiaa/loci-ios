@@ -24,7 +24,14 @@ import Observation
 
   /// The phone's copy of the forecast and rates first, then the server.
   func loadContext(latitude: Double, longitude: Double) async {
-    guard !Self.isOffline else { contextChecked = true; return }
+    guard !Self.isOffline else {
+      #if DEBUG
+        localContext = .previewRome
+        fxRates = [.previewEurUsd]
+      #endif
+      contextChecked = true
+      return
+    }
     let key = LocalCache.key(latitude: latitude, longitude: longitude)
     async let context = cacheThrough(Loci_Localcontext_LocalContext.self, kind: .localContext, id: key, onCached: { self.localContext = $0.value }) {
       try await ResultsAPI.localContext(latitude: latitude, longitude: longitude)

@@ -20,6 +20,17 @@ struct CompareView: View {
   @State private var savedTrip: Loci_Trip_TripDraft?
   @State private var error: String?
 
+  init() {}
+
+  #if DEBUG
+    /// A finished compare, for `-designPreview compare`.
+    init(preview: Loci_Compare_V1_CompareWeekendResponse, origin: String, candidates: [String]) {
+      _origin = State(initialValue: origin)
+      _candidates = State(initialValue: candidates)
+      _result = State(initialValue: preview)
+    }
+  #endif
+
   private var canCompare: Bool {
     !origin.trimmingCharacters(in: .whitespaces).isEmpty && candidates.count >= 2 && window.end > window.start && !isComparing
   }

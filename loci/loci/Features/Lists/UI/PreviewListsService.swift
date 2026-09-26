@@ -79,7 +79,8 @@ nonisolated extension ListEntry {
       _ lat: Double?,
       _ lon: Double?,
       rating: Double,
-      _ type: Loci_List_ContentType = .poi
+      _ type: Loci_List_ContentType = .poi,
+      photo: String? = nil
     ) -> ListEntry {
       var stop = Loci_Poi_POIDetailedInfo()
       stop.id = id
@@ -92,6 +93,12 @@ nonisolated extension ListEntry {
         stop.latitude = lat
         stop.longitude = lon
       }
+      if let photo {
+        var credit = Loci_Poi_POIImage()
+        credit.url = photo
+        credit.attribution = "Wikimedia Commons"
+        stop.imageCredits = [credit]
+      }
       return ListEntry(itemID: id, contentType: type, stop: stop)
     }
     return [
@@ -102,7 +109,8 @@ nonisolated extension ListEntry {
         "The highest lookout in the city; go at sunset.",
         38.7193,
         -9.1325,
-        rating: 4.8
+        rating: 4.8,
+        photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Miradouro_da_Senhora_do_Monte_%2838530147244%29.jpg/330px-Miradouro_da_Senhora_do_Monte_%2838530147244%29.jpg"
       ),
       place(
         "5c7e0000-0000-4000-8000-000000000002",
@@ -112,7 +120,8 @@ nonisolated extension ListEntry {
         38.7107,
         -9.1432,
         rating: 4.6,
-        .restaurant
+        .restaurant,
+        photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Bacalhau_a_Bras.jpg/330px-Bacalhau_a_Bras.jpg"
       ),
       place(
         "5c7e0000-0000-4000-8000-000000000003",
@@ -121,9 +130,19 @@ nonisolated extension ListEntry {
         "Five centuries of tiles in a former convent.",
         38.7247,
         -9.1136,
-        rating: 4.7
+        rating: 4.7,
+        photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Access_stairs_to_small_cloister_%28Claustrim%29%2C_Museu_Nacional_do_Azulejo%2C_Lisbon%2C_Portugal_julesvernex2.jpg/330px-Access_stairs_to_small_cloister_%28Claustrim%29%2C_Museu_Nacional_do_Azulejo%2C_Lisbon%2C_Portugal_julesvernex2.jpg"
       ),
-      place("5c7e0000-0000-4000-8000-000000000004", "Feira da Ladra", "Market", "The flea market behind São Vicente.", nil, nil, rating: 4.3),
+      place(
+        "5c7e0000-0000-4000-8000-000000000004",
+        "Feira da Ladra",
+        "Market",
+        "The flea market behind São Vicente.",
+        nil,
+        nil,
+        rating: 4.3,
+        photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Feira_da_Ladra%2C_Lisboa%2C_Jul_2024.jpg/330px-Feira_da_Ladra%2C_Lisboa%2C_Jul_2024.jpg"
+      ),
     ]
   }
 
