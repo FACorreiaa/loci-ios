@@ -68,14 +68,11 @@ struct WalkDayCard: View {
       Label("You're at \(stopName) (\(walk.progressText))", systemImage: "flag.checkered")
         .font(.lociHeadline(16)).foregroundStyle(Color.lociForest)
       if let next = walk.upcoming {
+        Text("Next: \(walk.stops[next].name)\(nextTime)").lociCoordStyle(10).lineLimit(2)
         HStack {
-          Button {
-            Task { await walk.walkToNext() }
-          } label: {
-            Text("Walk to next: \(walk.stops[next].name)\(nextTime)").lineLimit(1)
-          }
-          .buttonStyle(.borderedProminent).tint(.lociForest)
-          .disabled(walk.navigator.leg == nil)
+          Button("Walk to next", systemImage: "figure.walk") { Task { await walk.walkToNext() } }
+            .buttonStyle(.borderedProminent).tint(.lociForest)
+            .disabled(walk.navigator.leg == nil)
           Button("Skip") { Task { await walk.skip() } }.buttonStyle(.bordered)
         }
       }
