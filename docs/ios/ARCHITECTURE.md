@@ -1589,6 +1589,10 @@ tests are not in CI.
   search-finished alert is a `UNNotificationRequest` posted by the app itself.
   The payload keys already match the planned push, so APNs can plug into the
   same router later. (`docs/ios-search-notifications.md`, `ROADMAP.md`.)
+- **Gastronomy added an endpoint.** Typical gastronomy (`docs/ios/23-gastronomy.md`)
+  is the first feature past the "no new endpoints" rule: it reads
+  `GastronomyService.GetCityGastronomy` and the new `gastronomy` stream case.
+  It is entered from a Discover card, not a tab.
 - **Keep the five tabs.** Discover, Calendar, Assistant, Saved, Profile stay
   as the pre-slice app had them (`MainTabView.swift`), even though
   NATIVE_DESIGN §5 describes four journeys; the roadmap records "the current

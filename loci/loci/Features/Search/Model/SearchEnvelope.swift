@@ -75,6 +75,7 @@ nonisolated struct SearchStore: Sendable {
     payload.restaurants = state.restaurants
     payload.activities = state.activities
     if payload.pointsOfInterest.isEmpty { payload.pointsOfInterest = state.generalPOIs }
+    if let gastronomy = state.gastronomy, !payload.hasGastronomy { payload.gastronomy = gastronomy }
     payload.sessionID = sessionId
     snapshot.complete.result = payload
     snapshot.complete.sessionID = sessionId

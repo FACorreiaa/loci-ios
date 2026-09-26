@@ -105,6 +105,8 @@ enum DesignPreview: String {
   case tripSetup
   /// Weekend compare after Porto → Évora or Beja came back: Loci's pick, two columns.
   case compare
+  /// Typical gastronomy of Porto: overview, filter chips, four dishes.
+  case gastronomy
   /// Walking a day stop by stop: four stops in Lisbon's Baixa. Starts a real
   /// walk from the simulator's location (set it with `simctl location`).
   case walkDay
@@ -197,6 +199,7 @@ enum DesignPreview: String {
       NavigationStack { GlobeView(store: GlobeStore(service: PreviewTravelHistoryService(data: .previewEmpty)), recents: PreviewRecentsService()) }
     case .tripSetup: TripSetupPreview()
     case .compare: NavigationStack { CompareView(preview: .previewPorto, origin: "Porto", candidates: ["Évora", "Beja"]) }
+    case .gastronomy: NavigationStack { GastronomyView(store: GastronomyStore(service: PreviewGastronomyService()), city: "Porto") }
     case .walkDay: NavigationStack { WalkDayView(day: .previewBaixa) }
     }
   }
