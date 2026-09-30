@@ -181,13 +181,17 @@ private let origin = CLLocationCoordinate2D(latitude: 41.1460, longitude: -8.610
     #expect(walk.navigator.destination?.name == "B")
   }
 
-  @Test func arrivingAtTheLastStopFinishesTheDay() async {
+  @Test func arrivingAtTheLastUnvisitedStopFinishesTheDay() async {
     let walk = walk()
     await walk.start(porto, from: origin)
-    await walk.jump(to: 2)
+    await walk.ingest(at(41.1480, -8.6100))
+    await walk.walkToNext()
+    await walk.ingest(at(41.1498, -8.6100))
+    await walk.walkToNext()
     await walk.ingest(at(41.1516, -8.6100))
     #expect(walk.phase == .done)
     #expect(walk.upcoming == nil)
+    #expect(walk.summary.visited == 3)
   }
 
   // Review Focus 1
@@ -232,6 +236,67 @@ private let origin = CLLocationCoordinate2D(latitude: 41.1460, longitude: -8.610
     #expect(!walk.isWalking(key: "trip:t:d"))
   }
 
+  // Final review #1: a fix that arrived before following began must still count.
+  @Test func aFixFromBeforeTheStartCountsAsArrival() async {
+    let walk = walk()
+    await walk.ingest(at(41.1480, -8.6100))  // standing on A, nothing walking yet
+    await walk.start(porto, from: origin)
+    #expect(walk.phase == .arrived)
+    #expect(walk.visited == [0])
+  }
+
+  // Final review #1: the next stop in the same spot arrives without another fix.
+  @Test func walkingToAStopYouAreAlreadyAtArrivesAtOnce() async {
+    let walk = walk()
+    let twin = WalkDay(id: "y", title: "Day 1", stops: [stop("Market", 41.1480, -8.6100), stop("Café", 41.1480, -8.6100)], withoutLocation: 0)
+    await walk.start(twin, from: origin)
+    await walk.ingest(at(41.1480, -8.6100))
+    await walk.walkToNext()
+    #expect(walk.phase == .done)
+  }
+
+  // Final review #4: a finished day stays finished.
+  @Test func jumpingFromAFinishedDayDoesNothing() async {
+    let walk = walk()
+    let one = WalkDay(id: "x", title: "Day 1", stops: [porto.stops[0]], withoutLocation: 0)
+    await walk.start(one, from: origin)
+    await walk.ingest(at(41.1480, -8.6100))
+    await walk.jump(to: 0)
+    #expect(walk.phase == .done)
+  }
+
+  // Final review #7: after jumping back to a skipped stop, "next" is not a stop already visited.
+  @Test func nextNeverSendsYouBackToAVisitedStop() async {
+    let walk = walk()
+    let five = WalkDay(
+      id: "five",
+      title: "Day 1",
+      stops: (0..<5).map { stop("S\($0)", 41.1480 + Double($0) * 0.0018, -8.6100) },
+      withoutLocation: 0
+    )
+    func arriveAt(_ i: Int) async { await walk.ingest(at(41.1480 + Double(i) * 0.0018, -8.6100)) }
+    await walk.start(five, from: origin)
+    await arriveAt(0)
+    await walk.walkToNext()
+    await arriveAt(1)
+    await walk.skip()  // skip S2
+    await walk.walkToNext()
+    await arriveAt(3)
+    await walk.jump(to: 2)
+    await arriveAt(2)
+    #expect(walk.upcoming == 4)
+  }
+
+  // Final review #7: stops passed over by a forward jump are still offered later.
+  @Test func stopsPassedOverByAJumpComeBackAtTheEnd() async {
+    let walk = walk()
+    await walk.start(porto, from: origin)
+    await walk.jump(to: 2)
+    await walk.ingest(at(41.1516, -8.6100))
+    #expect(walk.phase == .arrived)
+    #expect(walk.upcoming == 0)
+  }
+
   @Test func lockScreenStateFollowsThePhase() {
     let walking = StopWalk.contentState(phase: .walking, stopName: "B", progress: "2 of 3", meters: 400, eta: 300, steps: 900, walked: 700)
     #expect(walking.routeText == "2 of 3 · B · 400 m · 5 min")
@@ -242,10 +307,11 @@ private let origin = CLLocationCoordinate2D(latitude: 41.1460, longitude: -8.610
     #expect(done.routeText == "Day walked")
   }
 
-  @Test func nextIndexSkipsSkippedStops() {
-    #expect(StopWalk.nextIndex(after: 0, count: 4, skipped: [1, 2]) == 3)
-    #expect(StopWalk.nextIndex(after: 2, count: 3, skipped: []) == nil)
-    #expect(StopWalk.nextIndex(after: -1, count: 2, skipped: [0]) == 1)
+  @Test func nextIndexPassesOverSettledStopsAndWrapsAround() {
+    #expect(StopWalk.nextIndex(after: 0, count: 4, settled: [0, 1, 2]) == 3)
+    #expect(StopWalk.nextIndex(after: 2, count: 3, settled: [0, 1, 2]) == nil)
+    #expect(StopWalk.nextIndex(after: -1, count: 2, settled: [0]) == 1)
+    #expect(StopWalk.nextIndex(after: 2, count: 4, settled: [2, 3]) == 0)
   }
 }
 

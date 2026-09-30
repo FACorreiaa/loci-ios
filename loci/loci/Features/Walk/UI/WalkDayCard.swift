@@ -5,15 +5,27 @@ import SwiftUI
 struct WalkDayCard: View {
   let walk: StopWalk
   let withoutLocation: Int
+  /// True while the first fix and route are being fetched.
+  let isStarting: Bool
+  let onStart: () -> Void
   let onEnd: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       switch walk.phase {
-      case .idle:
+      case .idle where isStarting:
         HStack {
           ProgressView()
           Text("Finding your way…").foregroundStyle(Color.lociMutedInk)
+        }
+      case .idle:
+        // Ended from elsewhere (another walk started, or a failed start):
+        // say so and let the person start again, never restart on their behalf.
+        HStack {
+          Text("Not walking").font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
+          Spacer()
+          Button("Start walking", systemImage: "figure.walk", action: onStart)
+            .buttonStyle(.borderedProminent).tint(.lociForest)
         }
       case .walking:
         walking
