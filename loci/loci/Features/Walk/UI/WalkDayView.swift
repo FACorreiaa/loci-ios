@@ -12,6 +12,11 @@ struct WalkDayView: View {
   @State private var lastStepAt = Date.distantPast
   @State private var showList = false
   @State private var error: String?
+  /// `.task` runs again on every appear (tab switches, popping a child); the
+  /// walk starts once per push and never again behind the person's back.
+  @State private var didBegin = false
+  @State private var starting = false
+  @Environment(\.dismiss) private var dismiss
 
   var body: some View {
     Map(position: $camera) {
@@ -33,8 +38,19 @@ struct WalkDayView: View {
       if walk.navigator.isNavigating, !following { RecenterButton { follow() } }
     }
     .safeAreaInset(edge: .bottom) {
-      WalkDayCard(walk: walk, withoutLocation: day.withoutLocation) { Task { await walk.end() } }
-        .padding(.bottom, 8)
+      WalkDayCard(
+        walk: walk,
+        withoutLocation: day.withoutLocation,
+        isStarting: starting,
+        onStart: { Task { await begin() } },
+        onEnd: {
+          Task {
+            await walk.end()
+            dismiss()
+          }
+        }
+      )
+      .padding(.bottom, 8)
     }
     .navigationTitle(day.title)
     .navigationBarTitleDisplayMode(.inline)
@@ -54,7 +70,11 @@ struct WalkDayView: View {
       .presentationDetents([.medium, .large])
     }
     .errorAlert($error)
-    .task { await begin() }
+    .task {
+      guard !didBegin else { return }
+      didBegin = true
+      await begin()
+    }
     .onChange(of: walk.location) { _, location in
       guard walk.navigator.isNavigating, following, let location else { return }
       withAnimation(.easeInOut(duration: 0.8)) {
@@ -85,7 +105,9 @@ struct WalkDayView: View {
 
   /// Reattach to this day's walk if it is already running; otherwise start it.
   private func begin() async {
-    guard !walk.isWalking(key: day.id) else { return }
+    guard !walk.isWalking(key: day.id), !starting else { return }
+    starting = true
+    defer { starting = false }
     do {
       let here = try await CurrentLocation.fetch()
       await walk.start(day, from: here)

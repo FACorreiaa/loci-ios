@@ -39,6 +39,9 @@ import UserNotifications
   private var activity: Activity<NearbyWalkAttributes>?
   private var locationTask: Task<Void, Never>?
   private var lastActivityUpdate = Date.distantPast
+  /// Bumped by `end()`: work that awaited across an end or a restart checks it
+  /// and stops, instead of acting on the walk that replaced it.
+  private var generation = 0
 
   init(navigator: WalkNavigator = WalkNavigator(), live: Bool = true) {
     self.navigator = navigator
@@ -47,8 +50,9 @@ import UserNotifications
 
   var stops: [WalkStop] { day?.stops ?? [] }
 
-  /// The next stop after the current one, passing over skipped stops.
-  var upcoming: Int? { Self.nextIndex(after: index, count: stops.count, skipped: skipped) }
+  /// The next stop still to see: after the current one, else the first one
+  /// passed over earlier. Visited and skipped stops are never offered again.
+  var upcoming: Int? { Self.nextIndex(after: index, count: stops.count, settled: visited.union(skipped)) }
 
   var progressText: String { "\(index + 1) of \(stops.count)" }
 
@@ -60,10 +64,12 @@ import UserNotifications
 
   func start(_ day: WalkDay, from here: CLLocationCoordinate2D) async {
     await end()
+    let current = generation
     guard !day.stops.isEmpty else { return }
     self.day = day
     origin = here
     if live { await startLive(title: day.title) }
+    guard current == generation else { return }
     await walk(to: 0)
   }
 
@@ -72,11 +78,13 @@ import UserNotifications
     self.location = location
     origin = location.coordinate
     guard phase == .walking else { return }
+    let current = generation
     navigator.ingest(location)
     guard navigator.arrivedAt != nil else { return }
     navigator.dismissArrival()
     visited.insert(index)
     await notifyArrival()
+    guard current == generation else { return }
     await arrived()
     refreshActivity(force: true)
   }
@@ -95,12 +103,15 @@ import UserNotifications
   }
 
   func jump(to target: Int) async {
-    guard stops.indices.contains(target), phase != .idle else { return }
+    guard stops.indices.contains(target), phase != .idle, phase != .done else { return }
     skipped.remove(target)
     await walk(to: target)
   }
 
+  /// Ends the walk. The last fix is kept: it is where the person is, and the
+  /// next walk's first stop may already be under their feet.
   func end() async {
+    generation += 1
     if live { await stopLive() }
     navigator.end()
     day = nil
@@ -108,13 +119,14 @@ import UserNotifications
     phase = .idle
     visited = []
     skipped = []
-    location = nil
-    origin = nil
+    origin = location?.coordinate
   }
 
-  nonisolated static func nextIndex(after current: Int, count: Int, skipped: Set<Int>) -> Int? {
-    guard current + 1 < count else { return nil }
-    return (current + 1..<count).first { !skipped.contains($0) }
+  /// The first unsettled stop after `current`, else the first one before it.
+  nonisolated static func nextIndex(after current: Int, count: Int, settled: Set<Int>) -> Int? {
+    let after = max(current + 1, 0)..<max(count, current + 1)
+    let before = 0..<min(max(current, 0), count)
+    return Array(after).first { !settled.contains($0) } ?? Array(before).first { !settled.contains($0) }
   }
 
   // MARK: - Lock Screen, location, notifications
@@ -174,6 +186,8 @@ import UserNotifications
 
   private func startLive(title: String) async {
     await NearbyWalk.shared.stop()
+    // Never leave a loop or a Lock Screen card behind from an earlier start.
+    await stopLive()
     tracker.start()
     if ActivityAuthorizationInfo().areActivitiesEnabled {
       let attributes = NearbyWalkAttributes(startedAt: Date(), radiusKm: 0, title: title)
@@ -220,14 +234,19 @@ import UserNotifications
   // MARK: - Private
 
   private func walk(to target: Int) async {
+    let current = generation
     index = target
     phase = .walking
     let stop = stops[target]
     if navigator.destination?.stableID != stop.poi.stableID || navigator.leg == nil, let origin {
       await navigator.preview(to: stop.poi, from: origin)
     }
+    guard current == generation else { return }
     navigator.start()
     refreshActivity(force: true)
+    // A fix that came in before following began (or none will come, because
+    // the person is standing still at the stop) must still count.
+    if let location { await ingest(location) }
   }
 
   /// At `index`: preview the next stop, or finish the day.
@@ -235,6 +254,9 @@ import UserNotifications
     guard let next = upcoming else {
       navigator.end()
       phase = .done
+      // The day is over: stop GPS and the pedometer now, not when Done is
+      // tapped. The counts stay for the summary.
+      if live { await stopLive() }
       return
     }
     phase = .arrived

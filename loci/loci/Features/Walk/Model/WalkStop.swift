@@ -37,6 +37,13 @@ nonisolated struct WalkDay: Identifiable, Hashable {
     )
   }
 
+  /// The walkable days of a restored itinerary search.
+  static func days(from state: SearchState) -> [WalkDay] {
+    state.dayGroups
+      .map { from(group: $0, sessionId: state.sessionId ?? "", cityName: state.cityName ?? "") }
+      .filter { !$0.stops.isEmpty }
+  }
+
   static func from(group: DayGroup, sessionId: String, cityName: String) -> WalkDay {
     let usable = group.stops.filter(GoogleMapsRoute.hasCoordinate)
     let stops = usable.map {

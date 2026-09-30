@@ -276,6 +276,7 @@ process-wide singletons. There is no dependency-injection container.
 | `SearchSessionController.shared` | `Features/Search/SearchSessionController.swift` | The one running search, its envelope and its result copy |
 | `PushNotificationManager.shared` | `Core/Notifications/PushNotificationManager.swift` | `UNUserNotificationCenterDelegate`, authorisation, APNs device token |
 | `NearbyWalk.shared` | `Features/Nearby/Services/NearbyWalk.swift` | The active walk and its Live Activity |
+| `StopWalk.shared` | `Features/Walk/Services/StopWalk.swift` | A day being walked stop by stop, its location loop and Live Activity |
 | `AppleCalendar.shared` | `Features/Calendar/AppleCalendar.swift` | The `EKEventStore` and the "Loci" calendar |
 
 Views read these directly (`private let controller = SearchSessionController.shared`)
@@ -1152,6 +1153,14 @@ trip write from outside the editor. It never trusts a version it read earlier:
 `AddToTripFlow` reads the trip with `GetTrip`, resolves the chosen day by its
 number (every save gives days new ids), sends `AddStop`, and on
 `FailedPrecondition` does that once more.
+
+**Walk a day** (slice 25). Every day header in the editor has a Walk button
+that pushes `WalkDayView` for `WalkDay.from(trip:day:)`. `StopWalk` walks the
+stops one leg at a time with its own `WalkNavigator` and pauses at each stop
+until Walk to next. The map layer (walker, route line, follow camera) is
+`Core/Navigation/UI/WalkMapLayer.swift`, shared with Near me. Only one walker
+runs at a time: starting either walk ends the other. Trip-day mode is
+independent and may run alongside with its own Lock Screen card.
 
 ### Compare
 

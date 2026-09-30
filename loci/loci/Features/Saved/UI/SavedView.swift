@@ -173,6 +173,12 @@ struct SavedView: View {
 /// A saved itinerary: its markdown, and a way back to the session that made it.
 struct SavedItineraryView: View {
   let itinerary: Loci_Itinerary_UserSavedItinerary
+  /// Walk it: the itinerary's days, loaded from the search that made it.
+  @State private var days: [WalkDay] = []
+  @State private var walking: WalkDay?
+  @State private var picking = false
+  @State private var loading = false
+  @State private var error: String?
 
   var body: some View {
     ScrollView {
@@ -185,6 +191,13 @@ struct SavedItineraryView: View {
             .font(.lociBody())
         }
         if itinerary.hasSessionID, !itinerary.sessionID.isEmpty {
+          Button {
+            Task { await loadDays() }
+          } label: {
+            Label(loading ? "Loading stops…" : "Walk it", systemImage: "figure.walk")
+          }
+          .buttonStyle(.borderedProminent).tint(.lociForest)
+          .disabled(loading)
           NavigationLink("Open the search that made it") {
             SearchResultsView(link: SessionLink(destination: .itinerary, sessionId: itinerary.sessionID, domain: "itinerary"))
           }
@@ -195,6 +208,29 @@ struct SavedItineraryView: View {
     .background(Color.lociPaper.ignoresSafeArea())
     .navigationBarTitleDisplayMode(.inline)
     .toolbar { ShareLink(item: itinerary.markdownContent.isEmpty ? itinerary.title : itinerary.markdownContent) }
+    .navigationDestination(item: $walking) { WalkDayView(day: $0) }
+    .confirmationDialog("Which day?", isPresented: $picking, titleVisibility: .visible) {
+      ForEach(days) { day in Button(day.title) { walking = day } }
+    }
+    .errorAlert($error)
+  }
+
+  /// The stops live in the search result, not the saved itinerary: restore it,
+  /// then walk its only day or ask which one.
+  private func loadDays() async {
+    loading = true
+    defer { loading = false }
+    let link = SessionLink(destination: .itinerary, sessionId: itinerary.sessionID, domain: "itinerary")
+    guard let state = await SearchSessionController.shared.state(for: link) else {
+      error = "Couldn't load the stops for this itinerary"
+      return
+    }
+    days = WalkDay.days(from: state)
+    switch days.count {
+    case 0: error = "Couldn't load the stops for this itinerary"
+    case 1: walking = days[0]
+    default: picking = true
+    }
   }
 }
 
