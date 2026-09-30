@@ -31,7 +31,7 @@ Spec: `docs/superpowers/specs/2026-09-25-walk-a-day-design.md`. Plan: `docs/supe
   - the Lock Screen state for each phase;
   - `isMoving`;
   - saved itinerary to walkable days.
-- Full suite 591/591. SwiftLint clean.
+- Full suite 596/596 after the review fixes. SwiftLint clean.
 - Simulator (`-designPreview walkDay`, Lisbon):
   - walking card, numbered pins, walker and no-location note;
   - moving onto stop 1 arrives, fades pin 1, turns pin 2 coral and shows the arrived card. The first layout truncated the Walk to next button; that was fixed and checked again.
@@ -41,3 +41,13 @@ Spec: `docs/superpowers/specs/2026-09-25-walk-a-day-design.md`. Plan: `docs/supe
 - A real walk on a phone: steps, the follow camera while moving, the arrival notification with the phone locked, and battery use.
 - **Walk it** from Saved: that needs a signed-in account.
 - Which way the walker faces when moving (still the slice 20 guess, `WalkingRoute.symbolFacesRight`).
+
+## Deferred from the final review (minor)
+- The map pins come from the screen's `day.stops`, while their colour comes from the walk. If a trip day is edited mid-walk and reopened, the two can disagree.
+- The Lock Screen card says "Day walked" until its first refresh, because the activity is requested while the walk is still idle.
+- Live Activities left behind when the app is killed mid-walk are never cleaned up. Near me has the same gap.
+- Popping the screen during the first route fetch can leave a straight-line route.
+- A tab switch during start (`CancellationError`) shows an error alert.
+- Walk it on a search that is still streaming can use a partial result. A multi-city itinerary only offers the first city's days.
+- The same place twice in a saved itinerary day (e.g. the hotel first and last) gives duplicate ids, which breaks the `ForEach`.
+- The `walkDay` design preview starts a real walk and Live Activity.
