@@ -258,3 +258,24 @@ struct WalkMapLayerTests {
     #expect(!WalkMapLayer.isMoving(speed: -1, lastStepAt: .distantPast, now: now))
   }
 }
+
+struct SavedItineraryWalkTests {
+  @Test func eachDayWithAPlaceBecomesAWalkDay() {
+    var state = SearchState()
+    state.sessionId = "s1"
+    state.cityName = "Porto"
+    state.destination = .itinerary
+    var a = poi("A", 41.14, -8.61)
+    a.day = 1
+    var b = poi("B", 41.15, -8.62)
+    b.day = 2
+    var c = poi("C", 0, 0)
+    c.day = 3
+    state.generalPOIs = [a, b, c]
+
+    let days = WalkDay.days(from: state)
+
+    #expect(days.map(\.title) == ["Day 1 · Porto", "Day 2 · Porto"])
+    #expect(days.map(\.id) == ["session:s1:1", "session:s1:2"])
+  }
+}
