@@ -55,6 +55,14 @@ One-time: create signing certs/profiles and push them to the match repo
 
 Release to the App Store (phased rollout)
 
+### ios metadata
+
+```sh
+[bundle exec] fastlane ios metadata
+```
+
+Upload App Store listing text (fastlane/metadata) and screenshots (fastlane/screenshots) to the open version; no build, no submission
+
 ### ios send_push
 
 ```sh
