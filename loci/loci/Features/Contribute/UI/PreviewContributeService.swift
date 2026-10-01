@@ -19,6 +19,33 @@ nonisolated struct PreviewContributeService: ContributeService {
     ContributorProfile(reputation: 42, submittedClaims: 17, acceptedClaims: 11, badges: ["local-scout"])
   }
 
+  func myClaims() async throws -> [MyClaim] {
+    [
+      Self.claim("c-1", "Tasca do Chico", .openingHours, "Mon–Sat 19:00–02:00", .accepted, daysAgo: 3),
+      Self.claim("c-2", "Miradouro da Graça", .noiseLevel, "quiet", .pending, daysAgo: 1),
+      Self.claim("c-3", "", .dogFriendly, "yes", .contradicted, daysAgo: 9),
+    ]
+  }
+
+  private static func claim(
+    _ id: String,
+    _ place: String,
+    _ field: Loci_Place_PlaceFactField,
+    _ value: String,
+    _ status: Loci_Place_PlaceClaimStatus,
+    daysAgo: Double
+  ) -> MyClaim {
+    MyClaim(
+      id: id,
+      poiID: "poi-\(id)",
+      placeName: place,
+      field: field,
+      value: value,
+      status: status,
+      createdAt: Date().addingTimeInterval(-daysAgo * 86_400)
+    )
+  }
+
   func pendingPlaces() async throws -> [PendingPlace] {
     [
       PendingPlace(submissionID: "p-1", name: "Tasca do Chico", cityName: "Lisbon", category: "fado bar", confirmationsNeeded: 1),

@@ -79,7 +79,7 @@ write fails), so it was not ported. This slice follows the contract that api
 - Screens: `place_reviews` ("See all"), `review_composer {is_edit}`,
   `my_reviews`.
 
-## Server gaps (read at `30da4de`, not probed live)
+## Server gaps (read at `30da4de`; 1–5 closed by proto v5.29.0 + api #100/#101, consumed 2026-10-01)
 
 | # | Gap | Effect on iOS | Fix |
 |---|---|---|---|
@@ -89,6 +89,16 @@ write fails), so it was not ported. This slice follows the contract that api
 | 4 | `GetUserReviews.statistics` is never filled. | My reviews works out its summary from the loaded rows. | fill it, or drop it from the proto |
 | 5 | `ReportReview` is Unimplemented. | There is no report UI. | a table and a handler, or remove the RPC |
 | 6 | Reads need a JWT. | Nothing on iOS, which is always signed in. | none needed for iOS |
+
+**Closed, and what iOS does with it:** `Review.voted_by_me` seeds `HelpfulVote`
+(`HelpfulVote(review)`), so a vote survives a reload and the first tap takes
+it back; `GetMyPOIReview` replaces the paged `GetUserReviews` lookup in
+`ConnectReviewsService.ownReview`; the server refuses votes on your own review
+(iOS already hid the button); `GetUserReviews.statistics` feeds the My reviews
+line (`ReviewerSummary`, with the reviewer level) and the row maths is only
+the fallback; `ReportReview` is wired as a flag in the card's overflow menu
+with web's five reasons (`ReviewReport`), remembered per session in
+`PlaceReviewsStore.reported`.
 
 ## Tests and previews
 

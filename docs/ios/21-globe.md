@@ -117,10 +117,10 @@ Analytics: `Analytics.screen("globe")`.
 
 ## Server gaps
 
-- `GlobeArc` has no `duration_mins`, though `trip_legs` stores one, so the
-  label never shows a time. `GlobeLeg.durationMins` is there for when it does.
-- `GlobeArc` has no id, though `trip_legs.id` exists; the composite key above
-  stands in for it.
+- Closed 2026-10-01 (proto v5.29.0): `GlobeArc.duration_mins` now feeds the
+  label ("rail · 274 km · 3h 5m"; zero on the wire means unknown and shows
+  nothing), and `GlobeArc.id` is the leg's identity when sent; the composite
+  key above is only the fallback for older servers.
 - `country` is only set where a city resolved against the cities table, so
   "No country recorded yet" is common.
 

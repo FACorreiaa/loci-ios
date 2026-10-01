@@ -43,6 +43,8 @@ nonisolated struct PreviewReviewsService: ReviewsService {
 
   func delete(reviewID: String) async throws {}
 
+  func report(reviewID: String, reason: ReviewReport.Reason) async throws {}
+
   func like(reviewID: String, isLike: Bool) async throws -> Int {
     if failLikes { throw APIError.server("Could not record your vote.") }
     let base = LociReview.previewPlace(poiID: LociReview.previewPOI).first { $0.id == reviewID }?.helpfulCount ?? 0

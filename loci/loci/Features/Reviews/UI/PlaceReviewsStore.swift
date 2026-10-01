@@ -46,6 +46,8 @@ nonisolated enum ReviewSubmitResult: Equatable, Sendable {
   private(set) var hasMore = false
   private(set) var isLoadingMore = false
   private(set) var votes: [String: HelpfulVote] = [:]
+  /// Reviews the caller flagged this session; the card shows "Reported" instead of the menu.
+  private(set) var reported: Set<String> = []
   private var voting: Set<String> = []
   private var page = 1
   var error: String?
@@ -66,7 +68,8 @@ nonisolated enum ReviewSubmitResult: Equatable, Sendable {
     return review.userID.lowercased() == userID.lowercased()
   }
 
-  func vote(for review: LociReview) -> HelpfulVote { votes[review.id] ?? HelpfulVote(count: review.helpfulCount) }
+  /// A tap's state while it is in flight, else what the server said you did.
+  func vote(for review: LociReview) -> HelpfulVote { votes[review.id] ?? HelpfulVote(review) }
 
   func load() async {
     if reviews.isEmpty, phase != .loaded { phase = .loading }
@@ -122,6 +125,21 @@ nonisolated enum ReviewSubmitResult: Equatable, Sendable {
     } catch {
       votes[review.id] = before
       if !error.isCancellation { self.error = error.userMessage }
+    }
+  }
+
+  /// Flag someone else's review. Your own cannot be reported.
+  @discardableResult
+  func report(_ review: LociReview, reason: ReviewReport.Reason) async -> Bool {
+    guard !isOwn(review), !reported.contains(review.id) else { return false }
+    do {
+      try await service.report(reviewID: review.id, reason: reason)
+      reported.insert(review.id)
+      Analytics.capture(.reviewReported, ["reason": reason.value])
+      return true
+    } catch {
+      if !error.isCancellation { self.error = error.userMessage }
+      return false
     }
   }
 
@@ -199,9 +217,13 @@ nonisolated enum ReviewSubmitResult: Equatable, Sendable {
 
   init(service: ReviewsService = ConnectReviewsService()) { self.service = service }
 
-  /// "4.4 average · 12 helpful votes", from what is loaded (the server leaves
-  /// GetUserReviews' statistics empty).
+  /// GetUserReviews.statistics as the server sent it; nil from older servers.
+  private(set) var serverSummary: ReviewerSummary?
+
+  /// "7 reviews · 4.4 average · 12 helpful votes · Guide" from the server's
+  /// totals; worked out from the loaded rows when a server leaves them empty.
   var summary: String {
+    if let serverSummary, serverSummary.total > 0 { return serverSummary.text }
     guard !reviews.isEmpty else { return "" }
     let average = Double(reviews.map(\.rating).reduce(0, +)) / Double(reviews.count)
     let helpful = reviews.map(\.helpfulCount).reduce(0, +)
@@ -218,6 +240,7 @@ nonisolated enum ReviewSubmitResult: Equatable, Sendable {
       reviews = first.reviews
       total = first.total
       hasMore = first.hasMore
+      serverSummary = first.summary
       page = 1
       phase = .loaded
     } catch {

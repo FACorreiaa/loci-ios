@@ -89,6 +89,7 @@ struct PlaceReviewCard: View {
   let review: LociReview
   @Binding var composer: ReviewComposerMode?
   @Binding var pendingDelete: LociReview?
+  @State private var reporting = false
 
   var body: some View {
     let own = store.isOwn(review)
@@ -98,8 +99,17 @@ struct PlaceReviewCard: View {
       isOwn: own,
       onHelpful: own ? nil : { Task { await store.toggleHelpful(review) } },
       onEdit: own ? { composer = .edit(review) } : nil,
-      onDelete: own ? { pendingDelete = review } : nil
+      onDelete: own ? { pendingDelete = review } : nil,
+      onReport: own ? nil : { reporting = true },
+      isReported: store.reported.contains(review.id)
     )
+    .confirmationDialog("Report this review", isPresented: $reporting, titleVisibility: .visible) {
+      ForEach(ReviewReport.reasons, id: \.rawValue) { reason in
+        Button(reason.label, role: .destructive) { Task { await store.report(review, reason: reason) } }
+      }
+    } message: {
+      Text("The Loci team takes a look. The reviewer is not told who reported it.")
+    }
   }
 }
 
