@@ -171,8 +171,11 @@ import UserNotifications
     // Reaching a stop on the spot scores it (the server checks the fix).
     if let reached = running.slots.first(where: { $0.stop.poi.stableID == identifier }), let place = reached.coordinate {
       let visit = SpotVisit(
-        poiID: reached.stop.poi.id, poiName: reached.stop.name, cityName: running.cityName,
-        latitude: place.latitude, longitude: place.longitude
+        poiID: reached.stop.poi.id,
+        poiName: reached.stop.name,
+        cityName: running.cityName,
+        latitude: place.latitude,
+        longitude: place.longitude
       )
       ProgressReporter.arrived(visit, location: CLLocationManager().location)
     }

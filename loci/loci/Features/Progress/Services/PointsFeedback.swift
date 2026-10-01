@@ -121,7 +121,8 @@ nonisolated enum StreakReminder {
     content.title = "Keep your \(progress.currentStreak + 1)-day streak"
     content.body = "Open Loci today so your streak doesn't reset."
     content.threadIdentifier = "progress"
-    let request = UNNotificationRequest(identifier: identifier, content: content, trigger: UNCalendarNotificationTrigger(dateMatching: when, repeats: false))
+    let trigger = UNCalendarNotificationTrigger(dateMatching: when, repeats: false)
+    let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
     try? await center.add(request)
   }
 

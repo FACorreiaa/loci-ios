@@ -88,7 +88,7 @@ enum FacebookConnect {
 
   static var isAvailable: Bool {
     #if canImport(FacebookLogin)
-      return Bundle.main.object(forInfoDictionaryKey: "FacebookAppID") as? String != nil
+      return Bundle.main.object(forInfoDictionaryKey: "FacebookAppID") is String
     #else
       return false
     #endif

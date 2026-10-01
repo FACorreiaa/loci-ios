@@ -102,10 +102,15 @@ struct TodayChecklistRows: View {
   var body: some View {
     row("Opened Loci", done: today.checkedIn, points: "+5")
     row("Searched a trip", done: today.searched, points: "+5")
-    row(
-      today.placesVisited == 0 ? "Visit a place with Near me" : "Visited \(today.placesVisited) place\(today.placesVisited == 1 ? "" : "s")",
-      done: today.placesVisited > 0, points: "+10 each"
-    )
+    row(placesTitle, done: today.placesVisited > 0, points: "+10 each")
+  }
+
+  private var placesTitle: String {
+    switch today.placesVisited {
+    case 0: "Visit a place with Near me"
+    case 1: "Visited 1 place"
+    default: "Visited \(today.placesVisited) places"
+    }
   }
 
   private func row(_ title: String, done: Bool, points: String) -> some View {
