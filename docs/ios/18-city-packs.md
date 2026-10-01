@@ -69,6 +69,14 @@ web's.
   stop's key for a second visit to the same place, so every row and pin stays
   unique. The detail sheet opened from the list always gets the real POI id
   (`PackStop.detailPlace`).
+- **Photos** (proto v5.32.0). The server fills `TripStop.image` on pack stops
+  from the linked POI's stored images. `PackStop.image` keeps it and
+  `PackStop.card` puts it first in `imageCredits` (dropping a duplicate of the
+  same URL), which is where `StopCard`'s photo and credit badge and
+  `PlaceDetailSheet`'s attribution · licence line already read from, so the
+  picture never shows without its credit. No image (no `poi_id`, no stored
+  picture, a blank URL, or an older server) leaves the card on the hashed
+  gradient.
 - **Time to spend** sits in the card's bottom-right corner; the day header adds
   the author's day title.
 - "N of M stops have no position yet and are not on the map." appears under the
@@ -135,7 +143,6 @@ three days, one unplaced stop), `packLocked` (paid, day one, "2 more days").
 - `ClaimBundle` answers FailedPrecondition "this pack is not for sale" when the
   service was built without a trips repository (`s.trips == nil`), which reads
   wrong for a free pack. Both show "That did not save" here.
-- Pack stops carry no images, so every card shows the hashed gradient.
 
 ## Not verified
 
