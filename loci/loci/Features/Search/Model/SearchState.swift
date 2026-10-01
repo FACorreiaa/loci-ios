@@ -224,10 +224,8 @@ nonisolated extension SearchState {
       savedTripID = Self.tripID(from: event) ?? savedTripID
       status = .completed
       return .completed
-    case .route, .gastronomy:
-      break  // handled above
-    case .actionProposal:
-      break  // trip actions (proto 9c6e264) have no iOS surface yet; ignore them
+    case .route, .gastronomy, .actionProposal:
+      break  // route/gastronomy handled above; trip actions have no iOS surface yet
     }
     return nil
   }
