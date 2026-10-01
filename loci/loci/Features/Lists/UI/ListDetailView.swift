@@ -92,6 +92,11 @@ struct ListDetailView: View {
     }
     .refreshable { await store.load() }
     .task { await store.load() }
+    .toolbar {
+      if let detail = store.detail, !detail.entries.isEmpty {
+        ListExportButton(detail: detail, error: $store.error)
+      }
+    }
     .errorAlert($store.error)
     .onAppear { Analytics.screen("list_detail") }
   }
