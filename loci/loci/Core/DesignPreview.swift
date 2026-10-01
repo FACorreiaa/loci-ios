@@ -57,6 +57,7 @@ enum DesignPreview: String {
   case ratingRows
   /// Profile with its "You" hub rows above Settings (signed out, so the name reads "Traveler").
   case youHub
+  case youHubPro, youHubFree
   /// Recents' feed with a day of each kind: chats, searches, a kept trip, favourites, Load more.
   case recents
   /// Recents' Cities view.
@@ -163,6 +164,8 @@ enum DesignPreview: String {
     case .savedPlace: NavigationStack { SavedPlaceDetailView(item: .savedPlaceSample) }
     case .ratingRows: NavigationStack { RatingRowsPreview() }
     case .youHub: ProfileView()
+    case .youHubPro: NavigationStack { List { YouSection(entitlements: .previewPro) } }
+    case .youHubFree: NavigationStack { List { YouSection(entitlements: .previewFree) } }
     case .recents: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService())) }
     case .recentsCities: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService()), segment: .cities) }
     case .recentCity: NavigationStack { RecentCityView(city: RecentCity.previewLisbon) }

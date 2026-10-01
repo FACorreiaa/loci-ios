@@ -43,10 +43,15 @@ enum YouDestination: String, CaseIterable, Identifiable {
   }
 }
 
-/// Profile's "You" rows, above Settings.
+/// Profile's "You" rows, above Settings, headed by the account's plan chip.
 struct YouSection: View {
+  var entitlements: Entitlements?
+
+  private var plan: Entitlements { entitlements ?? EntitlementsStore.shared.current }
+
   var body: some View {
     Section("You") {
+      PlanChip(entitlements: plan)
       ForEach(YouDestination.allCases) { destination in
         NavigationLink {
           destination.screen
@@ -56,5 +61,25 @@ struct YouSection: View {
       }
     }
     .listRowBackground(Color.lociCard)
+  }
+}
+
+/// "Pro", or "Free · 3/5 lists · 12/50 places". Read-only: the app does not
+/// sell the upgrade (web: EntitlementsBadge without its link).
+struct PlanChip: View {
+  let entitlements: Entitlements
+
+  var body: some View {
+    HStack(spacing: 10) {
+      Image(systemName: entitlements.isPro ? "star.circle.fill" : "person.crop.circle")
+        .foregroundStyle(entitlements.isPro ? Color.lociForest : Color.lociMutedInk)
+      VStack(alignment: .leading, spacing: 2) {
+        Text("Plan").lociCoordStyle(10)
+        Text(entitlements.chipText).font(.lociBody(15)).foregroundStyle(Color.lociInk)
+      }
+      Spacer(minLength: 0)
+    }
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel("Plan: \(entitlements.chipText)")
   }
 }
