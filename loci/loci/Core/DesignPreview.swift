@@ -59,6 +59,7 @@ enum DesignPreview: String {
   case youHub
   case youHubPro, youHubFree
   case goScoreGood, goScoreMaybe, driveCost
+  case changeEmail, resetPassword, confirmEmail
   /// Recents' feed with a day of each kind: chats, searches, a kept trip, favourites, Load more.
   case recents
   /// Recents' Cities view.
@@ -175,6 +176,9 @@ enum DesignPreview: String {
     case .goScoreGood: GoScorePreview.card(verdict: "go", score: 81)
     case .goScoreMaybe: GoScorePreview.card(verdict: "maybe", score: 54, estimated: true)
     case .driveCost: GoScorePreview.driveCost()
+    case .changeEmail: NavigationStack { ChangeEmailView() }
+    case .resetPassword: ResetPasswordView(token: "preview-token")
+    case .confirmEmail: ConfirmEmailView(token: "preview-token")
     case .recents: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService())) }
     case .recentsCities: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService()), segment: .cities) }
     case .recentCity: NavigationStack { RecentCityView(city: RecentCity.previewLisbon) }

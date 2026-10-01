@@ -8,7 +8,10 @@ import SwiftUI
 struct SecuritySettingsView: View {
   var body: some View {
     List {
-      Section { NavigationLink("Change password") { ChangePasswordView() } }
+      Section {
+        NavigationLink("Change password") { ChangePasswordView() }
+        NavigationLink("Change email") { ChangeEmailView() }
+      }
       TwoFactorSection()
       SignedInDevicesSection()
     }
