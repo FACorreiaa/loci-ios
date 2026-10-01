@@ -226,6 +226,8 @@ nonisolated extension SearchState {
       return .completed
     case .route, .gastronomy:
       break  // handled above
+    case .actionProposal:
+      break  // trip-action cards are rendered by the chat thread (plan 4), not the search stream
     }
     return nil
   }
@@ -347,6 +349,8 @@ nonisolated extension Loci_Chat_StreamEvent.OneOf_Payload {
     case .complete: "complete"
     case .route: "route"
     case .gastronomy: "gastronomy"
+    // Trip-action cards (plan 4 renders them); until then only named for dedup.
+    case .actionProposal: "action_proposal"
     }
   }
 }
