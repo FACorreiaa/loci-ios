@@ -26,10 +26,12 @@ What the server does with it (`internal/domain/travelhistory/handler.go`
   window against the last. Servers before that send zeros for `*_this_period`
   and cumulative totals as they stood `periodDays` ago in `*_prev_period`; there
   the arrow is the all-time total against that and only ever points up.
-  `TravelSummary.hasWindowCounts` (any `*_this_period` non-zero) picks the rule,
-  so the app works either side of the deploy. The catch: on a new server with
-  nothing in the current window every count is zero, which reads as an old
-  server and falls back to the total-based trend.
+  Since proto v5.32.0 the server also sends `has_period_counts = true`
+  (`TravelSummary.hasPeriodCounts`): the window fields are then used exactly as
+  sent, zeros included, so "nothing this period, some last period" is a down
+  arrow. Only when the flag is false (a server before v5.32.0) does
+  `TravelSummary.hasWindowCounts` fall back to the old rule: any non-zero
+  `*_this_period` means window counts, all zeros means the total-based trend.
 - Proto3 drops zero values; the Swift defaults already read them as 0 / "".
   A missing summary maps to all zeros and `periodDays 365`.
 

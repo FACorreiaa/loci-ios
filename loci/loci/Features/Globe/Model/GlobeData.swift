@@ -62,10 +62,18 @@ nonisolated struct TravelSummary: Equatable, Sendable {
   var citiesVisitedThis = 0
   var countriesVisitedThis = 0
   var poisVisitedThis = 0
+  /// The server says the `*This` / `*Prev` fields are real window counts
+  /// (proto v5.32.0, `has_period_counts`), so a zero in them means "nothing in
+  /// that window" and is used as sent. False only from older servers.
+  var hasPeriodCounts = false
 
-  /// True when the server sends window counts. Any non-zero one decides it:
-  /// an older server always sends zeros here.
-  var hasWindowCounts: Bool { citiesVisitedThis != 0 || countriesVisitedThis != 0 || poisVisitedThis != 0 }
+  /// True when the trend compares window against window. A server that sets
+  /// `hasPeriodCounts` decides it outright, zeros included. Without the flag,
+  /// any non-zero window count decides it: a server before v5.29.0 always
+  /// sends zeros there.
+  var hasWindowCounts: Bool {
+    hasPeriodCounts || citiesVisitedThis != 0 || countriesVisitedThis != 0 || poisVisitedThis != 0
+  }
 
   var citiesTrend: Double? { trend(this: citiesVisitedThis, total: citiesVisited, previous: citiesVisitedPrev) }
   var countriesTrend: Double? { trend(this: countriesVisitedThis, total: countriesVisited, previous: countriesVisitedPrev) }
@@ -151,7 +159,8 @@ nonisolated enum GlobeMapping {
       periodDays: s.periodDays > 0 ? Int(s.periodDays) : 365,
       citiesVisitedThis: Int(s.citiesVisitedThisPeriod),
       countriesVisitedThis: Int(s.countriesVisitedThisPeriod),
-      poisVisitedThis: Int(s.poisVisitedThisPeriod)
+      poisVisitedThis: Int(s.poisVisitedThisPeriod),
+      hasPeriodCounts: s.hasPeriodCounts_p
     )
   }
 }
