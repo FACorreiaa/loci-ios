@@ -7,7 +7,17 @@ import SwiftUI
 /// is already authorised — Discover never raises the permission prompt; Nearby does.
 @MainActor @Observable
 final class HereBriefModel {
+  typealias GoScoreFetch = @Sendable (Double, Double) async throws -> (score: Loci_Localcontext_GoScore, cityName: String)?
+
   var brief: Loci_Localcontext_HereBrief?
+  /// "Should I go?" for the same spot (web: GoScoreCard); nil until scored.
+  var goScore: GoScoreModel?
+  var goScoreCity = ""
+  private let fetchGoScore: GoScoreFetch
+
+  init(fetchGoScore: @escaping GoScoreFetch = LocalContextAPI.goScore) {
+    self.fetchGoScore = fetchGoScore
+  }
 
   var placeName: String {
     guard let place = brief?.place else { return "" }
@@ -26,8 +36,17 @@ final class HereBriefModel {
     var req = Loci_Localcontext_GetHereBriefRequest()
     req.latitude = (coord.latitude * 100).rounded() / 100
     req.longitude = (coord.longitude * 100).rounded() / 100
+    async let scored = loadGoScore(latitude: req.latitude, longitude: req.longitude)
     let res = await SettingsClients.localContext.getHereBrief(request: req, headers: [:])
     if let message = res.message { brief = message }
+    await scored
+  }
+
+  /// A failure leaves the card out; the brief does not depend on it.
+  func loadGoScore(latitude: Double, longitude: Double) async {
+    guard let result = try? await fetchGoScore(latitude, longitude) else { return }
+    goScore = GoScoreModel(result.score)
+    goScoreCity = result.cityName
   }
 }
 
@@ -42,6 +61,7 @@ struct HereBriefSection: View {
           .font(.lociHeadline())
           .foregroundStyle(Color.lociInk)
         today(brief)
+        if let goScore = model.goScore { GoScoreCard(model: goScore, cityName: model.goScoreCity) }
         list("Around you", brief.local)
         list("Getting around", brief.disruption)
         list("What's on", brief.whatsOn)

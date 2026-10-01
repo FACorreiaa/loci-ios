@@ -65,8 +65,8 @@ Plan: [`docs/superpowers/plans/2026-09-25-ios-parity-pass3.md`](../superpowers/p
 |---|---|---|---|---|
 | 0 | Entitlements store (read-only plan; no paywall) | `entitlement.GetEntitlements` | `32-entitlements.md` | 2026-10-01 |
 | 1 | Share by link: trips, lists, places; open `lociai.fyi/share/<code>` | `share.*` | `23-share.md` | |
-| 2 | Recents recording from this phone + frequent places | `recents.RecordInteraction`, `GetCityInteractions`, `GetFrequentPlaces` | `24-recents-recording.md` | |
-| 3 | GoScore on Discover, drive cost per leg | `localcontext.GetGoScore`, `EstimateDriveCost` | `25-goscore.md` | |
+| 2 | Recents recording from this phone + frequent places | `recents.RecordInteraction`, `GetCityInteractions`, `GetFrequentPlaces` | parked 2026-10-01: the server's `RecordInteraction` is a stub (returns success, stores nothing), `GetFrequentPlaces` re-labels the cities list and `GetCityInteractions` only counts what the Cities page already shows — needs a server that stores interactions and folds them into the feed first | — |
+| 3 | GoScore on the here-brief, fuel line under a trip's legs | `localcontext.GetGoScore`, `EstimateDriveCost` | `34-goscore.md` | 2026-10-01 |
 | 4 | PDF exports for results pages and lists | `export.*` | `26-exports.md` | |
 | 5 | Lists completion: public lists, save/unsave, per-type views, item edits | `list.*` (10) | `27-lists-complete.md` | |
 | 6 | Per-domain preferences in Travel profiles | `profile.*` (6) | `28-domain-preferences.md` | |
