@@ -26,6 +26,8 @@ enum AnalyticsEvent: String {
   case tripExported = "trip_exported"
   /// A trip got a link (SetTripVisibility to friends, link or public). Properties: content_type ("trip").
   case shareLinkCreated = "share_link_created"
+  /// A `lociai.fyi/share/<code>` link opened in the app. Properties: content_type.
+  case sharedContentOpened = "shared_content_opened"
   /// A field report was filed (`field` as the proto enum name, `status`,
   /// `poiId`, `answers`), as web's ClaimForm sends it. Metric: contributions per active user.
   case placeClaimSubmitted = "place_claim_submitted"

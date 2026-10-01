@@ -22,6 +22,9 @@ struct AppLinkTests {
     ("https://lociai.fyi/friends?tab=add", .friends),
     ("https://lociai.fyi/friends/trips/t2", .friendTrip(id: "t2")),
     ("loci://u/ana", .user(username: "ana")),
+    ("https://lociai.fyi/share/abc", .shared(code: "abc")),
+    ("https://api.lociai.fyi/share/abc", .shared(code: "abc")),
+    ("loci://share/abc", .shared(code: "abc")),
   ])
   func parsesEveryRoute(_ string: String, _ expected: AppLink) throws {
     #expect(AppLink(url: try #require(URL(string: string))) == expected)
@@ -66,6 +69,7 @@ struct AppLinkTests {
     (.user(username: "ana"), .profile),
     (.friends, .profile),
     (.friendTrip(id: "t2"), .profile),
+    (.shared(code: "abc"), .discover),
   ])
   func routesToTheOwningTab(_ link: AppLink, _ tab: AppRouter.Tab) {
     let router = AppRouter()

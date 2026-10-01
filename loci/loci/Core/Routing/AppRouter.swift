@@ -118,6 +118,8 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   case user(username: String)
   case friends
   case friendTrip(id: String)
+  /// `lociai.fyi/share/<code>` or the API host's own `api.lociai.fyi/share/<code>`.
+  case shared(code: String)
 
   /// `loci://lists/abc` (the host is the route, as in `SessionLink`) or
   /// `https://lociai.fyi/lists/abc`. Anything with a missing id or extra
@@ -129,8 +131,12 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
       guard let host = url.host(), !host.isEmpty else { return nil }
       segments = [host] + url.pathComponents.dropFirst()
     case "https":
-      guard let host = url.host()?.lowercased(), SessionLink.webHosts.contains(host) else { return nil }
+      guard let host = url.host()?.lowercased() else { return nil }
       segments = Array(url.pathComponents.dropFirst())
+      // Share links are minted on the API host today; nothing else there is a page.
+      if !SessionLink.webHosts.contains(host) {
+        guard host == ShareLinks.apiHost, segments.first?.lowercased() == "share" else { return nil }
+      }
     default:
       return nil
     }
@@ -146,6 +152,7 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
     case ("u", 2): self = .user(username: segments[1])
     case ("friends", 1): self = .friends
     case ("friends", 3) where segments[1].lowercased() == "trips": self = .friendTrip(id: segments[2])
+    case ("share", 2): self = .shared(code: segments[1])
     default: return nil
     }
   }
@@ -190,7 +197,7 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   static func tab(for link: AppLink) -> Tab {
     switch link {
     case .list: .saved
-    case .pack: .discover
+    case .pack, .shared: .discover
     case .trip: .calendar
     case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip: .profile
     }

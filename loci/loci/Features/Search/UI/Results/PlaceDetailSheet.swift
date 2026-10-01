@@ -38,6 +38,7 @@ struct PlaceDetailView: View {
 
   @Environment(\.openURL) private var openURL
   @State private var facts: Loci_Place_PlaceFacts?
+  @State private var share: ShareSheetItem?
   /// Apple's street-level imagery; nil where there is no coverage, and then
   /// the section is simply absent.
   @State private var lookAround: MKLookAroundScene?
@@ -117,8 +118,10 @@ struct PlaceDetailView: View {
     .errorAlert($error)
     .task(id: stop.id) {
       async let scene: Void = loadLookAround()
+      async let link: Void = prepareShare()
       await loadFacts()
       await scene
+      await link
     }
   }
 
@@ -187,7 +190,7 @@ struct PlaceDetailView: View {
       if ListPayload.canAdd(stop) { Button("Add to list", systemImage: "text.badge.plus") { addingToList = true } }
       // A trip stop needs only a name, so any place can go in one.
       Button("Add to trip", systemImage: "calendar.badge.plus") { addingToTrip = true }
-      ShareLink(item: shareText) { Label("Share", systemImage: "square.and.arrow.up") }
+      ShareLink(item: share?.text ?? shareText) { Label("Share", systemImage: "square.and.arrow.up") }
       if GoogleMapsRoute.hasCoordinate(stop) {
         Button("Apple Maps", systemImage: "map") { openInAppleMaps() }
       }
@@ -209,8 +212,16 @@ struct PlaceDetailView: View {
     }
   }
 
-  private var shareText: String {
-    [stop.name, stop.address, ShareText.signature, ShareText.homeURL].filter { !$0.isEmpty }.joined(separator: "\n")
+  private var shareTarget: ShareTarget { .place(id: stop.id, name: stop.name, destination: destination, address: stop.address) }
+
+  /// Today's text while the server mints the link (`ShareSheetItem`).
+  private var shareText: String { shareTarget.fallbackText }
+
+  private func prepareShare() async {
+    guard !ResultsSideData.isOffline else { return }
+    let item = ShareSheetItem(target: shareTarget)
+    share = item
+    await item.prepare()
   }
 
   // MARK: - Actions

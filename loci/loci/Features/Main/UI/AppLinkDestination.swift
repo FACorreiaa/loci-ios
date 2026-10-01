@@ -18,6 +18,7 @@ struct AppLinkDestination: View {
     case .user(let username): UserProfileView(username: username)
     case .friends: YouDestination.friends.screen
     case .friendTrip(let id): SharedTripView(source: .tripID(id))
+    case .shared(let code): SharedContentView(code: code)
     }
   }
 }
