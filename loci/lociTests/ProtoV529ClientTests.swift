@@ -82,7 +82,7 @@ struct ProtoV529ClientTests {
     #expect(MyClaim(proto).placeName == "A place since removed")
     #expect(MyClaim.statusText(.accepted) == "Verified")
     #expect(MyClaim.statusText(.contradicted) == "Noted")
-    #expect(MyClaim.statusText(.expired) == "Recorded")
+    #expect(MyClaim.statusText(.expired) == "Expired")
     #expect(MyClaim.statusText(.unspecified) == "Recorded")
   }
 

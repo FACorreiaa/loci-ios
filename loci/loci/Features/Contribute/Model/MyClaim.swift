@@ -54,9 +54,10 @@ nonisolated struct MyClaim: Identifiable, Hashable, Sendable {
   var statusText: String { Self.statusText(status) }
 
   /// The claim form's outcome in one word: Verified, Noted (reports differ)
-  /// or Recorded (waiting on a second scout, expired, or a status this build
-  /// doesn't know).
+  /// or Recorded (waiting on a second scout, or a status this build doesn't
+  /// know). An expired claim says Expired, as web's My reports does.
   static func statusText(_ status: Loci_Place_PlaceClaimStatus) -> String {
+    if status == .expired { return "Expired" }
     switch ClaimOutcome(status) {
     case .verified: "Verified"
     case .contradicted: "Noted"
