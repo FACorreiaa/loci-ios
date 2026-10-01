@@ -285,6 +285,63 @@ struct GlobeMappingTests {
     #expect(summary.poisTrend == -50)
   }
 
+  @Test func periodCountsFlagTrustsZeroWindowCounts() {
+    // v5.32.0: has_period_counts true and nothing this window. The old
+    // heuristic would read all-zero as an older server and show a total-based up arrow.
+    var summary = Loci_Travelhistory_TravelSummary()
+    summary.citiesVisited = 7
+    summary.countriesVisited = 5
+    summary.poisVisited = 48
+    summary.citiesVisitedPrevPeriod = 4
+    summary.countriesVisitedPrevPeriod = 2
+    summary.poisVisitedPrevPeriod = 0
+    summary.hasPeriodCounts_p = true
+    let mapped = GlobeMapping.summary(summary)
+    #expect(mapped.hasPeriodCounts)
+    #expect(mapped.hasWindowCounts)
+    #expect(mapped.citiesVisitedThis == 0)
+    #expect(mapped.citiesTrend == -100)  // 0 this window against 4 last window
+    #expect(mapped.countriesTrend == -100)
+    #expect(mapped.poisTrend == nil)  // 0 against 0: no baseline, no arrow
+  }
+
+  @Test func periodCountsFlagUsesWindowValuesAsSent() {
+    var summary = Loci_Travelhistory_TravelSummary()
+    summary.citiesVisited = 7
+    summary.countriesVisited = 5
+    summary.poisVisited = 48
+    summary.citiesVisitedThisPeriod = 3
+    summary.citiesVisitedPrevPeriod = 2
+    summary.countriesVisitedThisPeriod = 0
+    summary.countriesVisitedPrevPeriod = 1
+    summary.poisVisitedThisPeriod = 30
+    summary.poisVisitedPrevPeriod = 20
+    summary.hasPeriodCounts_p = true
+    let mapped = GlobeMapping.summary(summary)
+    #expect(mapped.hasWindowCounts)
+    #expect(mapped.citiesTrend == 50)
+    #expect(mapped.countriesTrend == -100)
+    #expect(mapped.poisTrend == 50)
+  }
+
+  @Test func withoutPeriodCountsFlagTheOldFallbackStays() {
+    // Flag false (pre-v5.32.0 server) and all window counts zero: total against previous total.
+    var summary = Loci_Travelhistory_TravelSummary()
+    summary.citiesVisited = 7
+    summary.countriesVisited = 5
+    summary.poisVisited = 48
+    summary.citiesVisitedPrevPeriod = 5
+    summary.countriesVisitedPrevPeriod = 4
+    summary.poisVisitedPrevPeriod = 40
+    summary.hasPeriodCounts_p = false
+    let mapped = GlobeMapping.summary(summary)
+    #expect(!mapped.hasPeriodCounts)
+    #expect(!mapped.hasWindowCounts)
+    #expect(mapped.citiesTrend == 40)
+    #expect(mapped.countriesTrend == 25)
+    #expect(mapped.poisTrend == 20)
+  }
+
   @Test func recentsCityMatchIgnoresCaseAndAccents() {
     let cities = [
       RecentCity(name: "Évora", country: "", interactionCount: 1, lastActivity: nil, interactions: []),

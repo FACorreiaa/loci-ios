@@ -208,6 +208,38 @@ struct PackThemesTests {
     #expect(mapped.stops[1].detailPlace.id == poi)
   }
 
+  @Test func stopImageBecomesTheCardsCreditedPhoto() throws {
+    var stop = Fix.stop("Sé", 1, 1, id: "s1", poiID: "44444444-4444-4444-8444-444444444444")
+    stop.image.url = "https://upload.wikimedia.org/se.jpg"
+    stop.image.source = "wikimedia"
+    stop.image.licence = "CC BY-SA 4.0"
+    stop.image.attribution = "Jane Doe"
+    stop.image.sourcePageURL = "https://commons.wikimedia.org/wiki/File:Se.jpg"
+    var older = Loci_Poi_POIImage()
+    older.url = "https://example.org/old.jpg"
+    older.licence = "CC0"
+    older.attribution = "Someone"
+    stop.poi.imageCredits = [older, stop.image]
+    let mapped = PackDetail(detail(days: [Fix.day(1, [stop])]))
+    let packStop = try #require(mapped.stops.first)
+    #expect(packStop.image?.attribution == "Jane Doe")
+    let card = packStop.card
+    // The stop's image leads, once, with its credit; the POI's others follow.
+    #expect(card.imageCredits.map(\.url) == ["https://upload.wikimedia.org/se.jpg", "https://example.org/old.jpg"])
+    #expect(card.imageCredits.first?.licence == "CC BY-SA 4.0")
+    #expect(card.imageURL?.absoluteString == "https://upload.wikimedia.org/se.jpg")
+    #expect(packStop.detailPlace.imageCredits.first?.attribution == "Jane Doe")
+  }
+
+  @Test func aStopWithoutAnImageKeepsTheGradient() {
+    var empty = Fix.stop("b")
+    empty.image = Loci_Poi_POIImage()  // present but blank: treated as absent
+    let mapped = PackDetail(detail(days: [Fix.day(1, [Fix.stop("a", 1, 1), empty])]))
+    #expect(mapped.stops.allSatisfy { $0.image == nil })
+    #expect(mapped.stops.allSatisfy { $0.card.imageCredits.isEmpty })
+    #expect(mapped.stops.allSatisfy { !$0.card.hasPhoto })
+  }
+
   @Test func aStopWithoutAPlaceIsNotKeyedByTheStopId() {
     let mapped = PackDetail(detail(days: [Fix.day(1, [Fix.stop("Somewhere", id: "33333333-3333-4333-8333-333333333333")])]))
     // A stop id is a UUID too; used as a POI id it would save the wrong place.

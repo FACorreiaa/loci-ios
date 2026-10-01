@@ -149,6 +149,10 @@ nonisolated struct PackStop: Equatable, Sendable {
   let timeToSpend: String?
   /// The hydrated place (position, category, address), when there is one.
   let poi: Loci_Poi_POIDetailedInfo?
+  /// The stop's picture with the credit it must be shown with (proto v5.32.0,
+  /// `TripStop.image`). Nil when the stop has no linked POI, that POI has no
+  /// picture yet, or the server predates it: the card then shows the gradient.
+  let image: Loci_Poi_POIImage?
   /// The id the shared result components key on (`stableID`). The real POI id
   /// where it is unique in the pack, so a Save or facts lookup from the full
   /// map hits the right place; empty with no POI (the name keys it); the stop's
@@ -165,13 +169,21 @@ nonisolated struct PackStop: Equatable, Sendable {
     placeId = stop.poiID.isEmpty ? nil : stop.poiID
     timeToSpend = stop.hasDurationMinutes && stop.durationMinutes > 0 ? "\(stop.durationMinutes) min" : nil
     poi = stop.hasPoi ? stop.poi : nil
+    image = stop.hasImage && !stop.image.url.isEmpty ? stop.image : nil
     cardID = placeId ?? ""
   }
 
   /// The place as the shared result components want it (`StopCard`, the map).
+  /// The stop's image goes first in `imageCredits`, which is where `StopCard`
+  /// and `PlaceDetailSheet` take the photo and its credit line from, so the
+  /// picture never travels without its attribution and licence.
   var card: Loci_Poi_POIDetailedInfo {
     var place = poi ?? Loci_Poi_POIDetailedInfo()
     place.id = cardID
+    if let image {
+      place.imageCredits.removeAll { $0.url == image.url }
+      place.imageCredits.insert(image, at: 0)
+    }
     if !name.isEmpty { place.name = name }
     if !blurb.isEmpty { place.descriptionPoi = blurb }
     place.day = Int32(day + 1)
