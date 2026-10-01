@@ -104,3 +104,14 @@ Previews (Debug, offline):
 - Nothing has run signed in against the live API: tasks, profile, pending, confirm, claims, add place, and the plan's two-account check (an hours claim, then a second account corroborating it to "Verified").
 - The missing-place search with a real location and reverse geocoding.
 - Dynamic Type XL was not checked.
+
+## Your reports (2026-10-01)
+
+`ListMyClaims{limit: 20, page: 1}` (proto v5.29.0) lists the scout's own
+reports under the hero as **Your reports**: place (or "A place since removed"
+when the POI is gone), field and value, and the outcome in the claim form's
+own words — "Waiting on a second scout", "Verified", "Reports differ",
+"Expired". `MyClaim` maps the row; `ContributeStore.myClaims` loads it next
+to the profile and reloads with the page after a submission. Only the first
+page is shown; paging is not worth a control until someone has more than
+twenty.

@@ -8,6 +8,9 @@ import SwiftProtobuf
 nonisolated enum ContributePayload {
   static let taskLimit: Int32 = 40
   static let pendingLimit: Int32 = 20
+  static let myClaimsLimit: Int32 = 20
+  /// The server refuses more than 100 per page.
+  static let myClaimsMaxLimit: Int32 = 100
   static let searchRadiusKm = 25.0
   static let searchResultLimit = 5
   /// The SearchPOI handler ignores `city_name` on a hybrid search, but the
@@ -24,6 +27,14 @@ nonisolated enum ContributePayload {
   static func tasks() -> Loci_Place_ListVerificationTasksRequest {
     var request = Loci_Place_ListVerificationTasksRequest()
     request.limit = taskLimit
+    return request
+  }
+
+  /// web: useMyClaims → ListMyClaims{limit: 20, page}. Pages are 1-based.
+  static func myClaims(page: Int = 1, limit: Int32 = myClaimsLimit) -> Loci_Place_ListMyClaimsRequest {
+    var request = Loci_Place_ListMyClaimsRequest()
+    request.limit = min(max(1, limit), myClaimsMaxLimit)
+    request.page = Int32(max(1, page))
     return request
   }
 

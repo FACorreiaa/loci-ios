@@ -14,6 +14,9 @@ struct ReviewCard: View {
   var onHelpful: (() -> Void)?
   var onEdit: (() -> Void)?
   var onDelete: (() -> Void)?
+  /// Someone else's review: the flag in the overflow menu. Nil hides it.
+  var onReport: (() -> Void)?
+  var isReported = false
 
   @State private var expanded = false
   @Environment(\.dynamicTypeSize) private var typeSize
@@ -106,20 +109,36 @@ struct ReviewCard: View {
           .accessibilityLabel("Review actions")
         }
       }
-    } else if let vote, let onHelpful {
-      Button(action: onHelpful) {
-        Label(vote.count >= 1 ? "Helpful · \(vote.count)" : "Helpful", systemImage: vote.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
-          .font(.lociCaption(13))
-          .padding(.horizontal, 10).padding(.vertical, 5)
-          .background(vote.isLiked ? Color.lociSage : Color.lociMuted, in: Capsule())
-          .foregroundStyle(vote.isLiked ? Color.lociForest : Color.lociInk)
-          .contentTransition(.numericText())
+    } else {
+      HStack {
+        if let vote, let onHelpful {
+          Button(action: onHelpful) {
+            Label(vote.count >= 1 ? "Helpful · \(vote.count)" : "Helpful", systemImage: vote.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
+              .font(.lociCaption(13))
+              .padding(.horizontal, 10).padding(.vertical, 5)
+              .background(vote.isLiked ? Color.lociSage : Color.lociMuted, in: Capsule())
+              .foregroundStyle(vote.isLiked ? Color.lociForest : Color.lociInk)
+              .contentTransition(.numericText())
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel(vote.isLiked ? "Marked helpful, \(vote.count) votes" : "Mark helpful, \(vote.count) votes")
+          .accessibilityAddTraits(vote.isLiked ? .isSelected : [])
+        } else if review.helpfulCount >= 1 {
+          Label("\(review.helpfulCount) found this helpful", systemImage: "hand.thumbsup").font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk)
+        }
+        Spacer(minLength: 0)
+        if isReported {
+          Label("Reported", systemImage: "flag.fill").font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk)
+        } else if let onReport {
+          Menu {
+            Button("Report", systemImage: "flag", role: .destructive, action: onReport)
+          } label: {
+            Image(systemName: "ellipsis").frame(width: 32, height: 28).contentShape(Rectangle())
+          }
+          .foregroundStyle(Color.lociMutedInk)
+          .accessibilityLabel("More")
+        }
       }
-      .buttonStyle(.plain)
-      .accessibilityLabel(vote.isLiked ? "Marked helpful, \(vote.count) votes" : "Mark helpful, \(vote.count) votes")
-      .accessibilityAddTraits(vote.isLiked ? .isSelected : [])
-    } else if review.helpfulCount >= 1 {
-      Label("\(review.helpfulCount) found this helpful", systemImage: "hand.thumbsup").font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk)
     }
   }
 }

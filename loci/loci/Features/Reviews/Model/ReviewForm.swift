@@ -124,8 +124,8 @@ nonisolated enum ReviewText {
 
 /// The caller's helpful vote on one review, with its count. Tapping flips it
 /// at once; the server's `new_helpful_count` settles it; a failure puts the
-/// previous state back. The server has no "did I vote" field, so a review
-/// starts unvoted on each load (see the doc's server gaps).
+/// previous state back. The server says whether you already voted
+/// (`voted_by_me`), so a review loads in the state you left it.
 nonisolated struct HelpfulVote: Equatable, Sendable {
   var isLiked: Bool
   var count: Int
@@ -134,6 +134,8 @@ nonisolated struct HelpfulVote: Equatable, Sendable {
     self.isLiked = isLiked
     self.count = max(0, count)
   }
+
+  init(_ review: LociReview) { self.init(isLiked: review.votedByMe, count: review.helpfulCount) }
 
   /// The optimistic state after a tap.
   func toggled() -> HelpfulVote { HelpfulVote(isLiked: !isLiked, count: isLiked ? count - 1 : count + 1) }

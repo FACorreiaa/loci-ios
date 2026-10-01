@@ -18,6 +18,7 @@ struct ContributeView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 20) {
           ScoutHero(profile: store.profile)
+          if !store.myClaims.isEmpty { myClaimsSection }
           missingPlace
           if !store.shownPending.isEmpty { pendingSection }
           tasksSection(proxy: proxy)
@@ -155,6 +156,16 @@ struct ContributeView: View {
   }
 
   // MARK: - Pending places
+
+  private var myClaimsSection: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Your reports").lociCoordStyle(10)
+        Text("What became of what you saw").font(.lociTitle(20)).foregroundStyle(Color.lociInk)
+      }
+      ForEach(store.myClaims) { claim in MyClaimRow(claim: claim) }
+    }
+  }
 
   private var pendingSection: some View {
     VStack(alignment: .leading, spacing: 10) {
@@ -444,5 +455,32 @@ struct AddPlaceView: View {
       .onAppear { Analytics.screen("add_place") }
     }
     .presentationDetents([.medium, .large])
+  }
+}
+
+/// One of the scout's own reports: the place, what was said, and its status.
+private struct MyClaimRow: View {
+  let claim: MyClaim
+
+  private var when: String {
+    guard let date = claim.createdAt else { return "" }
+    return " · " + date.formatted(.dateTime.day().month(.abbreviated))
+  }
+
+  var body: some View {
+    HStack(alignment: .top, spacing: 12) {
+      Image(systemName: claim.symbol)
+        .font(.system(size: 18))
+        .foregroundStyle(claim.status == .accepted ? Color.lociForest : Color.lociMutedInk)
+        .frame(width: 24)
+      VStack(alignment: .leading, spacing: 3) {
+        Text(claim.placeName).font(.lociBody(15).weight(.semibold)).foregroundStyle(Color.lociInk)
+        Text("\(claim.fieldLabel) · \(claim.value)").font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk).lineLimit(2)
+        Text(claim.statusText + when).lociCoordStyle(10)
+      }
+      Spacer(minLength: 0)
+    }
+    .lociCard()
+    .accessibilityElement(children: .combine)
   }
 }

@@ -33,6 +33,23 @@ nonisolated enum ReviewPayload {
   }
 
   /// The caller's own reviews: `user_id` left empty on purpose.
+  /// web: useMyPOIReview → GetMyPOIReview{poiId}. NotFound when you have none.
+  static func myPOIReview(poiID: String) -> Loci_Review_GetMyPOIReviewRequest {
+    var request = Loci_Review_GetMyPOIReviewRequest()
+    request.poiID = poiID
+    return request
+  }
+
+  /// web: useReportReview → ReportReview{reviewId, reason, details}. The
+  /// reporter comes from the token, so `user_id` stays empty.
+  static func report(reviewID: String, reason: ReviewReport.Reason, details: String = "") -> Loci_Review_ReportReviewRequest {
+    var request = Loci_Review_ReportReviewRequest()
+    request.reviewID = reviewID
+    request.reason = reason.value
+    request.details = details.trimmingCharacters(in: .whitespacesAndNewlines)
+    return request
+  }
+
   static func userReviews(page: Int, pageSize: Int32 = pageSize) -> Loci_Review_GetUserReviewsRequest {
     var request = Loci_Review_GetUserReviewsRequest()
     request.pagination = pagination(page: page, pageSize: pageSize)

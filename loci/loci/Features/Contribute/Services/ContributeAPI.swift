@@ -27,6 +27,14 @@ nonisolated enum ContributeAPI {
     return ContributorProfile(response)
   }
 
+  /// web: useMyClaims → ListMyClaims{limit: 20, page: 1}. Newest first.
+  static func myClaims(page: Int = 1) async throws -> [MyClaim] {
+    let response = try await rpc("Could not load your reports.", ContributePayload.myClaims(page: page)) {
+      await places.listMyClaims(request: $0, headers: [:])
+    }
+    return response.claims.map(MyClaim.init)
+  }
+
   /// web: usePendingPlaces → ListPendingPlaces{limit: 20}.
   static func pendingPlaces() async throws -> [PendingPlace] {
     let response = try await rpc("Could not load places waiting on a scout.", ContributePayload.pendingPlaces()) {
@@ -126,6 +134,8 @@ nonisolated protocol ContributeService: Sendable {
   func tasks() async throws -> [VerificationTask]
   func profile() async throws -> ContributorProfile
   func pendingPlaces() async throws -> [PendingPlace]
+  /// The scout's own reports, newest first (first page).
+  func myClaims() async throws -> [MyClaim]
   func submitClaims(poiID: String, field: Loci_Place_PlaceFactField, values: [String]) async throws -> ClaimResult
   func submitPlace(_ draft: PlaceDraft) async throws -> PlaceSubmissionResult
   func confirmPlace(submissionID: String) async throws -> PlaceSubmissionResult
@@ -137,6 +147,7 @@ nonisolated struct ConnectContributeService: ContributeService {
   func tasks() async throws -> [VerificationTask] { try await ContributeAPI.tasks() }
   func profile() async throws -> ContributorProfile { try await ContributeAPI.profile() }
   func pendingPlaces() async throws -> [PendingPlace] { try await ContributeAPI.pendingPlaces() }
+  func myClaims() async throws -> [MyClaim] { try await ContributeAPI.myClaims() }
   func submitClaims(poiID: String, field: Loci_Place_PlaceFactField, values: [String]) async throws -> ClaimResult {
     try await ContributeAPI.submitClaims(poiID: poiID, field: field, values: values)
   }

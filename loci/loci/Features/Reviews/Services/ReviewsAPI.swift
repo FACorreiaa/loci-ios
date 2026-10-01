@@ -4,7 +4,6 @@ import LociConnectProto
 
 /// ReviewService (loci.review), one static func per RPC. Web's /reviews is
 /// mostly a mock, so the `web:` notes name the hook it has, where it has one.
-/// ReportReview is Unimplemented on the server and is not wrapped.
 nonisolated enum ReviewsAPI {
   private static let client = Loci_Review_ReviewServiceClient(client: ConnectTransport.shared.protocolClient)
   private static let poi = Loci_Poi_PoiserviceClient(client: ConnectTransport.shared.protocolClient)
@@ -29,7 +28,27 @@ nonisolated enum ReviewsAPI {
   static func myReviews(page: Int, pageSize: Int32 = ReviewPayload.pageSize) async throws -> ReviewPage {
     let request = ReviewPayload.userReviews(page: page, pageSize: pageSize)
     let response = try await reviewRPC("Could not load your reviews.", request) { await client.getUserReviews(request: $0, headers: [:]) }
-    return ReviewPage(reviews: response.reviews, pagination: response.hasPagination ? response.pagination : nil)
+    return ReviewPage(response)
+  }
+
+  /// web: useMyPOIReview → GetMyPOIReview{poiId}. Nil when you have none
+  /// (the server answers NotFound).
+  static func myPOIReview(poiID: String) async throws -> LociReview? {
+    do {
+      let response = try await reviewRPC("Could not check for your review.", ReviewPayload.myPOIReview(poiID: poiID)) {
+        await client.getMyPoireview(request: $0, headers: [:])
+      }
+      return response.hasReview ? LociReview(response.review) : nil
+    } catch APIError.notFound {
+      return nil
+    }
+  }
+
+  /// web: useReportReview → ReportReview{reviewId, reason, details}.
+  static func report(reviewID: String, reason: ReviewReport.Reason, details: String = "") async throws {
+    _ = try await reviewRPC("Could not send your report.", ReviewPayload.report(reviewID: reviewID, reason: reason, details: details)) {
+      await client.reportReview(request: $0, headers: [:])
+    }
   }
 
   /// web: useCreateReviewMutation. A second review of the same place is
@@ -93,12 +112,14 @@ nonisolated protocol ReviewsService: Sendable {
   func statistics(poiID: String) async throws -> ReviewStats
   func placeReviews(poiID: String, page: Int) async throws -> ReviewPage
   func myReviews(page: Int) async throws -> ReviewPage
-  /// The caller's review of one place, if any (GetUserReviews, filtered).
+  /// The caller's review of one place, if any (GetMyPOIReview).
   func ownReview(poiID: String) async throws -> LociReview?
   func create(poiID: String, form: ReviewForm) async throws -> LociReview
   func update(reviewID: String, form: ReviewForm) async throws -> LociReview
   func delete(reviewID: String) async throws
   func like(reviewID: String, isLike: Bool) async throws -> Int
+  /// Flag someone else's review for the Loci team.
+  func report(reviewID: String, reason: ReviewReport.Reason) async throws
 }
 
 nonisolated struct ConnectReviewsService: ReviewsService {
@@ -107,21 +128,11 @@ nonisolated struct ConnectReviewsService: ReviewsService {
   func placeReviews(poiID: String, page: Int) async throws -> ReviewPage { try await ReviewsAPI.poiReviews(poiID: poiID, page: page) }
   func myReviews(page: Int) async throws -> ReviewPage { try await ReviewsAPI.myReviews(page: page) }
 
-  /// There is no "my review of this POI" RPC, so this reads the caller's
-  /// reviews a page of 100 at a time (one page covers nearly everyone).
-  func ownReview(poiID: String) async throws -> LociReview? {
-    var page = 1
-    while page <= 5 {
-      let result = try await ReviewsAPI.myReviews(page: page, pageSize: ReviewPayload.ownLookupPageSize)
-      if let mine = result.reviews.first(where: { $0.poiID.lowercased() == poiID.lowercased() }) { return mine }
-      guard result.hasMore else { return nil }
-      page += 1
-    }
-    return nil
-  }
+  func ownReview(poiID: String) async throws -> LociReview? { try await ReviewsAPI.myPOIReview(poiID: poiID) }
 
   func create(poiID: String, form: ReviewForm) async throws -> LociReview { try await ReviewsAPI.create(poiID: poiID, form: form) }
   func update(reviewID: String, form: ReviewForm) async throws -> LociReview { try await ReviewsAPI.update(reviewID: reviewID, form: form) }
   func delete(reviewID: String) async throws { try await ReviewsAPI.delete(reviewID: reviewID) }
   func like(reviewID: String, isLike: Bool) async throws -> Int { try await ReviewsAPI.like(reviewID: reviewID, isLike: isLike) }
+  func report(reviewID: String, reason: ReviewReport.Reason) async throws { try await ReviewsAPI.report(reviewID: reviewID, reason: reason) }
 }

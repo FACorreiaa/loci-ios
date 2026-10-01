@@ -21,6 +21,8 @@ nonisolated struct LociReview: Identifiable, Hashable, Sendable {
   var reviewerName: String
   var reviewerAvatar: URL?
   var isVerified: Bool
+  /// Whether the caller has marked this review helpful (server-filled per viewer).
+  var votedByMe: Bool
 
   init(
     id: String,
@@ -36,7 +38,8 @@ nonisolated struct LociReview: Identifiable, Hashable, Sendable {
     helpfulCount: Int = 0,
     reviewerName: String = "",
     reviewerAvatar: URL? = nil,
-    isVerified: Bool = false
+    isVerified: Bool = false,
+    votedByMe: Bool = false
   ) {
     self.id = id
     self.userID = userID
@@ -52,6 +55,7 @@ nonisolated struct LociReview: Identifiable, Hashable, Sendable {
     self.reviewerName = reviewerName
     self.reviewerAvatar = reviewerAvatar
     self.isVerified = isVerified
+    self.votedByMe = votedByMe
   }
 
   init(_ review: Loci_Review_Review) {
@@ -70,7 +74,8 @@ nonisolated struct LociReview: Identifiable, Hashable, Sendable {
       helpfulCount: Int(max(0, review.helpfulCount)),
       reviewerName: review.reviewer.displayName,
       reviewerAvatar: review.reviewer.avatarURL.isEmpty ? nil : URL(string: review.reviewer.avatarURL),
-      isVerified: review.isVerified || review.reviewer.isVerified
+      isVerified: review.isVerified || review.reviewer.isVerified,
+      votedByMe: review.votedByMe
     )
   }
 
@@ -163,15 +168,68 @@ nonisolated struct ReviewPage: Equatable, Sendable {
   var reviews: [LociReview]
   var total: Int
   var hasMore: Bool
+  /// My reviews only: the server's totals for the caller (GetUserReviews.statistics).
+  var summary: ReviewerSummary?
 
-  init(reviews: [LociReview], total: Int, hasMore: Bool) {
+  init(reviews: [LociReview], total: Int, hasMore: Bool, summary: ReviewerSummary? = nil) {
     self.reviews = reviews
     self.total = total
     self.hasMore = hasMore
+    self.summary = summary
   }
 
-  init(reviews: [Loci_Review_Review], pagination: Loci_Common_PaginationMetadata?) {
+  init(reviews: [Loci_Review_Review], pagination: Loci_Common_PaginationMetadata?, summary: ReviewerSummary? = nil) {
     let mapped = reviews.map(LociReview.init)
-    self.init(reviews: mapped, total: Int(pagination?.totalRecords ?? Int32(mapped.count)), hasMore: pagination?.hasMore_p ?? false)
+    self.init(
+      reviews: mapped,
+      total: Int(pagination?.totalRecords ?? Int32(mapped.count)),
+      hasMore: pagination?.hasMore_p ?? false,
+      summary: summary
+    )
+  }
+
+  init(_ response: Loci_Review_GetUserReviewsResponse) {
+    self.init(
+      reviews: response.reviews,
+      pagination: response.hasPagination ? response.pagination : nil,
+      summary: response.hasStatistics ? ReviewerSummary(response.statistics) : nil
+    )
+  }
+}
+
+/// "7 reviews · 4.3 average · 12 helpful votes · Guide": the caller's totals
+/// over all their reviews, which the server now fills (web: My reviews header).
+nonisolated struct ReviewerSummary: Equatable, Sendable {
+  var total: Int
+  var averageGiven: Double
+  var helpfulReceived: Int
+  /// new / explorer / guide / expert at 1 / 5 / 20 reviews; empty on old servers.
+  var level: String
+
+  init(total: Int, averageGiven: Double, helpfulReceived: Int, level: String) {
+    self.total = max(0, total)
+    self.averageGiven = averageGiven
+    self.helpfulReceived = max(0, helpfulReceived)
+    self.level = level
+  }
+
+  init(_ proto: Loci_Review_UserReviewStatistics) {
+    self.init(
+      total: Int(proto.totalReviews),
+      averageGiven: proto.averageRatingGiven,
+      helpfulReceived: Int(proto.helpfulVotesReceived),
+      level: proto.reviewerLevel
+    )
+  }
+
+  var text: String { text() }
+
+  func text(locale: Locale = .current) -> String {
+    var parts = [total == 1 ? "1 review" : "\(total) reviews"]
+    parts.append("\(averageGiven.formatted(.number.precision(.fractionLength(1)).locale(locale))) average")
+    if helpfulReceived > 0 { parts.append(helpfulReceived == 1 ? "1 helpful vote" : "\(helpfulReceived) helpful votes") }
+    let level = level.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !level.isEmpty { parts.append(level.prefix(1).uppercased() + level.dropFirst()) }
+    return parts.joined(separator: " · ")
   }
 }

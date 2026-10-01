@@ -55,6 +55,7 @@ Web's signed-in pages that have no iOS screen. Five tabs stay; Profile becomes t
 | 6b | First-run profile wizard: budget, pace, getting around, interests → one default travel profile, offered once after sign-in (web: /trip-setup) | `31-first-run-profile.md` | #45 |
 | 6c | First-run wizard fixed to web #82: offered to brand-new accounts (`isNewUser`) whose profiles are all the untouched server "Default", seen per user; updates that default instead of adding a second profile; step-free → PUBLIC | `31-first-run-profile.md` | this PR |
 | 7 | Globe / Where you've been (MapKit globe, great-circle legs, stats, legs sheet, city → Recents) | `21-globe.md` | this PR |
+| 7b | Proto v5.29.0 consumers: voted-by-me, my review lookup, report a review, server review stats, Your reports, arc id + duration | `19-reviews.md`, `20-contribute.md`, `21-globe.md` | 2026-10-01 |
 | 8 | Web fixes, incl. AASA paths for the Phase 0 links (reviews rebuild + trip setup still to do) | loci-client | loci-client #78 |
 
 ## Phase 1.6 — Parity pass 3 (the RPCs iOS still never calls)

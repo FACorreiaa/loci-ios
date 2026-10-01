@@ -101,6 +101,7 @@ struct ClaimFormResubmitTests {
     func tasks() async throws -> [VerificationTask] { [] }
     func profile() async throws -> ContributorProfile { .empty }
     func pendingPlaces() async throws -> [PendingPlace] { [] }
+    func myClaims() async throws -> [MyClaim] { [] }
     func submitClaims(poiID: String, field: Loci_Place_PlaceFactField, values: [String]) async throws -> ClaimResult {
       try await PreviewContributeService().submitClaims(poiID: poiID, field: field, values: values)
     }

@@ -37,7 +37,7 @@ nonisolated struct GlobeLeg: Identifiable, Equatable, Hashable, Sendable {
   var mode: String
   /// The day the leg happened, when the trip day has a date.
   var occurredAt: Date?
-  /// Not on the wire yet (GlobeArc has no duration); kept so the label is web's.
+  /// From GlobeArc.duration_mins; nil when the trip recorded none (zero on the wire).
   var durationMins: Double?
 
   var label: String { GlobeFormat.legLabel(mode: mode, distanceKm: distanceKm, durationMins: durationMins) }
@@ -124,7 +124,8 @@ nonisolated enum GlobeMapping {
     return arcs.map { arc in
       let occurredAt = arc.hasOccurredAt ? arc.occurredAt.date : nil
       return GlobeLeg(
-        id: keys.next(tripId: arc.tripID, from: arc.fromName, to: arc.toName, occurredAt: occurredAt),
+        // The server's leg id when it sends one; older servers get the composite key.
+        id: arc.id.isEmpty ? keys.next(tripId: arc.tripID, from: arc.fromName, to: arc.toName, occurredAt: occurredAt) : arc.id,
         fromName: arc.fromName,
         toName: arc.toName,
         from: GeoPoint(latitude: arc.fromLat, longitude: arc.fromLon),
@@ -133,7 +134,7 @@ nonisolated enum GlobeMapping {
         tripId: arc.tripID,
         mode: arc.mode,
         occurredAt: occurredAt,
-        durationMins: nil
+        durationMins: arc.durationMins > 0 ? Double(arc.durationMins) : nil
       )
     }
   }
