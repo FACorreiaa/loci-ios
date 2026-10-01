@@ -72,7 +72,10 @@ import SwiftUI
   }
 
   func report(_ error: Error) {
-    if let limit = error as? EntitlementLimit { self.limit = limit } else if !error.isCancellation { self.error = error.userMessage }
+    if let limit = error as? EntitlementLimit {
+      self.limit = limit
+      Task { await EntitlementsStore.shared.invalidate() }
+    } else if !error.isCancellation { self.error = error.userMessage }
   }
 
   /// The server's echo when it sends one; else the old row with the form applied.
@@ -202,7 +205,10 @@ import SwiftUI
   }
 
   private func report(_ error: Error) {
-    if let limit = error as? EntitlementLimit { self.limit = limit } else if !error.isCancellation { self.error = error.userMessage }
+    if let limit = error as? EntitlementLimit {
+      self.limit = limit
+      Task { await EntitlementsStore.shared.invalidate() }
+    } else if !error.isCancellation { self.error = error.userMessage }
   }
 }
 

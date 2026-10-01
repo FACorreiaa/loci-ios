@@ -63,7 +63,7 @@ Plan: [`docs/superpowers/plans/2026-09-25-ios-parity-pass3.md`](../superpowers/p
 
 | # | Phase | RPCs | Note | PR |
 |---|---|---|---|---|
-| 0 | Entitlements store (read-only plan; no paywall) | `entitlement.GetEntitlements` | `22-entitlements.md` | |
+| 0 | Entitlements store (read-only plan; no paywall) | `entitlement.GetEntitlements` | `32-entitlements.md` | 2026-10-01 |
 | 1 | Share by link: trips, lists, places; open `lociai.fyi/share/<code>` | `share.*` | `23-share.md` | |
 | 2 | Recents recording from this phone + frequent places | `recents.RecordInteraction`, `GetCityInteractions`, `GetFrequentPlaces` | `24-recents-recording.md` | |
 | 3 | GoScore on Discover, drive cost per leg | `localcontext.GetGoScore`, `EstimateDriveCost` | `25-goscore.md` | |
