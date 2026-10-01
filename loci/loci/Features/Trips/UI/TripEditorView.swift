@@ -17,6 +17,8 @@ struct TripEditorView: View {
   let tripID: String
 
   @State private var trip: Loci_Trip_TripDraft?
+
+  @State private var driveCost: DriveCostModel?
   @State private var loaded: Loaded<Loci_Trip_TripDraft>?
   @State private var isEditing = false
   @State private var renaming: Loci_Trip_TripStop?
@@ -181,7 +183,16 @@ struct TripEditorView: View {
           Text("\(leg.mode) · \(Int(leg.distanceKm)) km · \(leg.durationMins / 60)h \(leg.durationMins % 60)m · after day \(leg.afterDay)").lociCoordStyle(10)
         }
       }
+      if let driveCost { DriveCostRow(model: driveCost) }
     }
+    .task(id: DriveCostModel.totalKm(legs)) { await loadDriveCost(km: DriveCostModel.totalKm(legs)) }
+  }
+
+  /// web: TripMoney — every leg's km summed; zero or a failure hides the line.
+  private func loadDriveCost(km: Double) async {
+    guard km > 0, !ResultsSideData.isOffline else { driveCost = nil; return }
+    guard let estimate = try? await LocalContextAPI.driveCost(km: km) else { return }
+    driveCost = DriveCostModel(estimate)
   }
 
   // MARK: - Loading
