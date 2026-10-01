@@ -111,6 +111,11 @@ enum DesignPreview: String {
   /// walk from the simulator's location (set it with `simctl location`).
   case walkDay
 
+  /// Profile › Leaderboard: you and four friends this week.
+  case leaderboard
+  /// Profile › Your progress: level, a 7-day streak, today, badges, points.
+  case myProgress
+
   static var requested: DesignPreview? {
     #if DEBUG
       let arguments = ProcessInfo.processInfo.arguments
@@ -197,6 +202,8 @@ enum DesignPreview: String {
     case .globe: NavigationStack { GlobeView(store: GlobeStore(service: PreviewTravelHistoryService()), recents: PreviewRecentsService()) }
     case .globeEmpty:
       NavigationStack { GlobeView(store: GlobeStore(service: PreviewTravelHistoryService(data: .previewEmpty)), recents: PreviewRecentsService()) }
+    case .leaderboard: NavigationStack { LeaderboardView(store: ProgressStore(service: PreviewProgressService())) }
+    case .myProgress: NavigationStack { MyProgressView(store: ProgressStore(service: PreviewProgressService())) }
     case .tripSetup: TripSetupPreview()
     case .compare: NavigationStack { CompareView(preview: .previewPorto, origin: "Porto", candidates: ["Évora", "Beja"]) }
     case .gastronomy: NavigationStack { GastronomyView(store: GastronomyStore(service: PreviewGastronomyService()), city: "Porto") }

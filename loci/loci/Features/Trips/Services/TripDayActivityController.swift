@@ -116,6 +116,10 @@ import UserNotifications
   /// End this day's activity and any other trip-day activity the system
   /// still holds (a relaunch can leave one behind).
   func end(final: TripDayAttributes.ContentState? = nil) async {
+    // A day with stops reached counts as walked (server: CompleteTripDay).
+    if let running, let last = final ?? Activity<TripDayAttributes>.activities.first?.content.state, last.stopsDone > 0 {
+      ProgressReporter.walked(tripID: running.tripId, dayID: running.dayId, stopsDone: last.stopsDone)
+    }
     for live in Activity<TripDayAttributes>.activities {
       let last = final ?? live.content.state
       await live.end(ActivityContent(state: last, staleDate: nil), dismissalPolicy: .default)
@@ -164,6 +168,14 @@ import UserNotifications
   /// A fence around the next stop fired: the traveller got there early.
   private func arrived(at identifier: String) async {
     guard let running else { return }
+    // Reaching a stop on the spot scores it (the server checks the fix).
+    if let reached = running.slots.first(where: { $0.stop.poi.stableID == identifier }), let place = reached.coordinate {
+      let visit = SpotVisit(
+        poiID: reached.stop.poi.id, poiName: reached.stop.name, cityName: running.cityName,
+        latitude: place.latitude, longitude: place.longitude
+      )
+      ProgressReporter.arrived(visit, location: CLLocationManager().location)
+    }
     let index = Self.effectiveIndex(slots: running.slots, manualIndex: manualIndex, now: Date())
     guard let next = running.slots.first(where: { $0.index == index + 1 }), next.stop.poi.stableID == identifier else { return }
     await advance()

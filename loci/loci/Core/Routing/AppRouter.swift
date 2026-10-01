@@ -118,6 +118,10 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   case user(username: String)
   case friends
   case friendTrip(id: String)
+  /// `/friends?tab=leaderboard` and `?tab=progress`: where a progress push
+  /// (a badge, a friend passing you) opens.
+  case leaderboard
+  case progress
 
   /// `loci://lists/abc` (the host is the route, as in `SessionLink`) or
   /// `https://lociai.fyi/lists/abc`. Anything with a missing id or extra
@@ -144,7 +148,12 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
     case ("t", 2): self = .sharedTrip(code: segments[1])
     case ("invite", 2): self = .invite(code: segments[1])
     case ("u", 2): self = .user(username: segments[1])
-    case ("friends", 1): self = .friends
+    case ("friends", 1):
+      switch URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "tab" })?.value {
+      case "leaderboard": self = .leaderboard
+      case "progress": self = .progress
+      default: self = .friends
+      }
     case ("friends", 3) where segments[1].lowercased() == "trips": self = .friendTrip(id: segments[2])
     default: return nil
     }
@@ -192,7 +201,7 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
     case .list: .saved
     case .pack: .discover
     case .trip: .calendar
-    case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip: .profile
+    case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip, .leaderboard, .progress: .profile
     }
   }
 

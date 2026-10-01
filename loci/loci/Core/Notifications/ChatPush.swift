@@ -8,11 +8,16 @@ nonisolated enum NotificationCategory {
   /// A message the agent posted into a chat thread on its own (a standing task
   /// running). loci-connect-server `push.ProactiveCategory`.
   static let lociChat = "loci_chat"
+  /// Friend requests and new friends (server `push.SocialCategory`).
+  static let lociSocial = "loci_social"
+  /// Badges and a friend passing you on the week's leaderboard (server
+  /// `push.ProgressCategory`). Taps open the payload's `url`.
+  static let lociProgress = "loci_progress"
 
   /// Everything registered with `setNotificationCategories`. The search-finished
   /// push and the local notifications carry no category and need none.
   static var all: Set<UNNotificationCategory> {
-    [UNNotificationCategory(identifier: lociChat, actions: [], intentIdentifiers: [], options: [])]
+    Set([lociChat, lociSocial, lociProgress].map { UNNotificationCategory(identifier: $0, actions: [], intentIdentifiers: [], options: []) })
   }
 }
 

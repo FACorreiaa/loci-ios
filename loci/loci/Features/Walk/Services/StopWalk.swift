@@ -46,6 +46,9 @@ import UserNotifications
   init(navigator: WalkNavigator = WalkNavigator(), live: Bool = true) {
     self.navigator = navigator
     self.live = live
+    if live {
+      navigator.onArrive = { place, location in ProgressReporter.arrived(SpotVisit(place), location: location) }
+    }
   }
 
   var stops: [WalkStop] { day?.stops ?? [] }
