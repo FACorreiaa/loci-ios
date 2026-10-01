@@ -60,6 +60,7 @@ enum DesignPreview: String {
   case youHubPro, youHubFree
   case goScoreGood, goScoreMaybe, driveCost
   case changeEmail, resetPassword, confirmEmail
+  case sharedPlace, sharedList, sharedItinerary
   /// Recents' feed with a day of each kind: chats, searches, a kept trip, favourites, Load more.
   case recents
   /// Recents' Cities view.
@@ -179,6 +180,9 @@ enum DesignPreview: String {
     case .changeEmail: NavigationStack { ChangeEmailView() }
     case .resetPassword: ResetPasswordView(token: "preview-token")
     case .confirmEmail: ConfirmEmailView(token: "preview-token")
+    case .sharedPlace: SharedContentPreview.view(SharedContentPreview.place())
+    case .sharedList: SharedContentPreview.view(SharedContentPreview.list())
+    case .sharedItinerary: SharedContentPreview.view(SharedContentPreview.itinerary())
     case .recents: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService())) }
     case .recentsCities: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService()), segment: .cities) }
     case .recentCity: NavigationStack { RecentCityView(city: RecentCity.previewLisbon) }

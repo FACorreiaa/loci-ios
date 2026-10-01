@@ -64,7 +64,7 @@ Plan: [`docs/superpowers/plans/2026-09-25-ios-parity-pass3.md`](../superpowers/p
 | # | Phase | RPCs | Note | PR |
 |---|---|---|---|---|
 | 0 | Entitlements store (read-only plan; no paywall) | `entitlement.GetEntitlements` | `32-entitlements.md` | 2026-10-01 |
-| 1 | Share by link: trips, lists, places; open `lociai.fyi/share/<code>` | `share.*` | `23-share.md` | |
+| 1 | Share by link: places, saved itineraries, lists; open `lociai.fyi/share/<code>` (trips: social layer) | `share.*`, `itinerary.GetItinerary` | `33-share.md` | 2026-10-01 |
 | 2 | Recents recording from this phone + frequent places | `recents.RecordInteraction`, `GetCityInteractions`, `GetFrequentPlaces` | parked 2026-10-01: the server's `RecordInteraction` is a stub (returns success, stores nothing), `GetFrequentPlaces` re-labels the cities list and `GetCityInteractions` only counts what the Cities page already shows — needs a server that stores interactions and folds them into the feed first | — |
 | 3 | GoScore on the here-brief, fuel line under a trip's legs | `localcontext.GetGoScore`, `EstimateDriveCost` | `34-goscore.md` | 2026-10-01 |
 | 4 | PDF exports for results pages and lists | `export.*` | `35-exports.md` | 2026-10-01 |

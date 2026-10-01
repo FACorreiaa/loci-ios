@@ -10,6 +10,7 @@ struct ListDetailView: View {
   @State private var selectedID: String?
   @State private var showFullMap = false
   @State private var editing: ListEntry?
+  @State private var share: ShareSheetItem?
 
   init(store: ListDetailStore) {
     _store = State(initialValue: store)
@@ -104,13 +105,24 @@ struct ListDetailView: View {
     .refreshable { await store.load() }
     .task { await store.load() }
     .sheet(item: $editing) { entry in ListItemEditSheet(entry: entry) { edit in await store.updateItem(entry, edit: edit) } }
+    .task(id: store.detail?.list.id) { await prepareShare() }
     .toolbar {
-      if let detail = store.detail, !detail.entries.isEmpty {
-        ListExportButton(detail: detail, error: $store.error)
+      if let detail = store.detail {
+        ShareLink(item: share?.text ?? ShareTarget.list(id: detail.list.id, name: detail.list.name).fallbackText) {
+          Label("Share", systemImage: "square.and.arrow.up")
+        }
+        if !detail.entries.isEmpty { ListExportButton(detail: detail, error: $store.error) }
       }
     }
     .errorAlert($store.error)
     .onAppear { Analytics.screen("list_detail") }
+  }
+
+  private func prepareShare() async {
+    guard let list = store.detail?.list, share?.target.contentID != list.id else { return }
+    let item = ShareSheetItem(target: .list(id: list.id, name: list.name))
+    share = item
+    await item.prepare()
   }
 
   private func headerMeta(_ list: LociList) -> String {
