@@ -7,7 +7,7 @@ struct InviteView: View {
   let code: String
 
   @State private var invite: Loci_Social_GetInviteResponse?
-  @State private var failure: String?
+  @State private var failure: InviteFailure?
   @State private var isAccepting = false
   @State private var friend: Loci_Social_PublicUser?
   @State private var error: String?
@@ -31,7 +31,7 @@ struct InviteView: View {
             .buttonStyle(.borderedProminent).tint(.lociCoralFill).controlSize(.large).disabled(isAccepting)
         }
       } else if let failure {
-        ContentUnavailableView(failure, systemImage: "link.badge.plus", description: Text("Ask your friend for a new link."))
+        ContentUnavailableView(failure.title(for: .open), systemImage: "link.badge.plus", description: Text(failure.hint))
       } else {
         ProgressView()
       }
@@ -43,7 +43,7 @@ struct InviteView: View {
     .navigationDestination(item: $friend) { UserProfileView(username: $0.username) }
     .errorAlert($error)
     .task {
-      do { invite = try await SocialAPI.invite(code: code) } catch { failure = error.userMessage }
+      do { invite = try await SocialAPI.invite(code: code) } catch { failure = InviteFailure(error) }
     }
   }
 
@@ -54,7 +54,7 @@ struct InviteView: View {
       do {
         friend = try await SocialAPI.acceptInvite(code: code)
         Analytics.capture(.friendAdded, ["via": "invite"])
-      } catch { self.error = error.userMessage }
+      } catch { self.error = InviteFailure(error).title(for: .accept) }
     }
   }
 }

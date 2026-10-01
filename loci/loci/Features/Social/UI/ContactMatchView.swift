@@ -37,7 +37,10 @@ struct ContactMatchView: View {
           EmptyView()
         }
       } footer: {
-        Text("Only scrambled fingerprints of numbers and emails leave your phone, and nothing is kept for people who aren't on Loci.")
+        VStack(alignment: .leading, spacing: 6) {
+          Text("Friends show up here when the number or email in your contacts is one they've verified on Loci.")
+          Text("Only scrambled fingerprints of numbers and emails leave your phone, and nothing is kept for people who aren't on Loci.")
+        }
       }
       .listRowBackground(Color.lociCard)
 
