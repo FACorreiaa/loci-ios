@@ -236,23 +236,9 @@ public struct CalendarView: View {
   }
 
   private func savePinned(_ trip: Loci_Trip_TripDraft) {
-    var updated = trip
-    let origin = calendar.startOfDay(for: pinStart)
-    updated.days = trip.days.map { day in
-      var copy = day
-      let shifted = calendar.date(byAdding: .day, value: Int(day.dayNumber - 1), to: origin) ?? origin
-      // Midnight UTC of the chosen day, the shape web writes and DayTimeline reads.
-      let pinned = DayTimeline.utcMidnight(ofDayContaining: shifted, calendar: calendar) ?? shifted
-      var ts = SwiftProtobuf.Google_Protobuf_Timestamp()
-      ts.seconds = Int64(pinned.timeIntervalSince1970)
-      copy.date = ts
-      return copy
-    }
+    let req = CalendarPin.saveRequest(trip, start: pinStart, calendar: calendar)
     Task {
       let headers: Connect.Headers = [:]
-      var req = Loci_Trip_SaveTripRequest()
-      req.trip = updated
-      req.baseVersion = trip.version
       _ = await client.saveTrip(request: req, headers: headers)
       await MainActor.run {
         pinning = nil
@@ -263,3 +249,29 @@ public struct CalendarView: View {
 }
 
 extension Loci_Trip_TripDraft: @retroactive Identifiable {}
+
+/// The SaveTrip that pins a trip's days to dates from `start`. SaveTrip
+/// replaces the whole trip, so everything else goes back exactly as read,
+/// legs included with their ids: the server keeps a leg's id only when the
+/// client sends it back (or the hop is unchanged), and the globe keys its arcs
+/// on that id.
+nonisolated enum CalendarPin {
+  static func saveRequest(_ trip: Loci_Trip_TripDraft, start: Date, calendar: Calendar = .current) -> Loci_Trip_SaveTripRequest {
+    var updated = trip
+    let origin = calendar.startOfDay(for: start)
+    updated.days = trip.days.map { day in
+      var copy = day
+      let shifted = calendar.date(byAdding: .day, value: Int(day.dayNumber - 1), to: origin) ?? origin
+      // Midnight UTC of the chosen day, the shape web writes and DayTimeline reads.
+      let pinned = DayTimeline.utcMidnight(ofDayContaining: shifted, calendar: calendar) ?? shifted
+      var ts = SwiftProtobuf.Google_Protobuf_Timestamp()
+      ts.seconds = Int64(pinned.timeIntervalSince1970)
+      copy.date = ts
+      return copy
+    }
+    var request = Loci_Trip_SaveTripRequest()
+    request.trip = updated
+    request.baseVersion = trip.version
+    return request
+  }
+}
