@@ -198,29 +198,57 @@ nonisolated struct ReviewPage: Equatable, Sendable {
 }
 
 /// "7 reviews · 4.3 average · 12 helpful votes · Guide": the caller's totals
-/// over all their reviews, which the server now fills (web: My reviews header).
+/// over all their reviews (GetUserReviews.statistics, web: mineSummary), with
+/// how many gave each star. Worked out from the loaded rows only when a server
+/// leaves the statistics empty (`fromRows`).
 nonisolated struct ReviewerSummary: Equatable, Sendable {
   var total: Int
   var averageGiven: Double
   var helpfulReceived: Int
   /// new / explorer / guide / expert at 1 / 5 / 20 reviews; empty on old servers.
   var level: String
+  /// Your reviews per star, index 0 = one star.
+  var distribution: [Int]
 
-  init(total: Int, averageGiven: Double, helpfulReceived: Int, level: String) {
+  init(total: Int, averageGiven: Double, helpfulReceived: Int, level: String, distribution: [Int] = [0, 0, 0, 0, 0]) {
     self.total = max(0, total)
-    self.averageGiven = averageGiven
+    self.averageGiven = min(max(averageGiven, 0), 5)
     self.helpfulReceived = max(0, helpfulReceived)
     self.level = level
+    self.distribution = Array((distribution + [0, 0, 0, 0, 0]).prefix(5).map { max(0, $0) })
   }
 
   init(_ proto: Loci_Review_UserReviewStatistics) {
+    let breakdown = proto.ratingDistribution
     self.init(
       total: Int(proto.totalReviews),
       averageGiven: proto.averageRatingGiven,
       helpfulReceived: Int(proto.helpfulVotesReceived),
-      level: proto.reviewerLevel
+      level: proto.reviewerLevel,
+      distribution: [breakdown.oneStar, breakdown.twoStar, breakdown.threeStar, breakdown.fourStar, breakdown.fiveStar].map(Int.init)
     )
   }
+
+  /// The fallback: the rows loaded so far (web: summariseMine). `total` is the
+  /// server's row count when it sent one, so the count covers every page even
+  /// though the average and bars cover only what is loaded. Nil with no rows.
+  static func fromRows(_ reviews: [LociReview], total: Int = 0) -> ReviewerSummary? {
+    guard !reviews.isEmpty else { return nil }
+    var counts = [0, 0, 0, 0, 0]
+    for review in reviews { counts[ReviewRating.clamp(Double(review.rating)) - 1] += 1 }
+    return ReviewerSummary(
+      total: max(total, reviews.count),
+      averageGiven: Double(reviews.map(\.rating).reduce(0, +)) / Double(reviews.count),
+      helpfulReceived: reviews.map(\.helpfulCount).reduce(0, +),
+      level: "",
+      distribution: counts
+    )
+  }
+
+  /// The same numbers as a place summary, for the star bars.
+  var stats: ReviewStats { ReviewStats(total: total, average: averageGiven, distribution: distribution) }
+
+  var hasDistribution: Bool { distribution.contains { $0 > 0 } }
 
   var text: String { text() }
 
