@@ -24,7 +24,7 @@ struct InviteSheet: View {
           ShareLink(item: url, message: Text("Travel with me on Loci")) {
             Label("Send invite link", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity)
           }
-          .buttonStyle(.borderedProminent).tint(.lociCoral).controlSize(.large)
+          .buttonStyle(.borderedProminent).tint(.lociCoralFill).controlSize(.large)
           Button("Make a new link", systemImage: "arrow.clockwise") { rotate() }
             .disabled(isRotating).font(.lociCaption()).tint(.lociMutedInk)
         } else {

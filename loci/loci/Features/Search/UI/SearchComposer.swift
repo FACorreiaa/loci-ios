@@ -70,9 +70,10 @@ struct SearchComposer: View {
       }
 
       if isStreaming, awaitingStart || controller.startedLink != nil {
+        // White on lociCoralFill: 5.63:1 light / 4.73:1 dark (lociPaper on lociCoral was 3.28:1 light).
         Button("Stop", systemImage: "stop.fill") { controller.stop() }
           .labelStyle(.iconOnly).frame(width: LociTheme.minTapTarget, height: LociTheme.minTapTarget)
-          .background(Color.lociCoral, in: Circle()).foregroundStyle(Color.lociPaper)
+          .background(Color.lociCoralFill, in: Circle()).foregroundStyle(Color.white)
       } else {
         Button("Send", systemImage: "arrow.up") { send() }
           .labelStyle(.iconOnly).frame(width: LociTheme.minTapTarget, height: LociTheme.minTapTarget)

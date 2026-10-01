@@ -134,7 +134,7 @@ struct TripEditorView: View {
         .swipeActions(edge: .trailing) {
           if canEdit {
             Button("Remove", role: .destructive) { Task { await remove(stop) } }
-            Button("Replace") { picking = .replace(stopID: stop.id) }.tint(.lociCoral)
+            Button("Replace") { picking = .replace(stopID: stop.id) }.tint(.lociCoralFill)
           }
         }
         .swipeActions(edge: .leading) {

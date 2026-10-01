@@ -114,7 +114,7 @@ struct FriendsView: View {
       ForEach(incoming, id: \.id) { request in
         PersonRow(user: request.from) {
           HStack(spacing: 6) {
-            Button("Accept") { respond(request, accept: true) }.buttonStyle(.borderedProminent).tint(.lociCoral)
+            Button("Accept") { respond(request, accept: true) }.buttonStyle(.borderedProminent).tint(.lociCoralFill)
             Button("Decline") { respond(request, accept: false) }.buttonStyle(.bordered)
           }
           .controlSize(.small)

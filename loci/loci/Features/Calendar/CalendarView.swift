@@ -116,7 +116,7 @@ public struct CalendarView: View {
             )
             ForEach(Array(dayBlocks.prefix(2))) { block in
               Text(block.title).font(.system(size: 9, weight: .semibold)).foregroundColor(.white).lineLimit(1)
-                .padding(.horizontal, 3).padding(.vertical, 1).background(Color.lociCoral).cornerRadius(3)
+                .padding(.horizontal, 3).padding(.vertical, 1).background(Color.lociCoralFill).cornerRadius(3)
             }
           }.frame(maxWidth: .infinity, minHeight: 56, alignment: .topLeading).padding(4).background(
             selectedKey == cell.dateKey ? Color.lociCoral.opacity(0.15) : Color.lociCard
