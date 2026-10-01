@@ -117,6 +117,13 @@ Not gated, ever: user-submitted places and place facts (contributions are the su
 - Onboarding wizard and Fastlane beta/prod lanes (Phase 1.5 if TestFlight is needed sooner).
 
 ## Phase 4 — Social (after share-by-link is in daily use)
+
+> **Changed 2026-10-01.** The owner overrode the 10-strangers rule and chose
+> to build friends and points now. Facebook *is* in (Limited Login, linking
+> only — it finds friends who also linked Facebook; it never signs anyone
+> in); X and Instagram stay out as imports and are share targets for the
+> invite link. Points, streaks, badges and friends-only leaderboards are
+> added (`Features/Progress`). Live position is still parked.
 The first viral loop is a trip a friend can open. It is built from what the server already has, in this order:
 1. **Share by link** — pass 3, Phase 1 (`share.CreateShareLink`, `GetSharedContent`; `lociai.fyi/share/<code>` opens in the app).
 2. **Friends on Loci, by invite.** A share link that also invites: the recipient who signs up becomes a "friend", and both see each other's *shared trips* (not positions) on Saved and on the globe ("Where you've been" gains a "Friends" layer). Needs new server work: a `friends` table, invite acceptance, and a per-trip "share with friends" toggle. No social-network sign-in is involved: Facebook's `user_friends` only returns friends who also installed the app, and X's follower APIs are paid and rate-limited, so neither gives a usable graph at our scale.
