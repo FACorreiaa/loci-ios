@@ -59,7 +59,7 @@ Web's signed-in pages that have no iOS screen. Five tabs stay; Profile becomes t
 | 8 | Web fixes, incl. AASA paths for the Phase 0 links (reviews rebuild + trip setup still to do) | loci-client | loci-client #78 |
 
 ## Phase 1.6 — Parity pass 3 (the RPCs iOS still never calls)
-Plan: [`docs/superpowers/plans/2026-09-25-ios-parity-pass3.md`](../superpowers/plans/2026-09-25-ios-parity-pass3.md). Audit of 2026-09-25: 238 RPCs in the proto, 136 called from iOS `main`, 102 not (PRs #31, #35, #36 close trip extras, Contribute and Globe). One PR per phase; 2, 3, 6 and 8 can run in parallel.
+Plan: [`docs/superpowers/plans/2026-09-25-ios-parity-pass3.md`](../superpowers/plans/2026-09-25-ios-parity-pass3.md). Audit of 2026-09-25: 238 RPCs in the proto, 136 called from iOS `main`, 102 not (PRs #31, #35, #36 close trip extras, Contribute and Globe). One PR per phase; 2, 3, 6 and 8 can run in parallel. Re-run 2026-10-01 after pass 3 (main + #64): 295 RPCs, 197 called, 98 not — what is left is web-only by design (payment, statistics, bundle), parked with a server-side reason (recents, profile getters, nine of list.*), other sessions' slices (gamification, chat trip actions, social, phone sign-in) and ai_poi/health.
 
 | # | Phase | RPCs | Note | PR |
 |---|---|---|---|---|
