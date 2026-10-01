@@ -9,6 +9,7 @@ struct ListDetailView: View {
   @State private var opened: ListEntry?
   @State private var selectedID: String?
   @State private var showFullMap = false
+  @State private var editing: ListEntry?
 
   init(store: ListDetailStore) {
     _store = State(initialValue: store)
@@ -54,6 +55,16 @@ struct ListDetailView: View {
           .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button("Remove", systemImage: "minus.circle", role: .destructive) { Task { await store.remove(entry) } }
           }
+          .swipeActions(edge: .leading) {
+            Button("Note", systemImage: "square.and.pencil") { editing = entry }.tint(Color.lociForest)
+          }
+          .contextMenu { Button("Edit note, day or time", systemImage: "square.and.pencil") { editing = entry } }
+          if !entry.notes.isEmpty || entry.scheduleLine() != nil {
+            ListEntryNote(entry: entry) { editing = entry }
+              .listRowBackground(Color.clear)
+              .listRowSeparator(.hidden)
+              .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 6, trailing: 12))
+          }
         }
         let unplaced = entries.count - mapData.pins.count
         if !mapData.isEmpty, unplaced > 0 {
@@ -92,6 +103,7 @@ struct ListDetailView: View {
     }
     .refreshable { await store.load() }
     .task { await store.load() }
+    .sheet(item: $editing) { entry in ListItemEditSheet(entry: entry) { edit in await store.updateItem(entry, edit: edit) } }
     .toolbar {
       if let detail = store.detail, !detail.entries.isEmpty {
         ListExportButton(detail: detail, error: $store.error)

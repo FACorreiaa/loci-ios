@@ -27,6 +27,7 @@ nonisolated struct PreviewListsService: ListsService {
   func delete(_ listId: String) async throws {}
   func add(_ stop: Loci_Poi_POIDetailedInfo, destination: SearchDestination, to listId: String) async throws {}
   func remove(_ entry: ListEntry, from listId: String) async throws {}
+  func updateItem(_ entry: ListEntry, edit: ListItemEdit, in listId: String) async throws -> ListEntry { edit.applied(to: entry) }
 }
 
 extension ListDetailStore {

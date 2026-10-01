@@ -65,6 +65,15 @@ nonisolated enum ListsAPI {
   }
 
   /// web: useRemoveFromListMutation.
+  /// UpdateListItem: the entry as the server now holds it (its place kept).
+  static func updateItem(userId: String, listId: String, entry: ListEntry, edit: ListItemEdit) async throws -> ListEntry {
+    guard let request = ListPayload.updateItem(userId: userId, listId: listId, entry: entry, edit: edit) else { return entry }
+    let response = try await listRPC("Could not save the change.", request) { await client.updateListItem(request: $0, headers: [:]) }
+    var updated = response.hasItem ? ListEntry(response.item) : edit.applied(to: entry)
+    updated.stop = entry.stop
+    return updated
+  }
+
   static func remove(userId: String, listId: String, entry: ListEntry) async throws {
     let request = ListPayload.removeItem(userId: userId, listId: listId, entry: entry)
     _ = try await listRPC("Could not remove it from the list.", request) { await client.removeListItem(request: $0, headers: [:]) }
@@ -109,6 +118,8 @@ nonisolated protocol ListsService: Sendable {
   func delete(_ listId: String) async throws
   func add(_ stop: Loci_Poi_POIDetailedInfo, destination: SearchDestination, to listId: String) async throws
   func remove(_ entry: ListEntry, from listId: String) async throws
+  /// Note, day and time on one item; the entry as the server now holds it.
+  func updateItem(_ entry: ListEntry, edit: ListItemEdit, in listId: String) async throws -> ListEntry
 }
 
 nonisolated struct ConnectListsService: ListsService {
@@ -123,4 +134,8 @@ nonisolated struct ConnectListsService: ListsService {
     try await ListsAPI.add(userId: userId(), listId: listId, stop: stop, destination: destination)
   }
   func remove(_ entry: ListEntry, from listId: String) async throws { try await ListsAPI.remove(userId: userId(), listId: listId, entry: entry) }
+
+  func updateItem(_ entry: ListEntry, edit: ListItemEdit, in listId: String) async throws -> ListEntry {
+    try await ListsAPI.updateItem(userId: await userId(), listId: listId, entry: entry, edit: edit)
+  }
 }

@@ -58,6 +58,10 @@ nonisolated struct ListEntry: Identifiable, Hashable, Sendable {
   let itemID: String
   var contentType: Loci_List_ContentType
   var notes: String
+  /// Which day of the plan the item sits on, when the list is an itinerary; nil when unset.
+  var dayNumber: Int?
+  /// When on that day; nil when unset.
+  var timeSlot: Date?
   var stop: Loci_Poi_POIDetailedInfo
 
   var id: String { itemID }
@@ -65,10 +69,19 @@ nonisolated struct ListEntry: Identifiable, Hashable, Sendable {
   /// Result pages pick card layout and meta line from the domain.
   var destination: SearchDestination { ListPayload.destination(for: contentType) }
 
-  init(itemID: String, contentType: Loci_List_ContentType = .poi, notes: String = "", stop: Loci_Poi_POIDetailedInfo) {
+  init(
+    itemID: String,
+    contentType: Loci_List_ContentType = .poi,
+    notes: String = "",
+    dayNumber: Int? = nil,
+    timeSlot: Date? = nil,
+    stop: Loci_Poi_POIDetailedInfo
+  ) {
     self.itemID = itemID
     self.contentType = contentType
     self.notes = notes
+    self.dayNumber = dayNumber
+    self.timeSlot = timeSlot
     self.stop = stop
   }
 
@@ -77,7 +90,22 @@ nonisolated struct ListEntry: Identifiable, Hashable, Sendable {
     stop.id = item.itemID
     stop.name = ListEntry.unnamed
     if !item.itemAiDescription.isEmpty { stop.description_p = item.itemAiDescription }
-    self.init(itemID: item.itemID, contentType: item.contentType, notes: item.notes, stop: stop)
+    self.init(
+      itemID: item.itemID,
+      contentType: item.contentType,
+      notes: item.notes,
+      dayNumber: item.dayNumber > 0 ? Int(item.dayNumber) : nil,
+      timeSlot: item.hasTimeSlot ? item.timeSlot.date : nil,
+      stop: stop
+    )
+  }
+
+  /// "Day 2 · 10:30", "Day 2", "10:30" or nil.
+  func scheduleLine(locale: Locale = .current) -> String? {
+    var parts: [String] = []
+    if let dayNumber { parts.append("Day \(dayNumber)") }
+    if let timeSlot { parts.append(timeSlot.formatted(.dateTime.hour().minute().locale(locale))) }
+    return parts.isEmpty ? nil : parts.joined(separator: " · ")
   }
 
   /// The id to look the place up by: the POI id when the row has one.

@@ -1,5 +1,6 @@
 import Foundation
 import LociConnectProto
+import SwiftProtobuf
 
 /// What the create/edit sheet holds (web: the ListsPage modal's signals).
 nonisolated struct ListForm: Equatable, Sendable {
@@ -107,6 +108,22 @@ nonisolated enum ListPayload {
     let blurb = stop.blurb
     if !blurb.isEmpty { request.itemAiDescription = String(blurb.prefix(maxDescription)) }
     if stop.hasRecommendationTrace { request.recommendationTrace = stop.recommendationTrace }
+    return request
+  }
+
+  /// UpdateListItem{userId, listId, itemId, contentType + only the fields
+  /// that changed}. Nil when nothing changed or the edit cannot be expressed
+  /// (a cleared note or day: the proto has no presence).
+  static func updateItem(userId: String, listId: String, entry: ListEntry, edit: ListItemEdit) -> Loci_List_UpdateListItemRequest? {
+    guard edit.isChanged(from: entry), ListItemEdit.problem(edit, from: entry) == nil else { return nil }
+    var request = Loci_List_UpdateListItemRequest()
+    request.userID = userId
+    request.listID = listId
+    request.itemID = entry.itemID
+    request.contentType = entry.contentType
+    if edit.trimmedNotes != entry.notes { request.notes = edit.trimmedNotes }
+    if let day = edit.dayNumber, day != entry.dayNumber { request.dayNumber = Int32(day) }
+    if let time = edit.timeSlot, time != entry.timeSlot { request.timeSlot = Google_Protobuf_Timestamp(date: time) }
     return request
   }
 
