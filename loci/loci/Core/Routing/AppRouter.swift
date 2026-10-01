@@ -121,6 +121,8 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   /// Email links, allowed signed out: `/auth/reset-password?token=…`, `/auth/confirm-email-change?token=…`.
   case resetPassword(token: String)
   case confirmEmail(token: String)
+  /// `lociai.fyi/share/<code>` or the API host's own `api.lociai.fyi/share/<code>`.
+  case shared(code: String)
 
   /// `loci://lists/abc` (the host is the route, as in `SessionLink`) or
   /// `https://lociai.fyi/lists/abc`. Anything with a missing id or extra
@@ -132,8 +134,8 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
       guard let host = url.host(), !host.isEmpty else { return nil }
       segments = [host] + url.pathComponents.dropFirst()
     case "https":
-      guard let host = url.host()?.lowercased(), SessionLink.webHosts.contains(host) else { return nil }
-      segments = Array(url.pathComponents.dropFirst())
+      guard let web = Self.webSegments(of: url) else { return nil }
+      segments = web
     default:
       return nil
     }
@@ -152,6 +154,7 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
     case ("auth", 2):
       guard let link = Self.authLink(page: segments[1], url: url) else { return nil }
       self = link
+    case ("share", 2): self = .shared(code: segments[1])
     default: return nil
     }
   }
@@ -164,6 +167,16 @@ nonisolated extension AppLink {
     case .resetPassword, .confirmEmail: true
     default: false
     }
+  }
+
+  /// Path segments of a web link this app owns: the web hosts, or the API
+  /// host only for `/share/<code>` (share links are minted there today).
+  static func webSegments(of url: URL) -> [String]? {
+    guard let host = url.host()?.lowercased() else { return nil }
+    let segments = Array(url.pathComponents.dropFirst())
+    if SessionLink.webHosts.contains(host) { return segments }
+    guard host == ShareLinks.apiHost, segments.first?.lowercased() == "share" else { return nil }
+    return segments
   }
 
   /// `/auth/reset-password?token=…` and `/auth/confirm-email-change?token=…`; no token, no page.
@@ -221,7 +234,7 @@ nonisolated extension AppLink {
   static func tab(for link: AppLink) -> Tab {
     switch link {
     case .list: .saved
-    case .pack: .discover
+    case .pack, .shared: .discover
     case .trip: .calendar
     case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip, .resetPassword, .confirmEmail: .profile
     }

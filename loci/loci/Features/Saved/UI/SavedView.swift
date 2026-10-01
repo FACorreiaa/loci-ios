@@ -179,6 +179,7 @@ struct SavedItineraryView: View {
   @State private var picking = false
   @State private var loading = false
   @State private var error: String?
+  @State private var share: ShareSheetItem?
 
   var body: some View {
     ScrollView {
@@ -207,7 +208,12 @@ struct SavedItineraryView: View {
     }
     .background(Color.lociPaper.ignoresSafeArea())
     .navigationBarTitleDisplayMode(.inline)
-    .toolbar { ShareLink(item: itinerary.markdownContent.isEmpty ? itinerary.title : itinerary.markdownContent) }
+    .toolbar { ShareLink(item: shareText) }
+    .task(id: itinerary.id) {
+      let item = ShareSheetItem(target: .itinerary(id: itinerary.id, title: itinerary.title))
+      share = item
+      await item.prepare()
+    }
     .navigationDestination(item: $walking) { WalkDayView(day: $0) }
     .confirmationDialog("Which day?", isPresented: $picking, titleVisibility: .visible) {
       ForEach(days) { day in Button(day.title) { walking = day } }
@@ -217,6 +223,13 @@ struct SavedItineraryView: View {
 
   /// The stops live in the search result, not the saved itinerary: restore it,
   /// then walk its only day or ask which one.
+
+  /// The link once minted; until then the markdown (or the title) as before.
+  private var shareText: String {
+    if let share, share.url != nil { return share.text }
+    return itinerary.markdownContent.isEmpty ? itinerary.title : itinerary.markdownContent
+  }
+
   private func loadDays() async {
     loading = true
     defer { loading = false }

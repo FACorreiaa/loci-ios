@@ -31,6 +31,8 @@ enum AnalyticsEvent: String {
   case passwordReset = "password_reset"
   case emailChangeRequested = "email_change_requested"
   case emailChangeConfirmed = "email_change_confirmed"
+  /// A `lociai.fyi/share/<code>` link opened in the app. Properties: content_type.
+  case sharedContentOpened = "shared_content_opened"
   /// A field report was filed (`field` as the proto enum name, `status`,
   /// `poiId`, `answers`), as web's ClaimForm sends it. Metric: contributions per active user.
   case placeClaimSubmitted = "place_claim_submitted"
