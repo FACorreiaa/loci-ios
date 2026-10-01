@@ -17,7 +17,7 @@ public struct ProfileView: View {
 
             VStack(alignment: .leading, spacing: 4) {
               Text(AuthSessionManager.shared.currentUsername ?? "Traveler").font(.headline.weight(.bold)).foregroundColor(.lociInk)
-              Text("Loci Explorer").font(.subheadline).foregroundColor(.lociCoral)
+              ProgressSummaryLine()
             }
           }.padding(.vertical, 8)
         }.listRowBackground(Color.lociCard)

@@ -49,6 +49,9 @@ enum AnalyticsEvent: String {
   case tripCopied = "trip_copied"
   /// A friendship started (`via`: request | invite | contacts | profile).
   case friendAdded = "friend_added"
+  /// An action earned points (`kind`: check_in | visit | trip_day, `points`).
+  /// Metric: returning, active travellers.
+  case pointsAwarded = "points_awarded"
 }
 
 @MainActor enum Analytics {

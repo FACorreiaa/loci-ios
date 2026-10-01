@@ -30,6 +30,18 @@ import Observation
 
   var liveActivitiesEnabled: Bool { ActivityAuthorizationInfo().areActivitiesEnabled }
 
+  init() {
+    // Walking up to a place on the map, or arriving by directions, records
+    // the visit on the spot and scores it (`ProgressReporter.arrived`).
+    proximity.onArrive = { [weak self] identifier in
+      Task { @MainActor in
+        guard let self, let place = self.places.first(where: { $0.stableID == identifier }) else { return }
+        ProgressReporter.arrived(SpotVisit(place), location: self.location)
+      }
+    }
+    navigator.onArrive = { place, location in ProgressReporter.arrived(SpotVisit(place), location: location) }
+  }
+
   func start(places: [Loci_Poi_POIDetailedInfo], radiusKm: Int) async {
     guard !isActive else { return }
     // Claim the walk before awaiting, so a second tap can't start another.

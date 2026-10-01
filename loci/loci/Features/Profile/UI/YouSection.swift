@@ -5,13 +5,15 @@ import SwiftUI
 /// since Phase 2, My reviews since Phase 5, Contribute since Phase 6 and Where
 /// you've been since Phase 7. `ComingSoonView` stays for AppLinkDestination.
 enum YouDestination: String, CaseIterable, Identifiable {
-  case friends, boards, recents, travelHistory, lists, reviews, contribute
+  case friends, leaderboard, progress, boards, recents, travelHistory, lists, reviews, contribute
 
   var id: String { rawValue }
 
   var title: String {
     switch self {
     case .friends: "Friends"
+    case .leaderboard: "Leaderboard"
+    case .progress: "Your progress"
     case .boards: "Boards"
     case .recents: "Recents"
     case .travelHistory: "Where you've been"
@@ -24,6 +26,8 @@ enum YouDestination: String, CaseIterable, Identifiable {
   var systemImage: String {
     switch self {
     case .friends: "person.2"
+    case .leaderboard: "trophy"
+    case .progress: "rosette"
     case .boards: BoardsHomeView.symbol
     case .recents: "clock.arrow.circlepath"
     case .travelHistory: "globe.europe.africa"
@@ -36,6 +40,8 @@ enum YouDestination: String, CaseIterable, Identifiable {
   @ViewBuilder var screen: some View {
     switch self {
     case .friends: FriendsView()
+    case .leaderboard: LeaderboardView()
+    case .progress: MyProgressView()
     case .boards: BoardsHomeView()
     case .recents: RecentsView()
     case .lists: ListsView()

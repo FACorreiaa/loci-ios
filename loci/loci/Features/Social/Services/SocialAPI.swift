@@ -64,6 +64,13 @@ nonisolated enum SocialAPI {
     _ = try await rpc("Could not unblock.", request) { await client.unblockUser(request: $0, headers: [:]) }
   }
 
+  /// Loci users among the Facebook friends the caller's link granted.
+  static func facebookFriends() async throws -> [Loci_Social_UserResult] {
+    try await rpc("Could not find your Facebook friends.", Loci_Social_MatchFacebookFriendsRequest()) {
+      await client.matchFacebookFriends(request: $0, headers: [:])
+    }.matches
+  }
+
   // MARK: Invites
 
   static func myInvite() async throws -> Loci_Social_Invite {

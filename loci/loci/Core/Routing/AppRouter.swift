@@ -118,6 +118,10 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   case user(username: String)
   case friends
   case friendTrip(id: String)
+  /// `/friends?tab=leaderboard` and `?tab=progress`: where a progress push
+  /// (a badge, a friend passing you) opens.
+  case leaderboard
+  case progress
   /// Email links, allowed signed out: `/auth/reset-password?token=…`, `/auth/confirm-email-change?token=…`.
   case resetPassword(token: String)
   case confirmEmail(token: String)
@@ -127,6 +131,15 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   /// `loci://lists/abc` (the host is the route, as in `SessionLink`) or
   /// `https://lociai.fyi/lists/abc`. Anything with a missing id or extra
   /// segments is nil, so the link stays in Safari.
+  /// `/friends`, or its `?tab=leaderboard` / `?tab=progress` pages.
+  private static func friendsTab(_ url: URL) -> AppLink {
+    switch URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "tab" })?.value {
+    case "leaderboard": .leaderboard
+    case "progress": .progress
+    default: .friends
+    }
+  }
+
   public init?(url: URL) {
     var segments: [String]
     switch url.scheme?.lowercased() {
@@ -149,7 +162,7 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
     case ("t", 2): self = .sharedTrip(code: segments[1])
     case ("invite", 2): self = .invite(code: segments[1])
     case ("u", 2): self = .user(username: segments[1])
-    case ("friends", 1): self = .friends
+    case ("friends", 1): self = Self.friendsTab(url)
     case ("friends", 3) where segments[1].lowercased() == "trips": self = .friendTrip(id: segments[2])
     case ("auth", 2):
       guard let link = Self.authLink(page: segments[1], url: url) else { return nil }
@@ -236,7 +249,8 @@ nonisolated extension AppLink {
     case .list: .saved
     case .pack, .shared: .discover
     case .trip: .calendar
-    case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip, .resetPassword, .confirmEmail: .profile
+    case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip, .leaderboard, .progress, .resetPassword, .confirmEmail:
+      .profile
     }
   }
 

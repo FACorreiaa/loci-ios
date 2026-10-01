@@ -40,6 +40,8 @@ import Observation
   private(set) var eta: TimeInterval = 0
   /// Set on arrival, until the card is dismissed.
   private(set) var arrivedAt: String?
+  /// Called once per arrival with the place and the fix that reached it.
+  var onArrive: ((Loci_Poi_POIDetailedInfo, CLLocation) -> Void)?
   private(set) var rerouteCount = 0
 
   private let directions: Directions
@@ -102,6 +104,7 @@ import Observation
 
     if let destinationCoordinate, WalkingRoute.isArrived(meters: WalkingRoute.distance(here, destinationCoordinate)) {
       let name = destination?.name
+      if let destination { onArrive?(destination, location) }
       end()
       arrivedAt = name ?? "your stop"
       return

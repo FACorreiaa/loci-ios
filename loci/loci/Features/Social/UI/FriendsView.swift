@@ -21,6 +21,7 @@ struct FriendsView: View {
   @State private var query = ""
   @State private var results: [SearchHit] = []
   @State private var showsInvite = false
+  @State private var showsPhone = false
   @State private var error: String?
 
   struct SearchHit: Identifiable {
@@ -46,6 +47,7 @@ struct FriendsView: View {
       }
     }
     .sheet(isPresented: $showsInvite) { InviteSheet() }
+    .sheet(isPresented: $showsPhone) { PhoneVerifySheet() }
     .refreshable { await load() }
     .errorAlert($error)
     .task { await load() }
@@ -135,9 +137,17 @@ struct FriendsView: View {
   }
 
   private var addSection: some View {
-    Section("Add friends") {
+    Section {
       NavigationLink { ContactMatchView() } label: { Label("From your contacts", systemImage: "person.crop.rectangle.stack") }
+      if FacebookConnect.isAvailable {
+        NavigationLink { FacebookFriendsView() } label: { Label("From Facebook", systemImage: "person.2.badge.key") }
+      }
       Button("Share your invite link", systemImage: "qrcode") { showsInvite = true }
+      Button("Let friends find you by number", systemImage: "phone.badge.checkmark") { showsPhone = true }
+    } header: {
+      Text("Add friends")
+    } footer: {
+      Text("Instagram, X or WhatsApp: share your invite link there. Opening it makes you friends.")
     }
     .listRowBackground(Color.lociCard)
   }

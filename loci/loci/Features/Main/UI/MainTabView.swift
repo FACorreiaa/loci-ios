@@ -8,6 +8,7 @@ public struct MainTabView: View {
   @Bindable private var router = AppRouter.shared
   @Bindable private var pushPrimer = PushPrimer.shared
   @Bindable private var tripSetup = TripSetupOffer.shared
+  @Environment(\.scenePhase) private var scenePhase
 
   public var body: some View {
     TabView(selection: $router.selectedTab) {
@@ -28,6 +29,13 @@ public struct MainTabView: View {
       // Once, after the first sign-in of an account with no profile (web: /trip-setup).
       .fullScreenCover(isPresented: $tripSetup.isPresenting) {
         TripSetupView { tripSetup.dismiss() }
+      }
+      // "+10 · Visited Pantheon" when something earns points.
+      .overlay(alignment: .top) { PointsToastOverlay() }
+      // The day's check-in: signed in and in front, once per local day.
+      .task { await ProgressReporter.checkInIfNeeded() }
+      .onChange(of: scenePhase) { _, phase in
+        if phase == .active { Task { await ProgressReporter.checkInIfNeeded() } }
       }
   }
 }
