@@ -58,7 +58,7 @@ nonisolated struct MyClaim: Identifiable, Hashable, Sendable {
   /// know). An expired claim says Expired, as web's My reports does.
   static func statusText(_ status: Loci_Place_PlaceClaimStatus) -> String {
     if status == .expired { return "Expired" }
-    switch ClaimOutcome(status) {
+    return switch ClaimOutcome(status) {
     case .verified: "Verified"
     case .contradicted: "Noted"
     case .recorded: "Recorded"
