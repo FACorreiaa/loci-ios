@@ -90,6 +90,9 @@ enum DesignPreview: String {
   /// Profile › Contribute: scout hero with a badge, missing-place search, two
   /// pending places, the first page of twelve tasks and the pager.
   case contribute
+  /// Contribute › Your reports: the first page of twenty-three reports
+  /// (Verified, Recorded, Noted, a removed place) and Load more.
+  case myReports
   /// A field report on a multi-answer field (Vibe, two picked) just after it was filed: "Recorded." with the scouts bar.
   case claimForm
   /// The same form on Opening hours: the week editor and the "Sent as" line.
@@ -193,6 +196,7 @@ enum DesignPreview: String {
     case .tripChecklists:
       NavigationStack { List { TripChecklistsSection(store: .preview(tripID: Loci_Trip_TripDraft.previewLisbon.id)) }.settingsStyle("Checklists") }
     case .contribute: NavigationStack { ContributeView(store: ContributeStore(service: PreviewContributeService())) }
+    case .myReports: NavigationStack { MyReportsView(store: MyReportsStore(service: PreviewContributeService())) }
     case .claimForm: NavigationStack { ClaimFormPreview(field: .vibe, tokens: ["cosy", "local"], submits: true) }
     case .openingHours: NavigationStack { ClaimFormPreview(field: .openingHours) }
     case .addToTrip: AddToTripPreview()

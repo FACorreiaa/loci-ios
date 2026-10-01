@@ -24,7 +24,10 @@ nonisolated struct PreviewReviewsService: ReviewsService {
 
   func myReviews(page: Int) async throws -> ReviewPage {
     let mine = LociReview.previewMyReviews
-    return ReviewPage(reviews: page == 1 ? mine : [], total: mine.count, hasMore: false)
+    // As the server sends it: totals over every review, not just this page.
+    var summary = ReviewerSummary.fromRows(mine)
+    summary?.level = "explorer"
+    return ReviewPage(reviews: page == 1 ? mine : [], total: mine.count, hasMore: false, summary: summary)
   }
 
   func ownReview(poiID: String) async throws -> LociReview? {

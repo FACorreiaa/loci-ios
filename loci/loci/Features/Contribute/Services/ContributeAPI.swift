@@ -27,12 +27,12 @@ nonisolated enum ContributeAPI {
     return ContributorProfile(response)
   }
 
-  /// web: useMyClaims → ListMyClaims{limit: 20, page: 1}. Newest first.
-  static func myClaims(page: Int = 1) async throws -> [MyClaim] {
+  /// web: useMyClaims → ListMyClaims{limit: 20, page}. Newest first.
+  static func myClaims(page: Int) async throws -> MyClaimsPage {
     let response = try await rpc("Could not load your reports.", ContributePayload.myClaims(page: page)) {
       await places.listMyClaims(request: $0, headers: [:])
     }
-    return response.claims.map(MyClaim.init)
+    return MyClaimsPage(response, page: page)
   }
 
   /// web: usePendingPlaces → ListPendingPlaces{limit: 20}.
@@ -134,8 +134,8 @@ nonisolated protocol ContributeService: Sendable {
   func tasks() async throws -> [VerificationTask]
   func profile() async throws -> ContributorProfile
   func pendingPlaces() async throws -> [PendingPlace]
-  /// The scout's own reports, newest first (first page).
-  func myClaims() async throws -> [MyClaim]
+  /// The scout's own reports, newest first, 20 a page (1-based).
+  func myClaims(page: Int) async throws -> MyClaimsPage
   func submitClaims(poiID: String, field: Loci_Place_PlaceFactField, values: [String]) async throws -> ClaimResult
   func submitPlace(_ draft: PlaceDraft) async throws -> PlaceSubmissionResult
   func confirmPlace(submissionID: String) async throws -> PlaceSubmissionResult
@@ -147,7 +147,7 @@ nonisolated struct ConnectContributeService: ContributeService {
   func tasks() async throws -> [VerificationTask] { try await ContributeAPI.tasks() }
   func profile() async throws -> ContributorProfile { try await ContributeAPI.profile() }
   func pendingPlaces() async throws -> [PendingPlace] { try await ContributeAPI.pendingPlaces() }
-  func myClaims() async throws -> [MyClaim] { try await ContributeAPI.myClaims() }
+  func myClaims(page: Int) async throws -> MyClaimsPage { try await ContributeAPI.myClaims(page: page) }
   func submitClaims(poiID: String, field: Loci_Place_PlaceFactField, values: [String]) async throws -> ClaimResult {
     try await ContributeAPI.submitClaims(poiID: poiID, field: field, values: values)
   }

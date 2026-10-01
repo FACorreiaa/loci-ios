@@ -14,8 +14,6 @@ import LociConnectProto
   private(set) var tasks: [VerificationTask] = []
   private(set) var profile = ContributorProfile.empty
   private(set) var pending: [PendingPlace] = []
-  /// The scout's own reports and what became of them (ListMyClaims, first page).
-  private(set) var myClaims: [MyClaim] = []
   /// Confirmed places leave the pending feed on the next load, so they are
   /// kept here long enough for the scout to read what their confirmation did.
   private(set) var confirmed: [String: (place: PendingPlace, outcome: PlaceSubmissionResult)] = [:]
@@ -61,7 +59,6 @@ import LociConnectProto
     async let tasksCall = service.tasks()
     async let profileCall = try? service.profile()
     async let pendingCall = try? service.pendingPlaces()
-    async let claimsCall = try? service.myClaims()
     do {
       tasks = try await tasksCall
       page = TaskPaging.clamp(page, total: tasks.count)
@@ -71,7 +68,6 @@ import LociConnectProto
     }
     if let loadedProfile = await profileCall { profile = loadedProfile }
     if let loadedPending = await pendingCall { pending = loadedPending }
-    if let loadedClaims = await claimsCall { myClaims = loadedClaims }
   }
 
   func goToPage(_ next: Int) {

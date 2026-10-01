@@ -123,15 +123,25 @@ nonisolated struct ContributorProfile: Equatable, Sendable {
   var reputation = 0
   var submittedClaims = 0
   var acceptedClaims = 0
+  /// Bare slugs, which every server sends.
   var badges: [String] = []
+  /// The same badges with the server's copy (proto v5.29.0); empty on older servers.
+  var badgeDetails: [ContributorBadge] = []
 
   static let empty = ContributorProfile()
 
-  init(reputation: Int = 0, submittedClaims: Int = 0, acceptedClaims: Int = 0, badges: [String] = []) {
+  init(
+    reputation: Int = 0,
+    submittedClaims: Int = 0,
+    acceptedClaims: Int = 0,
+    badges: [String] = [],
+    badgeDetails: [ContributorBadge] = []
+  ) {
     self.reputation = reputation
     self.submittedClaims = submittedClaims
     self.acceptedClaims = acceptedClaims
     self.badges = badges
+    self.badgeDetails = badgeDetails
   }
 
   init(_ proto: Loci_Place_ContributorProfile) {
@@ -139,13 +149,47 @@ nonisolated struct ContributorProfile: Equatable, Sendable {
       reputation: Int(proto.reputation),
       submittedClaims: Int(proto.submittedClaims),
       acceptedClaims: Int(proto.acceptedClaims),
-      badges: proto.badges
+      badges: proto.badges,
+      badgeDetails: proto.badgeDetails.compactMap(ContributorBadge.init)
     )
+  }
+
+  /// What the hero shows: the server's badges with its own wording, or, from
+  /// a server that sends only slugs, the slugs in this build's words.
+  var shownBadges: [ContributorBadge] {
+    guard badgeDetails.isEmpty else { return badgeDetails }
+    return badges.filter { !$0.isEmpty }.map { ContributorBadge(slug: $0, title: ScoutBadge.title($0), detail: ScoutBadge.detail($0)) }
   }
 }
 
-/// A badge slug in words. The server awards `local-scout` at ten verified
-/// reports (placeintel `creditCorroborators`); anything newer reads as its slug.
+/// One badge as the hero shows it (ContributorProfile.badge_details).
+nonisolated struct ContributorBadge: Identifiable, Equatable, Sendable {
+  let slug: String
+  let title: String
+  let detail: String?
+
+  var id: String { slug }
+
+  init(slug: String, title: String, detail: String?) {
+    self.slug = slug
+    self.title = title
+    self.detail = detail
+  }
+
+  /// Nil without a slug. A blank display name falls back to the slug in words,
+  /// and a blank description to none.
+  init?(_ proto: Loci_Place_Badge) {
+    let slug = proto.slug.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !slug.isEmpty else { return nil }
+    let title = proto.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+    let detail = proto.description_p.trimmingCharacters(in: .whitespacesAndNewlines)
+    self.init(slug: slug, title: title.isEmpty ? ScoutBadge.title(slug) : title, detail: detail.isEmpty ? nil : detail)
+  }
+}
+
+/// A badge slug in words, for servers that send no badge_details. The server
+/// awards `local-scout` at ten verified reports (placeintel
+/// `creditCorroborators`); anything newer reads as its slug.
 nonisolated enum ScoutBadge {
   static func title(_ slug: String) -> String {
     switch slug {

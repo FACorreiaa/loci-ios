@@ -220,18 +220,15 @@ nonisolated enum ReviewSubmitResult: Equatable, Sendable {
   /// GetUserReviews.statistics as the server sent it; nil from older servers.
   private(set) var serverSummary: ReviewerSummary?
 
-  /// "7 reviews · 4.4 average · 12 helpful votes · Guide" from the server's
-  /// totals; worked out from the loaded rows when a server leaves them empty.
-  var summary: String {
-    if let serverSummary, serverSummary.total > 0 { return serverSummary.text }
-    guard !reviews.isEmpty else { return "" }
-    let average = Double(reviews.map(\.rating).reduce(0, +)) / Double(reviews.count)
-    let helpful = reviews.map(\.helpfulCount).reduce(0, +)
-    var parts = [total == 1 ? "1 review" : "\(max(total, reviews.count)) reviews"]
-    parts.append("\(average.formatted(.number.precision(.fractionLength(1)))) average")
-    if helpful > 0 { parts.append(helpful == 1 ? "1 helpful vote" : "\(helpful) helpful votes") }
-    return parts.joined(separator: " · ")
+  /// The server's totals over every review you wrote; the loaded rows'
+  /// maths only when a server leaves GetUserReviews.statistics empty.
+  var summaryStats: ReviewerSummary? {
+    if let serverSummary, serverSummary.total > 0 { return serverSummary }
+    return ReviewerSummary.fromRows(reviews, total: total)
   }
+
+  /// "7 reviews · 4.4 average · 12 helpful votes · Guide".
+  var summary: String { summaryStats?.text ?? "" }
 
   func load() async {
     if reviews.isEmpty { phase = .loading }

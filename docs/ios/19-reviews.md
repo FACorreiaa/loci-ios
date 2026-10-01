@@ -12,7 +12,8 @@ write fails), so it was not ported. This slice follows the contract that api
 |---|---|---|
 | Place detail › Reviews (summary) | `ReviewService.GetReviewStatistics` | `poiId` |
 | Place detail › Reviews (latest 3), See all | `GetPOIReviews` | `poiId`, `pagination{page ≥ 1, pageSize 20}` |
-| "Write a review" vs "Edit your review" | `GetUserReviews` | `pagination{page, pageSize 100}`, **no `userId`** (empty means the caller). Filtered by `poi_id` on the client |
+| "Write a review" vs "Edit your review" | `GetMyPOIReview` | `poiId`. NotFound means "Write". Unimplemented (a server older than v5.29.0) falls back to `GetUserReviews` with `pagination{page, pageSize 100}`, up to 5 pages, **no `userId`**, filtered by `poi_id` on the client (`ReviewPayload.ownLookup`, `scanForOwn`) |
+| Card menu › Report | `ReportReview` | `reviewId`, `reason` (spam, inappropriate, fake, offensive, other), no `details`, no `userId` |
 | Write sheet › Post | `CreateReview` | `poiId`, `rating` (whole 1–5 as a double), `title`, `content` (both trimmed), `visitDate` only when set |
 | Write sheet › Save (edit) | `UpdateReview` | `reviewId`, `rating`, `title`, `content`, `visitDate` (none clears it: the handler overwrites every field) |
 | Delete (card menu, sheet, My reviews swipe) | `DeleteReview` | `reviewId` |
@@ -24,8 +25,13 @@ write fails), so it was not ported. This slice follows the contract that api
   the handler reads the caller from the token.
 - Photos, aspects, language and `content_*` are not sent. There is no upload
   RPC, and the server ignores the rest.
-- `ReportReview` is Unimplemented on the server, so there is no report
-  button. `GetContentReviews` and `GetRecentReviews` are not used.
+- `GetContentReviews` and `GetRecentReviews` are not used.
+- A report of your own review is PermissionDenied, and one the server won't
+  take is FailedPrecondition. Both read as one plain sentence
+  (`ReviewReport.refusal`: "You can't report your own review." / "This review
+  can't be reported right now.") instead of the server's message. The report
+  menu is hidden on your own reviews anyway, as the helpful button is: the
+  server refuses a vote on your own review with PermissionDenied too.
 - A 501 becomes "… This isn't available on the server yet." (`reviewRPC`,
   the same approach as `ListsAPI`).
 
@@ -66,13 +72,14 @@ write fails), so it was not ported. This slice follows the contract that api
 - **`MyReviewsStore`:**
   - Paging, and an optimistic delete that is rolled back on failure.
   - Edit goes through the same `ReviewComposer`.
-  - The summary line (count, average given, helpful votes) is computed from the loaded rows, because the server leaves `UserReviewStatistics` empty.
+  - The summary line (count, average given, helpful votes, level) and the star bars come from `GetUserReviews.statistics` (`total_reviews`, `average_rating_given`, `rating_distribution`), which cover every review, not just the loaded page. Only when a server sends no statistics (or a zero count) are they worked out from the loaded rows (`ReviewerSummary.fromRows`, web's `mineSummary`).
 - Both stores take a `ReviewsService`:
   - `ConnectReviewsService` is the live one.
   - `PreviewReviewsService` supplies offline samples, and is used by any place detail shown under `-designPreview`.
 
 ## Analytics
 
+- `review_reported {reason}` on every report the server accepts.
 - `review_submitted {rating, is_edit}` on every successful post or edit.
   Web sends `{rating, has_photos, travel_type}` from its mock page. iOS has
   neither field.
@@ -93,7 +100,8 @@ write fails), so it was not ported. This slice follows the contract that api
 **Closed, and what iOS does with it:** `Review.voted_by_me` seeds `HelpfulVote`
 (`HelpfulVote(review)`), so a vote survives a reload and the first tap takes
 it back; `GetMyPOIReview` replaces the paged `GetUserReviews` lookup in
-`ConnectReviewsService.ownReview`; the server refuses votes on your own review
+`ConnectReviewsService.ownReview` (the scan stays as the Unimplemented
+fallback); the server refuses votes on your own review
 (iOS already hid the button); `GetUserReviews.statistics` feeds the My reviews
 line (`ReviewerSummary`, with the reviewer level) and the row maths is only
 the fallback; `ReportReview` is wired as a flag in the card's overflow menu
@@ -101,6 +109,13 @@ with web's five reasons (`ReviewReport`), remembered per session in
 `PlaceReviewsStore.reported`.
 
 ## Tests and previews
+
+`lociTests/ReviewsV529Tests.swift` covers the v5.29.0 additions: the
+GetMyPOIReview answer (NotFound, Unimplemented → scan), the scan's paging and
+cap, report refusals and requests, a vote from an earlier session taken back
+on the first tap, and reports refused on your own review.
+`MyReviewsStatisticsTests.swift` covers the statistics mapping
+(count, average, distribution) and the row fallback.
 
 `lociTests/ReviewModelTests.swift` has three suites:
 
@@ -116,6 +131,7 @@ Previews (Debug, offline):
 
 ## Not verified
 
+- Report, GetMyPOIReview and the server statistics have not run signed in against prod either; the Unimplemented fallback has only run in tests.
 - Nothing has run signed in against the live API. Still untested there: write, edit, AlreadyExists → edit, like and unlike, delete, My reviews, tap through to the place, and the plan's live check.
 - "See all" paging beyond the first page, pull to refresh, and the swipe actions have run only against preview data.
 - Dynamic Type XL was not checked.

@@ -224,8 +224,8 @@ nonisolated extension SearchState {
       savedTripID = Self.tripID(from: event) ?? savedTripID
       status = .completed
       return .completed
-    case .route, .gastronomy:
-      break  // handled above
+    case .route, .gastronomy, .actionProposal:
+      break  // route/gastronomy handled above; trip actions have no iOS surface yet
     }
     return nil
   }
@@ -347,6 +347,7 @@ nonisolated extension Loci_Chat_StreamEvent.OneOf_Payload {
     case .complete: "complete"
     case .route: "route"
     case .gastronomy: "gastronomy"
+    case .actionProposal: "action_proposal"
     }
   }
 }
