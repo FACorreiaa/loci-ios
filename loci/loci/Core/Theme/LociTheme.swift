@@ -89,6 +89,11 @@ public extension Color {
   /// A forest fill for places the system forces a white label: swipe actions.
   /// Dark mode deepens it so white measures 5.7:1 (the sage forest gives 2.1:1).
   static let lociForestFill = dynamic(light: 0x214D3C, dark: 0x40705A)
+  /// A terracotta fill for places that carry a white label: swipe actions,
+  /// `.borderedProminent` buttons and chips tinted coral. `lociCoral` itself
+  /// stays the text/icon accent; under white it measures only 3.7:1 light /
+  /// 2.9:1 dark. This deeper coral gives white 5.6:1 light / 4.7:1 dark (WCAG AA).
+  static let lociCoralFill = dynamic(light: 0xA54E2E, dark: 0xB35A38)
   /// secondary (also the active tab fill)
   static let lociSage = dynamic(light: 0xD8E0D0, dark: 0x384840)
   /// muted. Dark value kept from the app's earlier palette; NATIVE_DESIGN gives none.

@@ -19,10 +19,10 @@ struct RelationshipButton: View {
       switch relationship {
       case .notConnected:
         Button("Add friend", systemImage: "person.badge.plus") { run(sendRequest) }
-          .buttonStyle(.borderedProminent)
+          .buttonStyle(.borderedProminent).tint(.lociCoralFill)
       case .incoming:
         Button("Accept", systemImage: "checkmark") { run(sendRequest) }
-          .buttonStyle(.borderedProminent)
+          .buttonStyle(.borderedProminent).tint(.lociCoralFill)
       case .requested:
         Button("Requested") { run(cancelRequest) }.buttonStyle(.bordered).disabled(outgoingRequestID == nil)
       case .friends:

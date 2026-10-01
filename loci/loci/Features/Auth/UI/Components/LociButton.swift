@@ -40,7 +40,7 @@ public struct LociButton: View {
 
   private var backgroundColor: Color {
     switch style {
-    case .primary: return .lociCoral
+    case .primary: return .lociCoralFill
     case .secondary: return .lociCard
     case .destructive: return Color.red.opacity(0.85)
     }

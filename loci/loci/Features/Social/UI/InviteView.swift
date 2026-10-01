@@ -28,7 +28,7 @@ struct InviteView: View {
           Text("This is your own invite. Send it to a friend.").font(.lociCaption())
         default:
           Button(isAccepting ? "Connecting…" : "Become friends") { accept() }
-            .buttonStyle(.borderedProminent).tint(.lociCoral).controlSize(.large).disabled(isAccepting)
+            .buttonStyle(.borderedProminent).tint(.lociCoralFill).controlSize(.large).disabled(isAccepting)
         }
       } else if let failure {
         ContentUnavailableView(failure, systemImage: "link.badge.plus", description: Text("Ask your friend for a new link."))
