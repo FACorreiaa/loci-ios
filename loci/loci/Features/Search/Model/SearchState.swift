@@ -224,10 +224,10 @@ nonisolated extension SearchState {
       savedTripID = Self.tripID(from: event) ?? savedTripID
       status = .completed
       return .completed
-    case .route, .gastronomy:
-      break  // handled above
-    case .actionProposal:
-      break  // trip-action cards are rendered by the chat thread (plan 4), not the search stream
+    case .route, .gastronomy, .actionProposal:
+      // route and gastronomy are handled above; trip-action cards belong to
+      // the chat thread (plan 4), not the search stream.
+      break
     }
     return nil
   }
