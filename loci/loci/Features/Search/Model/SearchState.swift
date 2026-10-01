@@ -226,6 +226,8 @@ nonisolated extension SearchState {
       return .completed
     case .route, .gastronomy:
       break  // handled above
+    case .actionProposal:
+      break  // trip actions (proto 9c6e264) have no iOS surface yet; ignore them
     }
     return nil
   }
@@ -347,6 +349,7 @@ nonisolated extension Loci_Chat_StreamEvent.OneOf_Payload {
     case .complete: "complete"
     case .route: "route"
     case .gastronomy: "gastronomy"
+    case .actionProposal: "action_proposal"
     }
   }
 }
