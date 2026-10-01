@@ -4,7 +4,7 @@ import SwiftProtobuf
 
 /// One of the scout's own field reports, as ListMyClaims returns it: the place,
 /// what was reported, and what became of it.
-nonisolated struct MyClaim: Identifiable, Equatable, Sendable {
+nonisolated struct MyClaim: Identifiable, Hashable, Sendable {
   var id: String
   var poiID: String
   var placeName: String
@@ -45,26 +45,54 @@ nonisolated struct MyClaim: Identifiable, Equatable, Sendable {
     )
   }
 
+  /// Whether the row opens the place: it is a stored POI that still exists.
+  var opensPlace: Bool { ContributePayload.canReport(poiID: poiID) && placeName != Self.removedPlaceName }
+
   var fieldLabel: String { PlaceFactVocabulary.label(field) }
+  /// The option's label ("Gluten free"), or the value itself (opening hours).
+  var valueText: String { PlaceFactVocabulary.displayValue(field, value) }
   var statusText: String { Self.statusText(status) }
 
-  /// The same words the claim form uses for an outcome.
+  /// The claim form's outcome in one word: Verified, Noted (reports differ)
+  /// or Recorded (waiting on a second scout, expired, or a status this build
+  /// doesn't know).
   static func statusText(_ status: Loci_Place_PlaceClaimStatus) -> String {
-    switch status {
-    case .pending: "Waiting on a second scout"
-    case .accepted: "Verified"
-    case .contradicted: "Reports differ"
-    case .expired: "Expired"
-    case .unspecified, .UNRECOGNIZED: "Recorded"
+    switch ClaimOutcome(status) {
+    case .verified: "Verified"
+    case .contradicted: "Noted"
+    case .recorded: "Recorded"
     }
   }
 
   var symbol: String {
-    switch status {
-    case .accepted: "checkmark.shield.fill"
+    switch ClaimOutcome(status) {
+    case .verified: "checkmark.shield.fill"
     case .contradicted: "exclamationmark.circle"
-    case .expired: "clock.badge.xmark"
-    case .pending, .unspecified, .UNRECOGNIZED: "clock"
+    case .recorded(let pending): pending ? "clock" : "checkmark.circle"
     }
+  }
+}
+
+/// One page of ListMyClaims, and whether there is another.
+nonisolated struct MyClaimsPage: Equatable, Sendable {
+  var claims: [MyClaim]
+  var total: Int
+  var hasMore: Bool
+
+  static let empty = MyClaimsPage(claims: [], total: 0, hasMore: false)
+
+  init(claims: [MyClaim], total: Int, hasMore: Bool) {
+    self.claims = claims
+    self.total = max(0, total)
+    self.hasMore = hasMore
+  }
+
+  init(_ response: Loci_Place_ListMyClaimsResponse, page: Int, limit: Int32 = ContributePayload.myClaimsLimit) {
+    let claims = response.claims.map(MyClaim.init)
+    self.init(
+      claims: claims,
+      total: Int(response.total),
+      hasMore: ContributePayload.claimsHaveMore(page: page, received: claims.count, total: Int(response.total), limit: limit)
+    )
   }
 }

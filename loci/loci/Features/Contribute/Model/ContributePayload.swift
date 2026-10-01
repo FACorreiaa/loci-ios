@@ -38,6 +38,15 @@ nonisolated enum ContributePayload {
     return request
   }
 
+  /// Another page after `page`: the server's total says so; a server that
+  /// sends no total (zero) has more only while pages come back full.
+  static func claimsHaveMore(page: Int, received: Int, total: Int, limit: Int32 = myClaimsLimit) -> Bool {
+    let size = Int(min(max(1, limit), myClaimsMaxLimit))
+    guard received > 0 else { return false }
+    if total > 0 { return max(1, page) * size < total }
+    return received >= size
+  }
+
   static func pendingPlaces() -> Loci_Place_ListPendingPlacesRequest {
     var request = Loci_Place_ListPendingPlacesRequest()
     request.limit = pendingLimit
