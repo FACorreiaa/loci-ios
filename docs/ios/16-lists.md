@@ -80,3 +80,16 @@ most of it cannot until the server is fixed: create, add from place detail,
 the list page with real rows (and the `GetPOI` fill), remove, delete, and the
 6th-list Pro sheet on a free account (the plan's live check). The
 entitlement header path is tested only against hand-built headers.
+
+## Item note, day and time (2026-10-01, pass 3 Phase 5)
+
+`ListService.UpdateListItem` (handler exposed in api #118) edits one item's
+note, day number and time slot. Swipe a card from the left ("Note") or long
+press it; the note and "Day 2 · 10:30" read under the card and tapping them
+opens the same sheet. `ListItemEdit` holds the draft; `ListPayload.updateItem`
+sends only the fields that changed. The proto has no field presence, so a
+cleared note or day cannot be sent — the sheet says "can be changed but not
+removed yet" instead of silently keeping the old value. Optimistic in
+`ListDetailStore.updateItem`, put back on refusal. `list_item_edited`.
+Web has no item editing. The other nine Phase 5 RPCs stay parked (no server
+code; see the ROADMAP row).

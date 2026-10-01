@@ -122,6 +122,27 @@ import SwiftUI
   }
 
   /// Optimistic; the row comes back where it was if the server refuses.
+  /// Optimistic: the row reads as edited at once; a refusal puts it back.
+  @discardableResult
+  func updateItem(_ entry: ListEntry, edit: ListItemEdit) async -> Bool {
+    guard var detail, let index = detail.entries.firstIndex(of: entry), edit.isChanged(from: entry) else { return true }
+    detail.entries[index] = edit.applied(to: entry)
+    self.detail = detail
+    do {
+      let saved = try await service.updateItem(entry, edit: edit, in: listID)
+      if let i = self.detail?.entries.firstIndex(where: { $0.itemID == entry.itemID }) { self.detail?.entries[i] = saved }
+      Analytics.capture(
+        .listItemEdited,
+        ["has_note": !edit.trimmedNotes.isEmpty, "has_day": edit.dayNumber != nil, "has_time": edit.timeSlot != nil]
+      )
+      return true
+    } catch {
+      if let i = self.detail?.entries.firstIndex(where: { $0.itemID == entry.itemID }) { self.detail?.entries[i] = entry }
+      if !error.isCancellation { self.error = error.userMessage }
+      return false
+    }
+  }
+
   func remove(_ entry: ListEntry) async {
     guard var detail, let index = detail.entries.firstIndex(of: entry) else { return }
     detail.entries.remove(at: index)

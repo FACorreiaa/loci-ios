@@ -26,6 +26,8 @@ enum AnalyticsEvent: String {
   case tripExported = "trip_exported"
   /// A trip got a link (SetTripVisibility to friends, link or public). Properties: content_type ("trip").
   case shareLinkCreated = "share_link_created"
+  /// A list item's note, day or time was edited. Properties: has_note, has_day, has_time.
+  case listItemEdited = "list_item_edited"
   case passwordReset = "password_reset"
   case emailChangeRequested = "email_change_requested"
   case emailChangeConfirmed = "email_change_confirmed"
