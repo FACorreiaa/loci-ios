@@ -24,6 +24,7 @@ struct SearchResultsView: View {
   private let reviews = ReviewPrompter.shared
   private let router = AppRouter.shared
   @State private var restored: SearchState?
+  @State private var exportError: String?
   @State private var isRestoring = false
   @State private var saveStatus: String?
   @State private var error: String?
@@ -97,6 +98,7 @@ struct SearchResultsView: View {
     .navigationTitle(link.destination.title)
     .toolbarVisibility(.hidden, for: .navigationBar)
     .interactivePopEnabled()
+    .errorAlert($exportError)
     .errorAlert($error)
     .museFlash($flash, status: state?.status, places: state?.places.count ?? 0)
     .task(id: reviews.isPromptDue) { await askForReviewIfDue() }
@@ -164,6 +166,16 @@ struct SearchResultsView: View {
         if state.hasResult {
           ShareLink(item: ShareText.build(title: shareTitle(state), groups: state.dayGroups, description: state.cityData?.description_p)) {
             Label("Share", systemImage: "square.and.arrow.up")
+          }
+          // The itinerary page's PDF lives in Trip Kit (with its day gate).
+          if state.destination != .itinerary {
+            ResultsExportButton(
+              destination: state.destination,
+              stops: state.dayGroups.flatMap(\.stops),
+              title: shareTitle(state),
+              cityName: state.cityData?.city ?? state.cityName ?? "",
+              error: $exportError
+            )
           }
         }
       }

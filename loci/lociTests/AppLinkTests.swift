@@ -66,6 +66,8 @@ struct AppLinkTests {
     (.user(username: "ana"), .profile),
     (.friends, .profile),
     (.friendTrip(id: "t2"), .profile),
+    (.resetPassword(token: "t"), .profile),
+    (.confirmEmail(token: "t"), .profile),
   ])
   func routesToTheOwningTab(_ link: AppLink, _ tab: AppRouter.Tab) {
     let router = AppRouter()

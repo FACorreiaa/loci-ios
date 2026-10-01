@@ -31,9 +31,11 @@ nonisolated enum ResultsAPI {
   }
 
   /// web: PaymentService.GetSubscription → plan id (`premium_annual`, `free`, …).
+  /// The plan the results pages key on (web: fetchEntitlements). One source
+  /// with the You hub: EntitlementService, not the payment subscription row.
   static func plan() async throws -> String {
-    let response = try await rpc("Could not confirm your plan.") { await payment.getSubscription(request: .init(), headers: [:]) }
-    return response.hasSubscription ? response.subscription.planID : "free"
+    let plan = try await EntitlementsAPI.fetch().plan
+    return plan.isEmpty ? "free" : plan
   }
 
   /// web: DetailedItemModal → GetPlaceFacts{poiId}

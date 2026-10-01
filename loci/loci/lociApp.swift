@@ -11,6 +11,7 @@ import SwiftUI
 @main struct lociApp: App {
   @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
   @State private var isAuthenticated: Bool = false
+  @State private var authLink: AuthLinkItem?
   @State private var isCheckingAuth: Bool = true
   @Environment(\.scenePhase) private var scenePhase
 
@@ -28,6 +29,17 @@ import SwiftUI
           MainTabView(onSignOut: { withAnimation { isAuthenticated = false } })
         } else {
           LoginScreen(onAuthenticated: { withAnimation { isAuthenticated = true } })
+            // The email links (reset password, confirm email) open without a session.
+            .onChange(of: AppRouter.shared.pendingLink, initial: true) { _, link in
+              if let link, link.isAuthEdge { authLink = AppRouter.shared.takeLink(for: .profile).map(AuthLinkItem.init) }
+            }
+            .sheet(item: $authLink) { item in
+              switch item.link {
+              case .resetPassword(let token): ResetPasswordView(token: token) { authLink = nil }
+              case .confirmEmail(let token): ConfirmEmailView(token: token) { authLink = nil }
+              default: EmptyView()
+              }
+            }
         }
       }.task {
         let restored = await AuthSessionManager.shared.restoreSessionIfNeeded()
@@ -44,12 +56,14 @@ import SwiftUI
         identifyCurrentUser()
         // The APNs token often arrives before the first sign-in; register it now.
         Task { await PushRegistration.shared.registerIfNeeded() }
+        Task { await EntitlementsStore.shared.refresh(userID: AuthSessionManager.shared.currentUserID) }
         // A brand-new account gets the four-question profile wizard, once.
         let isNewUser = note.userInfo?[AuthSessionUserInfo.isNewUser] as? Bool ?? false
         let userID = AuthSessionManager.shared.currentUserID
         Task { await TripSetupOffer.shared.offerIfNeeded(isNewUser: isNewUser, userID: userID) }
       }.onReceive(NotificationCenter.default.publisher(for: .authSessionDidInvalidate)) { _ in
         Analytics.reset()
+        EntitlementsStore.shared.reset()
         withAnimation {
           isAuthenticated = false
           isCheckingAuth = false
@@ -89,4 +103,10 @@ import SwiftUI
     let session = AuthSessionManager.shared
     Analytics.identify(userId: session.currentUserID, username: session.currentUsername)
   }
+}
+
+/// An auth-edge link being shown over the login screen.
+private struct AuthLinkItem: Identifiable {
+  let link: AppLink
+  var id: String { "\(link)" }
 }

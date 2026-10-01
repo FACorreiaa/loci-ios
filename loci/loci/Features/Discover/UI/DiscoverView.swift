@@ -9,16 +9,14 @@ struct DiscoverView: View {
   /// web: routes/discover.tsx `categories`
   static let quickCategories: [(name: String, symbol: String)] = [
     ("Restaurants", "fork.knife"), ("Hotels", "bed.double"), ("Activities", "target"), ("Attractions", "building.columns"),
-    ("Nightlife", "moon.stars"), ("Shopping", "bag"), ("Museums", "paintpalette"), ("Parks", "tree"),
-    ("Beaches", "beach.umbrella"), ("Adventure", "mountain.2"), ("Cultural", "theatermasks"), ("Markets", "storefront"),
+    ("Nightlife", "moon.stars"), ("Shopping", "bag"), ("Museums", "paintpalette"), ("Parks", "tree"), ("Beaches", "beach.umbrella"),
+    ("Adventure", "mountain.2"), ("Cultural", "theatermasks"), ("Markets", "storefront"),
   ]
 
   /// Shown until the first search, so a new user sees what a good prompt looks
   /// like. The first is web's landing placeholder, word for word.
   static let examplePrompts = [
-    "Three chill days in Lisbon for food and views",
-    "A rainy afternoon in Porto",
-    "A weekend of markets and street food in Mexico City",
+    "Three chill days in Lisbon for food and views", "A rainy afternoon in Porto", "A weekend of markets and street food in Mexico City",
   ]
 
   @State private var path: [SessionLink] = []
@@ -46,48 +44,36 @@ struct DiscoverView: View {
           } else {
             ProgressView().frame(maxWidth: .infinity)
           }
-        }
-        .padding(LociTheme.defaultPadding)
-      }
-      .background(Color.lociPaper.ignoresSafeArea())
-      .navigationTitle("Discover")
-      .navigationDestination(for: SessionLink.self) { SearchResultsView(link: $0) }
-      .refreshable {
+        }.padding(LociTheme.defaultPadding)
+      }.background(Color.lociPaper.ignoresSafeArea()).navigationTitle("Discover").navigationDestination(for: SessionLink.self) {
+        SearchResultsView(link: $0)
+      }.refreshable {
         async let brief: Void = here.load()
         await load()
         await brief
-      }
-      .task {
+      }.task {
         async let brief: Void = here.load()
         if page == nil { await load() }
         await brief
-      }
-      .errorAlert($error)
-      .navigationDestination(item: $linked) { AppLinkDestination(link: $0) }
-      .onAppear(perform: openPending)
-      .onChange(of: router.pendingLink) { openPending() }
+      }.errorAlert($error).navigationDestination(item: $linked) { AppLinkDestination(link: $0) }.onAppear(perform: openPending).onChange(
+        of: router.pendingLink
+      ) { openPending() }
     }
   }
 
   /// A `/packs/:slug` link pushes the pack over Discover.
-  private func openPending() {
-    if let link = router.takeLink(for: .discover) { linked = link }
-  }
+  private func openPending() { if let link = router.takeLink(for: .discover) { linked = link } }
 
   // MARK: - Sections
 
   private var hero: some View {
     VStack(alignment: .leading, spacing: 12) {
       Text("Where to next?").font(.lociDisplay(30)).foregroundStyle(Color.lociInk)
-      if !here.placeName.isEmpty {
-        Text(here.placeName).font(.lociCaption(13)).foregroundStyle(Color.lociForest)
-      }
-      TextField("City (optional)", text: $city)
-        .font(.lociBody())
-        .textContentType(.addressCity)
-        .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(Color.lociCard, in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder))
+      if !here.placeName.isEmpty { Text(here.placeName).font(.lociCaption(13)).foregroundStyle(Color.lociForest) }
+      TextField("City (optional)", text: $city).font(.lociBody()).textContentType(.addressCity).padding(.horizontal, 14).padding(.vertical, 10)
+        .background(Color.lociCard, in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous)).overlay(
+          RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder)
+        )
       SearchComposer(
         placeholder: "Restaurants, hotels, a day out…",
         seed: $composerSeed,
@@ -95,19 +81,42 @@ struct DiscoverView: View {
         useDefaultProfile: false
       ) { path.append($0) }
       HStack(spacing: 12) {
-        NavigationLink { NearbyView() } label: { Label("Near me", systemImage: "location") }
-        NavigationLink { CompareView() } label: { Label("Weekend: compare two cities", systemImage: "arrow.left.arrow.right") }
-      }
-      .font(.lociCaption(13))
-      .buttonStyle(.bordered)
-      .tint(.lociForest)
+        NavigationLink {
+          NearbyView()
+        } label: {
+          Label("Near me", systemImage: "location")
+        }
+        NavigationLink {
+          CompareView()
+        } label: {
+          Label("Weekend: compare two cities", systemImage: "arrow.left.arrow.right")
+        }
+      }.font(.lociCaption(13)).buttonStyle(.bordered).tint(.lociForest)
       packsEntry
       gastronomyEntry
+      boardsEntry
     }
   }
 
   /// City Packs (web: /packs): ready-made itineraries (`18-city-packs.md`).
   /// Typical gastronomy (web: /gastronomy), styled like the City Packs card.
+  /// Community boards (web: /boards), styled like the City Packs card.
+  private var boardsEntry: some View {
+    NavigationLink {
+      BoardsHomeView()
+    } label: {
+      HStack(spacing: 12) {
+        Image(systemName: BoardsHomeView.symbol).font(.title3).foregroundStyle(Color.lociForest).accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 2) {
+          Text("Boards").font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
+          Text("Trip reports and tips from other travellers").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+        }
+        Spacer()
+        Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Color.lociMutedInk).accessibilityHidden(true)
+      }.lociCard(padding: 12)
+    }.buttonStyle(.plain)
+  }
+
   private var gastronomyEntry: some View {
     NavigationLink {
       GastronomyView()
@@ -120,10 +129,8 @@ struct DiscoverView: View {
         }
         Spacer()
         Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Color.lociMutedInk).accessibilityHidden(true)
-      }
-      .lociCard(padding: 12)
-    }
-    .buttonStyle(.plain)
+      }.lociCard(padding: 12)
+    }.buttonStyle(.plain)
   }
 
   private var packsEntry: some View {
@@ -138,10 +145,8 @@ struct DiscoverView: View {
         }
         Spacer()
         Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(Color.lociMutedInk).accessibilityHidden(true)
-      }
-      .lociCard(padding: 12)
-    }
-    .buttonStyle(.plain)
+      }.lociCard(padding: 12)
+    }.buttonStyle(.plain)
   }
 
   private var examplesSection: some View {
@@ -151,13 +156,9 @@ struct DiscoverView: View {
         Button {
           composerSeed = prompt
         } label: {
-          Label(prompt, systemImage: "sparkle")
-            .font(.lociBody(15))
-            .foregroundStyle(Color.lociInk)
-            .frame(maxWidth: .infinity, alignment: .leading)
+          Label(prompt, systemImage: "sparkle").font(.lociBody(15)).foregroundStyle(Color.lociInk).frame(maxWidth: .infinity, alignment: .leading)
             .lociCard(padding: 12)
-        }
-        .buttonStyle(.plain)
+        }.buttonStyle(.plain)
       }
     }
   }
@@ -171,10 +172,10 @@ struct DiscoverView: View {
             Button {
               composerSeed = category.name
             } label: {
-              Label(category.name, systemImage: category.symbol).font(.lociCaption(13))
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(Color.lociSage, in: Capsule())
-                .foregroundStyle(Color.lociInk)
+              Label(category.name, systemImage: category.symbol).font(.lociCaption(13)).padding(.horizontal, 12).padding(.vertical, 8).background(
+                Color.lociSage,
+                in: Capsule()
+              ).foregroundStyle(Color.lociInk)
             }
           }
         }
@@ -197,8 +198,7 @@ struct DiscoverView: View {
               Text(item.cityName).font(.lociBody()).foregroundStyle(Color.lociInk)
               Spacer()
               Text("\(item.searchCount) searches").lociCoordStyle(10)
-            }
-            .lociCard(padding: 12)
+            }.lociCard(padding: 12)
           }
         }
       }
@@ -221,9 +221,7 @@ struct DiscoverView: View {
                   Text(item.emoji).font(.title)
                   Text(item.title).font(.lociHeadline(15)).foregroundStyle(Color.lociInk).multilineTextAlignment(.leading)
                   Text("\(item.itemCount) places").lociCoordStyle(10)
-                }
-                .frame(width: 160, alignment: .leading)
-                .lociCard(padding: 14)
+                }.frame(width: 160, alignment: .leading).lociCard(padding: 14)
               }
             }
           }

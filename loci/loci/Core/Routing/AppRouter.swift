@@ -122,6 +122,9 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   /// (a badge, a friend passing you) opens.
   case leaderboard
   case progress
+  /// Email links, allowed signed out: `/auth/reset-password?token=…`, `/auth/confirm-email-change?token=…`.
+  case resetPassword(token: String)
+  case confirmEmail(token: String)
 
   /// `loci://lists/abc` (the host is the route, as in `SessionLink`) or
   /// `https://lociai.fyi/lists/abc`. Anything with a missing id or extra
@@ -155,8 +158,36 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
       default: self = .friends
       }
     case ("friends", 3) where segments[1].lowercased() == "trips": self = .friendTrip(id: segments[2])
+    case ("auth", 2):
+      guard let link = Self.authLink(page: segments[1], url: url) else { return nil }
+      self = link
     default: return nil
     }
+  }
+}
+
+nonisolated extension AppLink {
+  /// Opens without a session: the email links. Everything else needs the tabs.
+  public var isAuthEdge: Bool {
+    switch self {
+    case .resetPassword, .confirmEmail: true
+    default: false
+    }
+  }
+
+  /// `/auth/reset-password?token=…` and `/auth/confirm-email-change?token=…`; no token, no page.
+  static func authLink(page: String, url: URL) -> AppLink? {
+    guard let token = token(in: url), !token.isEmpty else { return nil }
+    switch page.lowercased() {
+    case "reset-password": return .resetPassword(token: token)
+    case "confirm-email-change": return .confirmEmail(token: token)
+    default: return nil
+    }
+  }
+
+  static func token(in url: URL) -> String? {
+    URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "token" }?.value?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
   }
 }
 
@@ -201,7 +232,8 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
     case .list: .saved
     case .pack: .discover
     case .trip: .calendar
-    case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip, .leaderboard, .progress: .profile
+    case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip, .leaderboard, .progress, .resetPassword, .confirmEmail:
+      .profile
     }
   }
 

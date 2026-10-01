@@ -75,13 +75,13 @@ struct ProtoV529ClientTests {
     #expect(claim.fieldLabel == "Opening Hours")
     #expect(claim.value == "Mon–Fri 12:00–23:00")
     #expect(claim.status == .pending)
-    #expect(claim.statusText == "Waiting on a second scout")
+    #expect(claim.statusText == "Recorded")
     #expect(claim.createdAt == Date(timeIntervalSince1970: 1_700_000_000))
 
     proto.poiName = ""
     #expect(MyClaim(proto).placeName == "A place since removed")
     #expect(MyClaim.statusText(.accepted) == "Verified")
-    #expect(MyClaim.statusText(.contradicted) == "Reports differ")
+    #expect(MyClaim.statusText(.contradicted) == "Noted")
     #expect(MyClaim.statusText(.expired) == "Expired")
     #expect(MyClaim.statusText(.unspecified) == "Recorded")
   }

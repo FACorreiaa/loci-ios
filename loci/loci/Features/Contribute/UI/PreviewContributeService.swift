@@ -2,7 +2,7 @@ import CoreLocation
 import Foundation
 import LociConnectProto
 
-/// Offline sample data for `-designPreview contribute`, `claimForm` and
+/// Offline sample data for `-designPreview contribute`, `myReports`, `claimForm` and
 /// `openingHours`, for "Report a fact" on a place detail shown in a design
 /// preview, and for the tests. Writes echo what they were given.
 nonisolated struct PreviewContributeService: ContributeService {
@@ -16,35 +16,47 @@ nonisolated struct PreviewContributeService: ContributeService {
   }
 
   func profile() async throws -> ContributorProfile {
-    ContributorProfile(reputation: 42, submittedClaims: 17, acceptedClaims: 11, badges: ["local-scout"])
-  }
-
-  func myClaims() async throws -> [MyClaim] {
-    [
-      Self.claim("c-1", "Tasca do Chico", .openingHours, "Mon–Sat 19:00–02:00", .accepted, daysAgo: 3),
-      Self.claim("c-2", "Miradouro da Graça", .noiseLevel, "quiet", .pending, daysAgo: 1),
-      Self.claim("c-3", "", .dogFriendly, "yes", .contradicted, daysAgo: 9),
-    ]
-  }
-
-  private static func claim(
-    _ id: String,
-    _ place: String,
-    _ field: Loci_Place_PlaceFactField,
-    _ value: String,
-    _ status: Loci_Place_PlaceClaimStatus,
-    daysAgo: Double
-  ) -> MyClaim {
-    MyClaim(
-      id: id,
-      poiID: "poi-\(id)",
-      placeName: place,
-      field: field,
-      value: value,
-      status: status,
-      createdAt: Date().addingTimeInterval(-daysAgo * 86_400)
+    ContributorProfile(
+      reputation: 42,
+      submittedClaims: 23,
+      acceptedClaims: 11,
+      badges: ["local-scout"],
+      badgeDetails: [ContributorBadge(slug: "local-scout", title: "Local scout", detail: "Ten of your reports confirmed by another scout.")]
     )
   }
+
+  /// Twenty-three reports: a full first page and three on the second.
+  var claimCount = 23
+
+  func myClaims(page: Int) async throws -> MyClaimsPage {
+    let all = Self.previewClaims.prefix(claimCount)
+    let size = Int(ContributePayload.myClaimsLimit)
+    let start = (max(1, page) - 1) * size
+    let slice = start < all.count ? Array(all[(all.startIndex + start)..<min(all.startIndex + start + size, all.endIndex)]) : []
+    return MyClaimsPage(
+      claims: slice,
+      total: all.count,
+      hasMore: ContributePayload.claimsHaveMore(page: page, received: slice.count, total: all.count)
+    )
+  }
+
+  private static let previewClaims: [MyClaim] = {
+    let samples = [
+      MyClaim(id: "", poiID: "", placeName: "Tasca do Chico", field: .openingHours, value: "mon-sat 19:00-24:00; sun closed", status: .accepted),
+      MyClaim(id: "", poiID: "", placeName: "Miradouro da Graça", field: .noiseLevel, value: "quiet", status: .pending),
+      MyClaim(id: "", poiID: "", placeName: "", field: .dogFriendly, value: "yes", status: .contradicted),
+      MyClaim(id: "", poiID: "", placeName: "Fábrica Coffee Roasters", field: .dietary, value: "vegan", status: .accepted),
+      MyClaim(id: "", poiID: "", placeName: "Time Out Market", field: .crowdLevel, value: "busy", status: .pending),
+      MyClaim(id: "", poiID: "", placeName: "Jardim da Estrela", field: .childFriendly, value: "yes", status: .expired),
+    ]
+    return (0..<23).map { index in
+      var claim = samples[index % samples.count]
+      claim.id = "c-\(index + 1)"
+      claim.poiID = String(format: "5f0c0000-0000-4000-8000-%012d", index % samples.count + 1)
+      claim.createdAt = Date().addingTimeInterval(-Double(index + 1) * 86_400)
+      return claim
+    }
+  }()
 
   func pendingPlaces() async throws -> [PendingPlace] {
     [

@@ -20,6 +20,8 @@ struct AppLinkDestination: View {
     case .friendTrip(let id): SharedTripView(source: .tripID(id))
     case .leaderboard: YouDestination.leaderboard.screen
     case .progress: YouDestination.progress.screen
+    case .resetPassword(let token): ResetPasswordView(token: token)
+    case .confirmEmail(let token): ConfirmEmailView(token: token)
     }
   }
 }

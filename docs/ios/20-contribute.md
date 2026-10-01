@@ -16,6 +16,8 @@ web's tests, and the token lists are checked against the server's
 | Screen | RPC | Fields sent |
 |---|---|---|
 | Contribute › hero | `PlaceIntelligenceService.GetMyContributorProfile` | none |
+| Contribute › hero › Your reports | `ListMyClaims` | `limit: 20`, `page` (1-based), Load more for the next page |
+| Your reports › tap | `PoiService.GetPOI` | `poiId` (the My reviews pattern: the report's place name first, then the stored place) |
 | Contribute › Places that need a fresh look | `ListVerificationTasks` | `limit: 40` (paged 5 per page on the client) |
 | Contribute › Does this place exist? | `ListPendingPlaces` | `limit: 20` |
 | … › Yes, it exists | `ConfirmPlace` | `submissionId` |
@@ -36,7 +38,7 @@ web's tests, and the token lists are checked against the server's
   - The time pickers run in GMT and `en_GB`, so the device's zone, daylight saving and a 12-hour locale can't change the string. The wire format is 24-hour either way.
 - **Who can report:** `ContributePayload.canReport` is Add to list's and Reviews' rule (a real, non-nil POI UUID). The handler parses `poi_id` and checks it exists. A search result that isn't stored shows "Not reportable".
 - **Tasks:** fields this build doesn't know are dropped (web does the same). A searched place already on the gap list keeps its fields (`resolveTask`); any other gets every field.
-- **Badges:** shown under the hero stats. Web fetches them and never shows them. The server awards one, `local-scout`, at ten verified reports.
+- **Badges:** shown under the hero stats with the server's own copy (`ContributorProfile.badge_details`: slug, display name, description → `ContributorBadge`). A blank name falls back to the slug in words. Only when `badge_details` is empty (an older server) does the hard-coded `ScoutBadge` wording for the slugs apply. The server awards one, `local-scout`, at ten verified reports.
 - **Stored facts:** the place detail's "Verified by travellers" list now shows the option label ("Gluten free") instead of the raw token.
 
 ## State
@@ -57,8 +59,8 @@ web's tests, and the token lists are checked against the server's
 | # | Gap | Effect | Fix |
 |---|---|---|---|
 | 1 | `SearchPOIRequest.city_name` is `min_len: 1`, but the handler has a no-city semantic branch and ignores the city on hybrid. **Web's MissingPlaceCard always sends `cityName: ""`**, so its search fails validation in production every time (probed unauthenticated 2026-09-24: `invalid_argument … city_name: must be at least 1 characters`; with a city the same probe reaches auth). | iOS sends a typed or reverse-geocoded city, or `"nearby"` on a hybrid search, and needs a typed city when location isn't allowed. | Relax `city_name` to optional (IGNORE_IF_ZERO_VALUE), or make web send a city (Phase 8) |
-| 2 | Claims give no read-back: there is no "my claims" RPC. | A scout can't see earlier reports or their status. The result card shows only the report just filed. | `ListMyClaims` |
-| 3 | `ContributorProfile.badges` are bare slugs with no title or rule. | iOS has the one known slug hard-coded and shows others as words. | a badge message with title and description |
+| 2 | ~~Claims give no read-back.~~ Closed by `ListMyClaims` (v5.29.0). | Your reports, below. | done |
+| 3 | ~~Badges are bare slugs.~~ Closed by `badge_details` (v5.29.0). | The server's wording; the hard-coded slug words are only the fallback. | done |
 | 4 | `ConfirmPlace` by the submitter is FailedPrecondition, but pending places already exclude your own, so this only shows on a race. | none | none |
 
 ## Review follow-up (after #35)
@@ -107,11 +109,22 @@ Previews (Debug, offline):
 
 ## Your reports (2026-10-01)
 
-`ListMyClaims{limit: 20, page: 1}` (proto v5.29.0) lists the scout's own
-reports under the hero as **Your reports**: place (or "A place since removed"
-when the POI is gone), field and value, and the outcome in the claim form's
-own words — "Waiting on a second scout", "Verified", "Reports differ",
-"Expired". `MyClaim` maps the row; `ContributeStore.myClaims` loads it next
-to the profile and reloads with the page after a submission. Only the first
-page is shown; paging is not worth a control until someone has more than
-twenty.
+A "Your reports" row in the Contribute hero opens `MyReportsView`, which pages
+through `ListMyClaims{limit: 20, page}` (proto v5.29.0), newest first, with
+Load more (also loaded when the row scrolls into view). Each row has:
+
+- the place, or "A place since removed" when the POI is gone
+- the field label and the value in the vocabulary's words ("Dietary · Vegan"). Opening hours stay as sent.
+- the outcome in one word, from the claim form's `ClaimOutcome`: **Verified** (accepted), **Noted** (reports differ), **Recorded** (waiting on a second scout, expired, or unknown)
+- the date
+
+Tapping a row whose place still exists opens it (`ReviewedPlaceView(poiID:placeName:)`, the same GetPOI pattern as My reviews).
+
+Paging (`ContributePayload.claimsHaveMore`): the server's `total` decides. A
+server that sends no total has more only while pages come back full. A page
+that repeats a report already shown (a new report shifts the pages) is
+de-duplicated by claim id.
+
+- Screen: `my_reports`. Preview: `-designPreview myReports` (23 reports: a full first page, then three).
+- Tests: `lociTests/ContributeV529Tests.swift` covers badge mapping and fallback, row wording, paging maths, page mapping, and the store paging without duplicates.
+- Not verified: signed in against prod, and the screen on a simulator (the previews need a Debug build).

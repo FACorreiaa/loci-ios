@@ -14,10 +14,14 @@ struct MyReviewsView: View {
 
   var body: some View {
     List {
-      if store.phase == .loaded, !store.summary.isEmpty {
-        Text(store.summary).lociCoordStyle(10)
-          .listRowBackground(Color.clear)
-          .listRowSeparator(.hidden)
+      if store.phase == .loaded, let summary = store.summaryStats {
+        VStack(alignment: .leading, spacing: 10) {
+          Text(summary.text).lociCoordStyle(10)
+          if summary.hasDistribution { ReviewSummary(stats: summary.stats) }
+        }
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
       }
       ForEach(store.reviews) { review in
         NavigationLink(value: review) {
@@ -105,18 +109,23 @@ struct MyReviewsView: View {
   }
 }
 
-/// A reviewed place's detail, opened from My reviews: the review's own name
-/// first, then the stored place from GetPOI (the saved-place pattern).
+/// A reviewed (or reported) place's detail, opened from My reviews or
+/// Contribute › Your reports: the row's own name first, then the stored place
+/// from GetPOI (the saved-place pattern).
 struct ReviewedPlaceView: View {
-  let review: LociReview
+  let poiID: String
+  let placeName: String
   @State private var stop: Loci_Poi_POIDetailedInfo
   @State private var loading = true
 
-  init(review: LociReview) {
-    self.review = review
+  init(review: LociReview) { self.init(poiID: review.poiID, placeName: review.placeName) }
+
+  init(poiID: String, placeName: String) {
+    self.poiID = poiID
+    self.placeName = placeName
     var stop = Loci_Poi_POIDetailedInfo()
-    stop.id = review.poiID
-    stop.name = review.placeName
+    stop.id = poiID
+    stop.name = placeName
     _stop = State(initialValue: stop)
   }
 
@@ -127,10 +136,10 @@ struct ReviewedPlaceView: View {
       .toolbar {
         if loading { ToolbarItem(placement: .topBarTrailing) { ProgressView().accessibilityLabel("Loading more details") } }
       }
-      .task(id: review.poiID) {
-        if !ResultsSideData.isOffline, var richer = await ReviewsAPI.place(poiID: review.poiID) {
-          richer.id = review.poiID
-          if richer.name.isEmpty { richer.name = review.placeName }
+      .task(id: poiID) {
+        if !ResultsSideData.isOffline, var richer = await ReviewsAPI.place(poiID: poiID) {
+          richer.id = poiID
+          if richer.name.isEmpty { richer.name = placeName }
           withAnimation(.smooth) { stop = richer }
         }
         loading = false

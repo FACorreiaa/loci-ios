@@ -26,6 +26,9 @@ enum AnalyticsEvent: String {
   case tripExported = "trip_exported"
   /// A trip got a link (SetTripVisibility to friends, link or public). Properties: content_type ("trip").
   case shareLinkCreated = "share_link_created"
+  case passwordReset = "password_reset"
+  case emailChangeRequested = "email_change_requested"
+  case emailChangeConfirmed = "email_change_confirmed"
   /// A field report was filed (`field` as the proto enum name, `status`,
   /// `poiId`, `answers`), as web's ClaimForm sends it. Metric: contributions per active user.
   case placeClaimSubmitted = "place_claim_submitted"

@@ -63,15 +63,15 @@ Plan: [`docs/superpowers/plans/2026-09-25-ios-parity-pass3.md`](../superpowers/p
 
 | # | Phase | RPCs | Note | PR |
 |---|---|---|---|---|
-| 0 | Entitlements store (read-only plan; no paywall) | `entitlement.GetEntitlements` | `22-entitlements.md` | |
+| 0 | Entitlements store (read-only plan; no paywall) | `entitlement.GetEntitlements` | `32-entitlements.md` | 2026-10-01 |
 | 1 | Share by link: trips, lists, places; open `lociai.fyi/share/<code>` | `share.*` | `23-share.md` | |
-| 2 | Recents recording from this phone + frequent places | `recents.RecordInteraction`, `GetCityInteractions`, `GetFrequentPlaces` | `24-recents-recording.md` | |
-| 3 | GoScore on Discover, drive cost per leg | `localcontext.GetGoScore`, `EstimateDriveCost` | `25-goscore.md` | |
-| 4 | PDF exports for results pages and lists | `export.*` | `26-exports.md` | |
+| 2 | Recents recording from this phone + frequent places | `recents.RecordInteraction`, `GetCityInteractions`, `GetFrequentPlaces` | parked 2026-10-01: the server's `RecordInteraction` is a stub (returns success, stores nothing), `GetFrequentPlaces` re-labels the cities list and `GetCityInteractions` only counts what the Cities page already shows — needs a server that stores interactions and folds them into the feed first | — |
+| 3 | GoScore on the here-brief, fuel line under a trip's legs | `localcontext.GetGoScore`, `EstimateDriveCost` | `34-goscore.md` | 2026-10-01 |
+| 4 | PDF exports for results pages and lists | `export.*` | `35-exports.md` | 2026-10-01 |
 | 5 | Lists completion: public lists, save/unsave, per-type views, item edits | `list.*` (10) | `27-lists-complete.md` | |
-| 6 | Per-domain preferences in Travel profiles | `profile.*` (6) | `28-domain-preferences.md` | |
+| 6 | Per-domain preferences in Travel profiles | `profile.*` (6) | parked 2026-10-01: the editor already reads and saves all four domain messages through `GetUserPreferenceProfile` / `UpdateUserPreferenceProfile` (nested fields); the per-domain getters and `GetCombinedFilters` return the same data and web does not call them either | — |
 | 7 | Chat continuation in the Muse thread (probe `ContinueChat` first; fallback = re-stream) | `chat.ContinueChat` | `29-chat-continuation.md` | |
-| 8 | Auth edges: change email, reset password by link (`ValidateSession` not needed) | `auth.*` (3) | `30-auth-edges.md` | |
+| 8 | Auth edges: change email, reset password by link (`ValidateSession` not needed) | `auth.*` (3) | `36-auth-edges.md` | 2026-10-01 |
 | 9 | Web: AASA paths for share, confirm-email, reset-password | — | loci-client | |
 
 Web-only by design, never on iOS: `payment.*` and `bundle.CreateBundleCheckout` (Stripe; iOS must use StoreKit), `statistics.*`, `ai_poi.*`, `custom_auth.getOauthURL/oauthCallback`, API keys / MCP.

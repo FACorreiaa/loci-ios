@@ -57,6 +57,9 @@ enum DesignPreview: String {
   case ratingRows
   /// Profile with its "You" hub rows above Settings (signed out, so the name reads "Traveler").
   case youHub
+  case youHubPro, youHubFree
+  case goScoreGood, goScoreMaybe, driveCost
+  case changeEmail, resetPassword, confirmEmail
   /// Recents' feed with a day of each kind: chats, searches, a kept trip, favourites, Load more.
   case recents
   /// Recents' Cities view.
@@ -89,6 +92,9 @@ enum DesignPreview: String {
   /// Profile › Contribute: scout hero with a badge, missing-place search, two
   /// pending places, the first page of twelve tasks and the pager.
   case contribute
+  /// Contribute › Your reports: the first page of twenty-three reports
+  /// (Verified, Recorded, Noted, a removed place) and Load more.
+  case myReports
   /// A field report on a multi-answer field (Vibe, two picked) just after it was filed: "Recorded." with the scouts bar.
   case claimForm
   /// The same form on Opening hours: the week editor and the "Sent as" line.
@@ -110,6 +116,10 @@ enum DesignPreview: String {
   /// Walking a day stop by stop: four stops in Lisbon's Baixa. Starts a real
   /// walk from the simulator's location (set it with `simctl location`).
   case walkDay
+  /// Community boards: two boards, three posts (one with a place attached), as an admin.
+  case boards
+  /// A boards post with a three-deep comment thread and one deleted comment.
+  case boardsPost
 
   /// Profile › Leaderboard: you and four friends this week.
   case leaderboard
@@ -129,13 +139,11 @@ enum DesignPreview: String {
   @ViewBuilder var body: some View {
     switch self {
     case .inSeason: InSeasonPreview()
-    case .pushPrimer:
-      Color.lociPaper.ignoresSafeArea().sheet(isPresented: .constant(true)) { PushPrimerSheet(primer: PushPrimer()) }
+    case .pushPrimer: Color.lociPaper.ignoresSafeArea().sheet(isPresented: .constant(true)) { PushPrimerSheet(primer: PushPrimer()) }
     case .museChat: MuseChatPreview(state: .museSampleCompleted)
     case .museChatStreaming: MuseChatPreview(state: .museSampleStreaming)
     case .museChatThinking: MuseChatPreview(state: .museSampleThinking)
-    case .museChatStage:
-      MuseChatPreview(state: .museSampleThinking.with { $0.progressStage = "Checking opening hours and the tram timetable" })
+    case .museChatStage: MuseChatPreview(state: .museSampleThinking.with { $0.progressStage = "Checking opening hours and the tram timetable" })
     case .museChatDetached: MuseChatPreview(state: .museSampleStreaming.with { $0.status = .detached })
     case .museChatCelebrating: MuseChatPreview(state: .museSampleCompleted, flash: .celebrating(places: 2))
     case .museChatSnag:
@@ -168,6 +176,14 @@ enum DesignPreview: String {
     case .savedPlace: NavigationStack { SavedPlaceDetailView(item: .savedPlaceSample) }
     case .ratingRows: NavigationStack { RatingRowsPreview() }
     case .youHub: ProfileView()
+    case .youHubPro: NavigationStack { List { YouSection(entitlements: .previewPro) } }
+    case .youHubFree: NavigationStack { List { YouSection(entitlements: .previewFree) } }
+    case .goScoreGood: GoScorePreview.card(verdict: "go", score: 81)
+    case .goScoreMaybe: GoScorePreview.card(verdict: "maybe", score: 54, estimated: true)
+    case .driveCost: GoScorePreview.driveCost()
+    case .changeEmail: NavigationStack { ChangeEmailView() }
+    case .resetPassword: ResetPasswordView(token: "preview-token")
+    case .confirmEmail: ConfirmEmailView(token: "preview-token")
     case .recents: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService())) }
     case .recentsCities: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService()), segment: .cities) }
     case .recentCity: NavigationStack { RecentCityView(city: RecentCity.previewLisbon) }
@@ -191,10 +207,9 @@ enum DesignPreview: String {
         )
       }
     case .tripChecklists:
-      NavigationStack {
-        List { TripChecklistsSection(store: .preview(tripID: Loci_Trip_TripDraft.previewLisbon.id)) }.settingsStyle("Checklists")
-      }
+      NavigationStack { List { TripChecklistsSection(store: .preview(tripID: Loci_Trip_TripDraft.previewLisbon.id)) }.settingsStyle("Checklists") }
     case .contribute: NavigationStack { ContributeView(store: ContributeStore(service: PreviewContributeService())) }
+    case .myReports: NavigationStack { MyReportsView(store: MyReportsStore(service: PreviewContributeService())) }
     case .claimForm: NavigationStack { ClaimFormPreview(field: .vibe, tokens: ["cosy", "local"], submits: true) }
     case .openingHours: NavigationStack { ClaimFormPreview(field: .openingHours) }
     case .addToTrip: AddToTripPreview()
@@ -208,6 +223,11 @@ enum DesignPreview: String {
     case .compare: NavigationStack { CompareView(preview: .previewPorto, origin: "Porto", candidates: ["Évora", "Beja"]) }
     case .gastronomy: NavigationStack { GastronomyView(store: GastronomyStore(service: PreviewGastronomyService()), city: "Porto") }
     case .walkDay: NavigationStack { WalkDayView(day: .previewBaixa) }
+    case .boards: NavigationStack { BoardsHomeView(store: BoardsFeedStore(service: PreviewBoardsService(), myID: { "u-ana" })) }
+    case .boardsPost:
+      NavigationStack {
+        PostDetailView(store: BoardPostStore(postID: "p-trams", feed: BoardsFeedStore(service: PreviewBoardsService(), myID: { "u-ana" })))
+      }
     }
   }
 }
@@ -220,17 +240,13 @@ private struct InSeasonPreview: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
         Text("Where to next?").font(.lociDisplay(30)).foregroundStyle(Color.lociInk)
-        TextField("Ask Loci", text: $text)
-          .font(.lociBody())
-          .padding(.horizontal, 14).padding(.vertical, 10)
-          .background(Color.lociCard, in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
-          .overlay(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder))
+        TextField("Ask Loci", text: $text).font(.lociBody()).padding(.horizontal, 14).padding(.vertical, 10).background(
+          Color.lociCard,
+          in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous)
+        ).overlay(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder))
         InSeasonBand(seed: $seed)
-      }
-      .padding(LociTheme.defaultPadding)
-    }
-    .background(Color.lociPaper.ignoresSafeArea())
-    .onChange(of: seed) { _, value in
+      }.padding(LociTheme.defaultPadding)
+    }.background(Color.lociPaper.ignoresSafeArea()).onChange(of: seed) { _, value in
       guard !value.isEmpty else { return }
       text = value
       seed = ""
@@ -246,14 +262,12 @@ private struct RatingRowsPreview: View {
       Section("About") {
         ExternalLinkRow(title: "Loci Web", destination: URL(string: "https://lociai.fyi")!)
         ExternalLinkRow(title: "Rate Loci on the App Store", destination: URL(string: "https://apps.apple.com/app/id0000000000?action=write-review")!)
-      }
-      .listRowBackground(Color.lociCard)
+      }.listRowBackground(Color.lociCard)
       Section("App") {
         Label("Notifications", systemImage: "bell.badge")
         ReviewPromptToggle()
       }
-    }
-    .settingsStyle("Settings")
+    }.settingsStyle("Settings")
   }
 }
 
@@ -279,21 +293,15 @@ private struct MuseChatPreview: View {
             MuseThreadTail(thread: thread, sessionId: "preview")
             Color.clear.frame(height: 1).id(Self.threadEnd)
           }
-        }
-        .padding(.horizontal, LociTheme.defaultPadding)
-        .padding(.vertical, 12)
-      }
-      .task {
+        }.padding(.horizontal, LociTheme.defaultPadding).padding(.vertical, 12)
+      }.task {
         guard let scrollTo else { return }
         try? await Task.sleep(for: .seconds(1))
         proxy.scrollTo(scrollTo, anchor: scrollTo == Self.threadEnd ? .bottom : .top)
       }
-    }
-    .background(Color.museCanvas.ignoresSafeArea())
-    .safeAreaInset(edge: .top, spacing: 0) {
+    }.background(Color.museCanvas.ignoresSafeArea()).safeAreaInset(edge: .top, spacing: 0) {
       MuseChatHeader(activity: .resolve(state, flash: flash, isListening: isListening), leadingSystemImage: "chevron.left", leadingLabel: "Back")
-    }
-    .safeAreaInset(edge: .bottom, spacing: 0) {
+    }.safeAreaInset(edge: .bottom, spacing: 0) {
       PreviewComposer().padding(.horizontal, LociTheme.defaultPadding).padding(.vertical, 10).background(Color.museCanvas)
     }
   }
@@ -325,18 +333,11 @@ private struct MuseSessionsPreview: View {
   var body: some View {
     List {
       Section("Recent") {
-        ForEach(Loci_Chat_ChatSession.previewList, id: \.id) { session in
-          NavigationLink(value: session.id) { SessionRow(session: session) }
-        }
-      }
-      .listRowBackground(Color.museAgentBubble)
-    }
-    .listStyle(.insetGrouped)
-    .scrollContentBackground(.hidden)
-    .background(Color.museCanvas.ignoresSafeArea())
-    .safeAreaInset(edge: .top, spacing: 0) { MuseChatHeader(activity: .ready) }
-    .toolbarVisibility(.hidden, for: .navigationBar)
-    .navigationDestination(for: String.self) { Text($0) }
+        ForEach(Loci_Chat_ChatSession.previewList, id: \.id) { session in NavigationLink(value: session.id) { SessionRow(session: session) } }
+      }.listRowBackground(Color.museAgentBubble)
+    }.listStyle(.insetGrouped).scrollContentBackground(.hidden).background(Color.museCanvas.ignoresSafeArea()).safeAreaInset(edge: .top, spacing: 0) {
+      MuseChatHeader(activity: .ready)
+    }.toolbarVisibility(.hidden, for: .navigationBar).navigationDestination(for: String.self) { Text($0) }
   }
 }
 
@@ -347,15 +348,9 @@ private struct MuseChatPushPreview: View {
 
   var body: some View {
     NavigationStack {
-      List {
-        NavigationLink("Open the chat", value: "chat")
-      }
-      .navigationTitle("Ask Loci")
-      .navigationDestination(for: String.self) { _ in
+      List { NavigationLink("Open the chat", value: "chat") }.navigationTitle("Ask Loci").navigationDestination(for: String.self) { _ in
         if hidesBar {
-          MuseChatPreview(state: .museSampleCompleted)
-            .toolbarVisibility(.hidden, for: .navigationBar)
-            .interactivePopEnabled()
+          MuseChatPreview(state: .museSampleCompleted).toolbarVisibility(.hidden, for: .navigationBar).interactivePopEnabled()
         } else {
           MuseChatPreview(state: .museSampleCompleted)
         }
@@ -369,13 +364,12 @@ private struct PreviewComposer: View {
   @State private var text = ""
   var body: some View {
     HStack(alignment: .bottom, spacing: 8) {
-      TextField("Ask a follow-up", text: $text)
-        .font(.museBody)
-        .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(Color.musePill, in: RoundedRectangle(cornerRadius: LociTheme.Muse.bubbleRadius, style: .continuous))
-      Image(systemName: "arrow.up")
-        .frame(width: LociTheme.minTapTarget, height: LociTheme.minTapTarget)
-        .background(Color.lociForest, in: Circle()).foregroundStyle(Color.lociPaper)
+      TextField("Ask a follow-up", text: $text).font(.museBody).padding(.horizontal, 14).padding(.vertical, 10).background(
+        Color.musePill,
+        in: RoundedRectangle(cornerRadius: LociTheme.Muse.bubbleRadius, style: .continuous)
+      )
+      Image(systemName: "arrow.up").frame(width: LociTheme.minTapTarget, height: LociTheme.minTapTarget).background(Color.lociForest, in: Circle())
+        .foregroundStyle(Color.lociPaper)
     }
   }
 }
@@ -389,10 +383,8 @@ private struct TripDayPreview: View {
         VStack(alignment: .leading, spacing: 16) {
           Text("My trips").font(.lociDisplay(28)).foregroundStyle(Color.lociInk)
           if let day = DayTimeline.today(in: trip) { TodayBand(trip: trip, day: day) }
-        }
-        .padding(LociTheme.defaultPadding)
-      }
-      .background(Color.lociPaper.ignoresSafeArea())
+        }.padding(LociTheme.defaultPadding)
+      }.background(Color.lociPaper.ignoresSafeArea())
     }
   }
 }
@@ -446,9 +438,7 @@ extension SearchState {
     return copy
   }
 
-  static var museSampleThinking: SearchState {
-    museSampleStreaming.with { $0.text = "" }
-  }
+  static var museSampleThinking: SearchState { museSampleStreaming.with { $0.text = "" } }
 
   static var museSampleStreaming: SearchState {
     var state = SearchState()
@@ -457,7 +447,7 @@ extension SearchState {
     state.status = .streaming
     state.text =
       "Lisbon is steep, so I'm keeping each day to one neighbourhood: Belém by the river first,"
-        + " then the flat Baixa grid, and a tram up to the castle for the one climb worth it."
+      + " then the flat Baixa grid, and a tram up to the castle for the one climb worth it."
     return state
   }
 
@@ -522,17 +512,113 @@ extension SearchState {
       let photo: String
     }
     let plan = [
-      Seed(name: "Colosseum", category: "Landmark", lat: 41.8902, lon: 12.4922, day: 1, rating: 4.8, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Colosseo_2020.jpg/330px-Colosseo_2020.jpg"),
-      Seed(name: "Roman Forum", category: "Historic site", lat: 41.8925, lon: 12.4853, day: 1, rating: 4.7, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Foro_Romano_Musei_Capitolini_Roma.jpg/330px-Foro_Romano_Musei_Capitolini_Roma.jpg"),
-      Seed(name: "Palatine Hill", category: "Park", lat: 41.8892, lon: 12.4875, day: 1, rating: 4.6, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Palatine_Hill_from_across_the_Circus_Maximus_April_2019.jpg/330px-Palatine_Hill_from_across_the_Circus_Maximus_April_2019.jpg"),
-      Seed(name: "Capitoline Museums", category: "Museum", lat: 41.8933, lon: 12.4829, day: 1, rating: 4.6, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/0_Cordonata_-_Dioscuri_-_Palazzo_Senatorio.JPG/330px-0_Cordonata_-_Dioscuri_-_Palazzo_Senatorio.JPG"),
-      Seed(name: "Pantheon", category: "Landmark", lat: 41.8986, lon: 12.4769, day: 2, rating: 4.8, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Pantheon_%28Rome%29_-_Right_side_and_front.jpg/330px-Pantheon_%28Rome%29_-_Right_side_and_front.jpg"),
-      Seed(name: "Piazza Navona", category: "Square", lat: 41.8992, lon: 12.4731, day: 2, rating: 4.7, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Piazza_Navona_%28Rome%29_at_night.jpg/330px-Piazza_Navona_%28Rome%29_at_night.jpg"),
-      Seed(name: "Campo de' Fiori", category: "Market", lat: 41.8955, lon: 12.4722, day: 2, rating: 4.4, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Campo_dei_Fiori.jpg/330px-Campo_dei_Fiori.jpg"),
-      Seed(name: "Trevi Fountain", category: "Landmark", lat: 41.9009, lon: 12.4833, day: 2, rating: 4.7, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Trevi_Fountain_-_Roma.jpg/330px-Trevi_Fountain_-_Roma.jpg"),
-      Seed(name: "Vatican Museums", category: "Museum", lat: 41.9065, lon: 12.4536, day: 3, rating: 4.7, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Vatican_Museums_Spiral_Staircase_Looking_Up_2012.jpg/330px-Vatican_Museums_Spiral_Staircase_Looking_Up_2012.jpg"),
-      Seed(name: "St. Peter's Basilica", category: "Church", lat: 41.9022, lon: 12.4539, day: 3, rating: 4.8, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Basilica_di_San_Pietro_in_Vaticano_September_2015-1a.jpg/330px-Basilica_di_San_Pietro_in_Vaticano_September_2015-1a.jpg"),
-      Seed(name: "Trastevere", category: "Neighbourhood", lat: 41.8890, lon: 12.4694, day: 3, rating: 4.6, photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Santa_Maria_in_Trastevere_fountain.jpg/330px-Santa_Maria_in_Trastevere_fountain.jpg"),
+      Seed(
+        name: "Colosseum",
+        category: "Landmark",
+        lat: 41.8902,
+        lon: 12.4922,
+        day: 1,
+        rating: 4.8,
+        photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Colosseo_2020.jpg/330px-Colosseo_2020.jpg"
+      ),
+      Seed(
+        name: "Roman Forum",
+        category: "Historic site",
+        lat: 41.8925,
+        lon: 12.4853,
+        day: 1,
+        rating: 4.7,
+        photo:
+          "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Foro_Romano_Musei_Capitolini_Roma.jpg/330px-Foro_Romano_Musei_Capitolini_Roma.jpg"
+      ),
+      Seed(
+        name: "Palatine Hill",
+        category: "Park",
+        lat: 41.8892,
+        lon: 12.4875,
+        day: 1,
+        rating: 4.6,
+        photo:
+          "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Palatine_Hill_from_across_the_Circus_Maximus_April_2019.jpg/330px-Palatine_Hill_from_across_the_Circus_Maximus_April_2019.jpg"
+      ),
+      Seed(
+        name: "Capitoline Museums",
+        category: "Museum",
+        lat: 41.8933,
+        lon: 12.4829,
+        day: 1,
+        rating: 4.6,
+        photo:
+          "https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/0_Cordonata_-_Dioscuri_-_Palazzo_Senatorio.JPG/330px-0_Cordonata_-_Dioscuri_-_Palazzo_Senatorio.JPG"
+      ),
+      Seed(
+        name: "Pantheon",
+        category: "Landmark",
+        lat: 41.8986,
+        lon: 12.4769,
+        day: 2,
+        rating: 4.8,
+        photo:
+          "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Pantheon_%28Rome%29_-_Right_side_and_front.jpg/330px-Pantheon_%28Rome%29_-_Right_side_and_front.jpg"
+      ),
+      Seed(
+        name: "Piazza Navona",
+        category: "Square",
+        lat: 41.8992,
+        lon: 12.4731,
+        day: 2,
+        rating: 4.7,
+        photo:
+          "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Piazza_Navona_%28Rome%29_at_night.jpg/330px-Piazza_Navona_%28Rome%29_at_night.jpg"
+      ),
+      Seed(
+        name: "Campo de' Fiori",
+        category: "Market",
+        lat: 41.8955,
+        lon: 12.4722,
+        day: 2,
+        rating: 4.4,
+        photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Campo_dei_Fiori.jpg/330px-Campo_dei_Fiori.jpg"
+      ),
+      Seed(
+        name: "Trevi Fountain",
+        category: "Landmark",
+        lat: 41.9009,
+        lon: 12.4833,
+        day: 2,
+        rating: 4.7,
+        photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Trevi_Fountain_-_Roma.jpg/330px-Trevi_Fountain_-_Roma.jpg"
+      ),
+      Seed(
+        name: "Vatican Museums",
+        category: "Museum",
+        lat: 41.9065,
+        lon: 12.4536,
+        day: 3,
+        rating: 4.7,
+        photo:
+          "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Vatican_Museums_Spiral_Staircase_Looking_Up_2012.jpg/330px-Vatican_Museums_Spiral_Staircase_Looking_Up_2012.jpg"
+      ),
+      Seed(
+        name: "St. Peter's Basilica",
+        category: "Church",
+        lat: 41.9022,
+        lon: 12.4539,
+        day: 3,
+        rating: 4.8,
+        photo:
+          "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Basilica_di_San_Pietro_in_Vaticano_September_2015-1a.jpg/330px-Basilica_di_San_Pietro_in_Vaticano_September_2015-1a.jpg"
+      ),
+      Seed(
+        name: "Trastevere",
+        category: "Neighbourhood",
+        lat: 41.8890,
+        lon: 12.4694,
+        day: 3,
+        rating: 4.6,
+        photo:
+          "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Santa_Maria_in_Trastevere_fountain.jpg/330px-Santa_Maria_in_Trastevere_fountain.jpg"
+      ),
     ]
     response.itineraryResponse.pointsOfInterest = plan.enumerated().map { offset, entry in
       var poi = Loci_Poi_POIDetailedInfo()
@@ -563,7 +649,8 @@ extension SearchState {
     extra.rating = 4.5
     extra.descriptionPoi = "Where Romans actually eat lunch."
     var market = Loci_Poi_POIImage()
-    market.url = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Porta_San_Paolo_-_Piramid_Cestius.JPG/330px-Porta_San_Paolo_-_Piramid_Cestius.JPG"
+    market.url =
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Porta_San_Paolo_-_Piramid_Cestius.JPG/330px-Porta_San_Paolo_-_Piramid_Cestius.JPG"
     market.attribution = "Wikimedia Commons"
     extra.imageCredits = [market]
     response.pointsOfInterest = response.itineraryResponse.pointsOfInterest + [extra]
@@ -583,12 +670,8 @@ extension Loci_Localcontext_LocalContext {
     }
     var context = Loci_Localcontext_LocalContext()
     context.weather = [
-      (2, 24.0, 15.0, "Sunny", 0.05),
-      (3, 21.0, 14.0, "Rain", 0.8),
-      (4, 23.0, 14.0, "Partly cloudy", 0.2),
-      (5, 25.0, 16.0, "Sunny", 0.0),
-    ]
-    .map { day, high, low, condition, rain in
+      (2, 24.0, 15.0, "Sunny", 0.05), (3, 21.0, 14.0, "Rain", 0.8), (4, 23.0, 14.0, "Partly cloudy", 0.2), (5, 25.0, 16.0, "Sunny", 0.0),
+    ].map { day, high, low, condition, rain in
       var weather = Loci_Localcontext_WeatherDay()
       weather.date = on(day)
       weather.highC = high
@@ -781,7 +864,9 @@ extension Loci_Chat_Watch {
 
 extension Loci_Chat_ChatSession {
   nonisolated static var previewList: [Loci_Chat_ChatSession] {
-    func message(_ role: Loci_Chat_MessageRole, _ text: String, origin: Loci_Chat_MessageOrigin = .reply, label: String = "") -> Loci_Chat_ConversationMessage {
+    func message(_ role: Loci_Chat_MessageRole, _ text: String, origin: Loci_Chat_MessageOrigin = .reply, label: String = "")
+      -> Loci_Chat_ConversationMessage
+    {
       var message = Loci_Chat_ConversationMessage()
       message.id = UUID().uuidString
       message.role = role
@@ -795,8 +880,7 @@ extension Loci_Chat_ChatSession {
     lisbon.cityName = "Lisbon"
     lisbon.updatedAt = .init(date: Date().addingTimeInterval(-3600))
     lisbon.conversationHistory = [
-      message(.user, "3 days in Lisbon with kids, nothing too hilly"),
-      message(.assistant, "Here is a gentle plan."),
+      message(.user, "3 days in Lisbon with kids, nothing too hilly"), message(.assistant, "Here is a gentle plan."),
       message(
         .assistant,
         "Showers are likely in Lisbon tomorrow from about 14:00. Swap Belém for the Oceanário.",
@@ -845,12 +929,7 @@ private struct ClaimFormPreview: View {
     self.submits = submits
   }
 
-  var body: some View {
-    ClaimFormView(store: store)
-      .task {
-        if submits { await store.submit() }
-      }
-  }
+  var body: some View { ClaimFormView(store: store).task { if submits { await store.submit() } } }
 }
 
 extension WalkDay {
@@ -868,9 +947,7 @@ extension WalkDay {
       id: "preview:baixa",
       title: "Day 1 · Lisbon",
       stops: [
-        stop("Praça do Comércio", 38.7075, -9.1364),
-        stop("Arco da Rua Augusta", 38.7087, -9.1366),
-        stop("Elevador de Santa Justa", 38.7121, -9.1394),
+        stop("Praça do Comércio", 38.7075, -9.1364), stop("Arco da Rua Augusta", 38.7087, -9.1366), stop("Elevador de Santa Justa", 38.7121, -9.1394),
         stop("Rossio", 38.7139, -9.1394),
       ],
       withoutLocation: 1
