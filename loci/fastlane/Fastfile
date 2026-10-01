@@ -86,13 +86,30 @@ platform :ios do
       api_key: api_key,
       app_platform: "ios",
       app_identifier: BUNDLE_ID,
-      submit_for_review: true,
+      # Uploads only: pressing Submit for Review stays a person's decision.
+      submit_for_review: false,
       automatic_release: true,
       phased_release: true,
       precheck_include_in_app_purchases: false,
       force: true,
       skip_screenshots: true,
       skip_metadata: false
+    )
+  end
+
+  desc "Upload App Store listing text (fastlane/metadata) and screenshots (fastlane/screenshots) to the open version; no build, no submission"
+  lane :metadata do
+    upload_to_app_store(
+      api_key: asc_api_key,
+      app_platform: "ios",
+      app_identifier: BUNDLE_ID,
+      skip_binary_upload: true,
+      skip_screenshots: false,
+      overwrite_screenshots: true,
+      skip_metadata: false,
+      submit_for_review: false,
+      precheck_include_in_app_purchases: false,
+      force: true
     )
   end
 
