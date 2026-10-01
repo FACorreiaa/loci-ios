@@ -1,3 +1,4 @@
+import Connect
 import Foundation
 import LociConnectProto
 import SwiftProtobuf
@@ -38,6 +39,45 @@ nonisolated enum ReviewPayload {
     var request = Loci_Review_GetMyPOIReviewRequest()
     request.poiID = poiID
     return request
+  }
+
+  /// How many 100-review pages the fallback lookup reads before giving up.
+  static let ownScanMaxPages = 5
+
+  /// What GetMyPOIReview's answer means for "Write" versus "Edit".
+  enum OwnLookup: Equatable, Sendable {
+    /// The server answered: the review, or none.
+    case answered
+    /// NotFound: you have not reviewed this place, so the button reads "Write".
+    case noReview
+    /// Unimplemented: a server older than v5.29.0, so page through your reviews instead.
+    case scan
+    case failed
+  }
+
+  static func ownLookup(_ code: Code?) -> OwnLookup {
+    switch code {
+    case .none: .answered
+    case .some(.notFound): .noReview
+    case .some(.unimplemented): .scan
+    case .some: .failed
+    }
+  }
+
+  /// The fallback for servers without GetMyPOIReview (web: fetchMyPOIReview):
+  /// your reviews 100 at a time, up to five pages, filtered here by place.
+  static func scanForOwn(
+    poiID: String,
+    maxPages: Int = ownScanMaxPages,
+    page fetch: (Int) async throws -> ReviewPage
+  ) async throws -> LociReview? {
+    let wanted = poiID.lowercased()
+    for page in 1...max(1, maxPages) {
+      let result = try await fetch(page)
+      if let mine = result.reviews.first(where: { $0.poiID.lowercased() == wanted }) { return mine }
+      guard result.hasMore, !result.reviews.isEmpty else { return nil }
+    }
+    return nil
   }
 
   /// web: useReportReview → ReportReview{reviewId, reason, details}. The

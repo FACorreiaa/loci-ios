@@ -31,24 +31,35 @@ nonisolated enum ReviewsAPI {
     return ReviewPage(response)
   }
 
-  /// web: useMyPOIReview → GetMyPOIReview{poiId}. Nil when you have none
-  /// (the server answers NotFound).
+  /// web: fetchMyPOIReview → GetMyPOIReview{poiId}. Nil when you have none
+  /// (NotFound). A server without the RPC (Unimplemented) is asked the old
+  /// way: your reviews, 100 at a time, filtered by place.
   static func myPOIReview(poiID: String) async throws -> LociReview? {
-    do {
-      let response = try await reviewRPC("Could not check for your review.", ReviewPayload.myPOIReview(poiID: poiID)) {
-        await client.getMyPoireview(request: $0, headers: [:])
-      }
-      return response.hasReview ? LociReview(response.review) : nil
-    } catch APIError.notFound {
+    let request = ReviewPayload.myPOIReview(poiID: poiID)
+    let response = await withAuthRetry { await client.getMyPoireview(request: request, headers: [:]) }
+    switch ReviewPayload.ownLookup(response.error?.code) {
+    case .answered:
+      guard let message = response.message, message.hasReview else { return nil }
+      return LociReview(message.review)
+    case .noReview:
       return nil
+    case .scan:
+      return try await ReviewPayload.scanForOwn(poiID: poiID) { page in
+        try await myReviews(page: page, pageSize: ReviewPayload.ownLookupPageSize)
+      }
+    case .failed:
+      throw APIError(connect: response.error, fallback: "Could not check for your review.")
     }
   }
 
-  /// web: useReportReview → ReportReview{reviewId, reason, details}.
+  /// web: useReportReview → ReportReview{reviewId, reason, details}. Your own
+  /// review (PermissionDenied) and a review that can't take a report
+  /// (FailedPrecondition) come back as one plain sentence.
   static func report(reviewID: String, reason: ReviewReport.Reason, details: String = "") async throws {
-    _ = try await reviewRPC("Could not send your report.", ReviewPayload.report(reviewID: reviewID, reason: reason, details: details)) {
-      await client.reportReview(request: $0, headers: [:])
-    }
+    let request = ReviewPayload.report(reviewID: reviewID, reason: reason, details: details)
+    let response = await withAuthRetry { await client.reportReview(request: request, headers: [:]) }
+    if let refusal = ReviewReport.refusal(response.error?.code) { throw APIError.custom(refusal) }
+    _ = try response.unwrap("Could not send your report.")
   }
 
   /// web: useCreateReviewMutation. A second review of the same place is
