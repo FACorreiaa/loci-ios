@@ -86,8 +86,18 @@ struct FacebookFriendsView: View {
 enum FacebookConnect {
   enum Failure: Error { case cancelled, unavailable, noToken }
 
+  /// Whether the Meta app (2365177224247920) is published. While it is in
+  /// development mode only its App roles can log in and everyone else gets a
+  /// Facebook error page, so release builds leave the row out; Debug builds
+  /// keep it for testing with those accounts. Flip once business verification
+  /// and App Review for `user_friends` are done (owner, 2026-10-02).
+  static let metaAppLive = false
+
   static var isAvailable: Bool {
     #if canImport(FacebookLogin)
+      #if !DEBUG
+        guard metaAppLive else { return false }
+      #endif
       return Bundle.main.object(forInfoDictionaryKey: "FacebookAppID") is String
     #else
       return false
