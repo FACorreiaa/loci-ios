@@ -5,6 +5,7 @@ import LociConnectProto
 /// Why a proposed trip change could not be applied, in the card's words.
 nonisolated struct TripActionError: Error, Equatable, Sendable {
   enum Kind: Equatable, Sendable { case stale, gone, invalid, other }
+
   let kind: Kind
   let message: String
 

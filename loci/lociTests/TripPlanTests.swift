@@ -70,11 +70,12 @@ struct TripPlanDatesTests {
     #expect(range.map { CalendarMath.dateKey($0.end) } == "2026-11-17")
   }
 
-  @Test func aFlightSearchDepartsOnTheTripsFirstDayByDefault() {
+  @Test func aFlightSearchDepartsOnTheTripsFirstDayByDefault() throws {
     var t = Loci_Trip_TripDraft()
     t.startDate = "2026-11-12"
     t.endDate = "2026-11-17"
     #expect(TripPlan.defaultDeparture(of: t, today: .now) == "2026-11-12")
-    #expect(TripPlan.defaultDeparture(of: Loci_Trip_TripDraft(), today: CalendarMath.parseDateKey("2026-10-02")!) == "2026-10-02")
+    let today = try #require(CalendarMath.parseDateKey("2026-10-02"))
+    #expect(TripPlan.defaultDeparture(of: Loci_Trip_TripDraft(), today: today) == "2026-10-02")
   }
 }

@@ -22,9 +22,7 @@ struct TripProposalStreamTests {
   }
 
   @MainActor @Test func tripIdGoesOnTheRequestOnlyWhenSet() {
-    var envelope = SearchEnvelope(
-      sessionId: nil, requestId: "r", profileId: nil, lastEventId: nil, query: "x", cityName: nil, domain: nil,
-      latitude: nil, longitude: nil, startedAt: .now, finished: false, notified: false)
+    var envelope = SearchEnvelope(requestId: "r", query: "x", startedAt: .now, finished: false, notified: false)
     #expect(!SearchSessionController.request(from: envelope, resuming: false).hasTripID)
     envelope.tripId = "t1"
     #expect(SearchSessionController.request(from: envelope, resuming: false).tripID == "t1")

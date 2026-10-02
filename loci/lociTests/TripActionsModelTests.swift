@@ -5,13 +5,20 @@ import Testing
 
 actor StubTripActions: TripActionService {
   var applyResult: Result<Loci_Chat_ApplyTripActionResponse, TripActionError> = .success(.init())
-  private(set) var applied: [(String, Int?, Int64)] = []
+
+  struct Applied: Equatable {
+    let proposalID: String
+    let option: Int?
+    let baseVersion: Int64
+  }
+
+  private(set) var applied: [Applied] = []
   private(set) var dismissed: [String] = []
 
   func setApply(_ result: Result<Loci_Chat_ApplyTripActionResponse, TripActionError>) { applyResult = result }
 
   func apply(proposalID: String, option: Int?, baseVersion: Int64) async throws(TripActionError) -> Loci_Chat_ApplyTripActionResponse {
-    applied.append((proposalID, option, baseVersion))
+    applied.append(Applied(proposalID: proposalID, option: option, baseVersion: baseVersion))
     return try applyResult.get()
   }
 
@@ -39,7 +46,7 @@ struct TripActionsModelTests {
     #expect(trip?.version == 4)
     #expect(model.state("p1") == .applied)
     let calls = await stub.applied
-    #expect(calls.first?.0 == "p1" && calls.first?.1 == 1 && calls.first?.2 == 3)
+    #expect(calls == [StubTripActions.Applied(proposalID: "p1", option: 1, baseVersion: 3)])
   }
 
   @Test func aStaleTripKeepsTheCardAndSaysSo() async {
@@ -93,7 +100,9 @@ struct TripActionsBookTests {
   }
 
   @Test func eachTripKeepsOneModelForTheSession() {
-    #expect(TripActionsModel.forTrip("trip-a") === TripActionsModel.forTrip("trip-a"))
+    let first = TripActionsModel.forTrip("trip-a")
+    let again = TripActionsModel.forTrip("trip-a")
+    #expect(first === again)
     #expect(TripActionsModel.forTrip("trip-a") !== TripActionsModel.forTrip("trip-b"))
   }
 
