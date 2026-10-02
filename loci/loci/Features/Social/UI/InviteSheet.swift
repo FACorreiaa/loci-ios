@@ -7,6 +7,7 @@ struct InviteSheet: View {
   @Environment(\.dismiss) private var dismiss
   @State private var invite: Loci_Social_Invite?
   @State private var error: String?
+  @State private var loadFailed = false
   @State private var isRotating = false
 
   var body: some View {
@@ -27,6 +28,15 @@ struct InviteSheet: View {
           .buttonStyle(.borderedProminent).tint(.lociCoralFill).controlSize(.large)
           Button("Make a new link", systemImage: "arrow.clockwise") { rotate() }
             .disabled(isRotating).font(.lociCaption()).tint(.lociMutedInk)
+        } else if loadFailed {
+          ContentUnavailableView {
+            Label("Could not load your invite", systemImage: "link.badge.plus")
+          } description: {
+            Text("Check your connection and try again.")
+          } actions: {
+            Button("Try again") { Task { await load() } }
+              .buttonStyle(.borderedProminent).tint(.lociCoralFill)
+          }
         } else {
           ProgressView()
         }
@@ -37,10 +47,14 @@ struct InviteSheet: View {
       .navigationTitle("Invite a friend").navigationBarTitleDisplayMode(.inline)
       .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
       .errorAlert($error)
-      .task {
-        do { invite = try await SocialAPI.myInvite() } catch { self.error = error.userMessage }
-      }
+      .task { await load() }
     }
+  }
+
+  /// A failure shows a retry in place of the QR code, not an endless spinner.
+  private func load() async {
+    loadFailed = false
+    do { invite = try await SocialAPI.myInvite() } catch { loadFailed = true }
   }
 
   /// The old link stops working.
