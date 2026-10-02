@@ -10,6 +10,7 @@
 		0DC776E2305DBE860029F87E /* LociConnectProto in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776E1305DBE860029F87E /* LociConnectProto */; };
 		0DC776E5305DBE860029F87E /* Connect in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776E4305DBE860029F87E /* Connect */; };
 		0DC776F2305DBE860029F87E /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776F1305DBE860029F87E /* GoogleSignIn */; };
+		0DC776F8305DBE860029F87E /* FacebookLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776F7305DBE860029F87E /* FacebookLogin */; };
 		0DC776F5305DBE860029F87E /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776F4305DBE860029F87E /* PostHog */; };
 		14314FDF44DCB0760A62D268 /* NearbyWalkAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC7483382DCDDCF36790C44 /* NearbyWalkAttributes.swift */; };
 		318F9B058AC5DB86FA523A82 /* TripDayAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDCDC1C62E359B5888C1D5C1 /* TripDayAttributes.swift */; };
@@ -103,6 +104,7 @@
 				0DC776E2305DBE860029F87E /* LociConnectProto in Frameworks */,
 				0DC776E5305DBE860029F87E /* Connect in Frameworks */,
 				0DC776F2305DBE860029F87E /* GoogleSignIn in Frameworks */,
+				0DC776F8305DBE860029F87E /* FacebookLogin in Frameworks */,
 				0DC776F5305DBE860029F87E /* PostHog in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -209,6 +211,7 @@
 				0DC776E1305DBE860029F87E /* LociConnectProto */,
 				0DC776E4305DBE860029F87E /* Connect */,
 				0DC776F1305DBE860029F87E /* GoogleSignIn */,
+				0DC776F7305DBE860029F87E /* FacebookLogin */,
 				0DC776F4305DBE860029F87E /* PostHog */,
 			);
 			productName = loci;
@@ -310,6 +313,7 @@
 				0DC776E0305DBE860029F87E /* XCLocalSwiftPackageReference "loci-connect-proto" */,
 				0DC776E3305DBE860029F87E /* XCRemoteSwiftPackageReference "connect-swift" */,
 				0DC776F0305DBE860029F87E /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				0DC776F6305DBE860029F87E /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */,
 				0DC776F3305DBE860029F87E /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -1045,6 +1049,14 @@
 				minimumVersion = 3.82.0;
 			};
 		};
+		0DC776F6305DBE860029F87E /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/facebook-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 18.1.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1067,6 +1079,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0DC776F3305DBE860029F87E /* XCRemoteSwiftPackageReference "posthog-ios" */;
 			productName = PostHog;
+		};
+		0DC776F7305DBE860029F87E /* FacebookLogin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0DC776F6305DBE860029F87E /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookLogin;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -6,6 +6,9 @@
 //
 
 import GoogleSignIn
+#if canImport(FacebookLogin)
+  import FacebookLogin
+#endif
 import SwiftUI
 
 @main struct lociApp: App {
@@ -78,6 +81,14 @@ import SwiftUI
         // The Google SDK's redirect (the reversed client ID scheme) is its own;
         // everything else is a Loci deep link.
         if GIDSignIn.sharedInstance.handle(url) { return }
+        #if canImport(FacebookLogin)
+          // Facebook Login's return to the app (fb<app id>://).
+          if url.scheme == "fb\(Bundle.main.object(forInfoDictionaryKey: "FacebookAppID") as? String ?? "")",
+            ApplicationDelegate.shared.application(UIApplication.shared, open: url, sourceApplication: nil, annotation: nil)
+          {
+            return
+          }
+        #endif
         AppRouter.shared.open(url)
       }
         // A https://lociai.fyi result link tapped anywhere on the phone (Universal Links).

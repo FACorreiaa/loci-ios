@@ -98,6 +98,9 @@ enum FacebookConnect {
   /// the nonce it was asked for.
   @MainActor static func logIn() async throws -> (token: String, nonce: String) {
     #if canImport(FacebookLogin)
+      // FacebookAutoInitEnabled is off (Info.plist) so the SDK does nothing
+      // until someone asks to connect Facebook.
+      ApplicationDelegate.shared.initializeSDK()
       let nonce = UUID().uuidString + UUID().uuidString
       guard let configuration = LoginConfiguration(permissions: ["public_profile", "user_friends"], tracking: .limited, nonce: nonce) else {
         throw Failure.unavailable
