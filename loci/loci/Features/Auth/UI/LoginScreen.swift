@@ -51,7 +51,7 @@ public struct LoginScreen: View {
 
       Text("Loci").font(.lociDisplay(34)).foregroundStyle(Color.lociInk)
 
-      Text("Your intelligent travel companion").font(.lociBody(15)).foregroundStyle(Color.lociMutedInk)
+      Text("Explore cities with friends").font(.lociBody(15)).foregroundStyle(Color.lociMutedInk)
     }
   }
 
