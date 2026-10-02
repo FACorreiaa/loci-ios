@@ -31,6 +31,7 @@ struct TripEditorView: View {
   @State private var preferenceQueue: Task<Void, Never>?
   /// The day being walked stop by stop (pushed as WalkDayView).
   @State private var walkingDay: WalkDay?
+  @State private var planning = false
 
   /// Design previews pass a trip and a checklist and never touch the network.
   private let isOffline: Bool
@@ -104,6 +105,21 @@ struct TripEditorView: View {
       ToolbarItem(placement: .primaryAction) { Button(isEditing ? "Done" : "Edit") { isEditing.toggle() }.disabled(!canEdit) }
       if let trip, !isOffline {
         ToolbarItem(placement: .secondaryAction) { TripShareMenu(trip: trip).id(trip.id) }
+      }
+      if canEdit, !isOffline {
+        ToolbarItem(placement: .primaryAction) {
+          Button { planning = true } label: { Label("Ask the planner", systemImage: "bubble.left.and.text.bubble.right") }
+        }
+      }
+    }
+    .sheet(isPresented: $planning) {
+      if let trip {
+        TripPlannerSheet(
+          trip: trip,
+          currentVersion: { self.trip?.version },
+          onTripChanged: { next in Task { await adopt(next) } },
+          onReloadTrip: { await reload() }
+        )
       }
     }
     .alert("Rename stop", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
