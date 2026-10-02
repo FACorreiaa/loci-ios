@@ -80,6 +80,14 @@ struct TripEditorView: View {
           }
           TripPreferencesSection(constraints: trip.constraints, startsExpanded: expandsPreferences) { setPreference($0) }
             .disabled(!canEdit)
+          TripPlanSection(
+            trip: trip,
+            onSetDates: { start, end in Task { await setDates(start, end) } },
+            onSetStay: { stay in Task { await setStay(stay) } },
+            onAddFlight: { flight in Task { await addFlight(flight) } },
+            onRemoveFlight: { id in Task { await removeFlight(id) } }
+          )
+            .disabled(!canEdit)
           ForEach(trip.days, id: \.id) { day in daySection(day, trip: trip) }
           if !trip.legs.isEmpty { legsSection(trip.legs) }
           TripExportSection(trip: trip, isPro: side.isPro)
@@ -253,6 +261,45 @@ struct TripEditorView: View {
         self.error = error.message
       }
     }
+  }
+
+  // MARK: - Plan (dates, stays, flights)
+
+  private func setDates(_ start: String, _ end: String) async {
+    guard let trip else { return }
+    var request = Loci_Trip_SetTripDatesRequest()
+    request.tripID = trip.id
+    request.startDate = start
+    request.endDate = end
+    request.baseVersion = trip.version
+    await apply("Could not save the dates.", request) { await TripAPI.client.setTripDates(request: $0, headers: [:]) }
+  }
+
+  private func setStay(_ stay: Loci_Trip_TripStay) async {
+    guard let trip else { return }
+    var request = Loci_Trip_SetStayRequest()
+    request.tripID = trip.id
+    request.stay = stay
+    request.baseVersion = trip.version
+    await apply("Could not save the hotel.", request) { await TripAPI.client.setStay(request: $0, headers: [:]) }
+  }
+
+  private func addFlight(_ flight: Loci_Trip_TripFlight) async {
+    guard let trip else { return }
+    var request = Loci_Trip_AddFlightRequest()
+    request.tripID = trip.id
+    request.flight = flight
+    request.baseVersion = trip.version
+    await apply("Could not save the flight.", request) { await TripAPI.client.addFlight(request: $0, headers: [:]) }
+  }
+
+  private func removeFlight(_ id: String) async {
+    guard let trip else { return }
+    var request = Loci_Trip_RemoveFlightRequest()
+    request.tripID = trip.id
+    request.flightID = id
+    request.baseVersion = trip.version
+    await apply("Could not remove the flight.", request) { await TripAPI.client.removeFlight(request: $0, headers: [:]) }
   }
 
   /// Preference edits run one after another: each needs the `version` the
