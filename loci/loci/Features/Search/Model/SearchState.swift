@@ -48,6 +48,8 @@ nonisolated struct SearchState: Equatable, Sendable {
   /// The city's typical gastronomy: a section under itinerary and general
   /// results, and the whole answer of a gastronomy search ("food in Madeira").
   var gastronomy: Loci_Gastronomy_CityGastronomy?
+  /// Changes the planner proposes to the search's trip (ChatRequest.trip_id), in arrival order.
+  var proposals: [Loci_Chat_ActionProposal] = []
 
   /// The newest event id: the `resume_token` for a reattach.
   var lastEventId: String?
@@ -172,7 +174,7 @@ nonisolated extension SearchState {
       lastEventId = event.eventID
     }
 
-    if applyMultiCity(event, payload) || applyGastronomy(payload) { return nil }
+    if applyMultiCity(event, payload) || applyGastronomy(payload) || applyTripAction(payload) { return nil }
 
     switch payload {
     case .start(let start):
@@ -225,7 +227,7 @@ nonisolated extension SearchState {
       status = .completed
       return .completed
     case .route, .gastronomy, .actionProposal:
-      break  // route/gastronomy handled above; trip actions have no iOS surface yet
+      break  // route, gastronomy and trip actions handled above
     }
     return nil
   }
@@ -257,6 +259,15 @@ nonisolated extension SearchState {
 
   /// The gastronomy section, sent as soon as it is ready, before the itinerary
   /// that carries it again. Its own function so `apply` stays one switch.
+  /// A trip-action proposal: kept once, however many times a resumed stream replays it.
+  private mutating func applyTripAction(_ payload: Loci_Chat_StreamEvent.OneOf_Payload) -> Bool {
+    guard case .actionProposal(let wrapper) = payload else { return false }
+    if wrapper.hasProposal, !proposals.contains(where: { $0.id == wrapper.proposal.id }) {
+      proposals.append(wrapper.proposal)
+    }
+    return true
+  }
+
   private mutating func applyGastronomy(_ payload: Loci_Chat_StreamEvent.OneOf_Payload) -> Bool {
     guard case .gastronomy(let section) = payload else { return false }
     if section.hasGastronomy, !section.gastronomy.dishes.isEmpty { gastronomy = section.gastronomy }

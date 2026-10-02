@@ -31,6 +31,7 @@ struct TripEditorView: View {
   @State private var preferenceQueue: Task<Void, Never>?
   /// The day being walked stop by stop (pushed as WalkDayView).
   @State private var walkingDay: WalkDay?
+  @State private var planning = false
 
   /// Design previews pass a trip and a checklist and never touch the network.
   private let isOffline: Bool
@@ -80,6 +81,14 @@ struct TripEditorView: View {
           }
           TripPreferencesSection(constraints: trip.constraints, startsExpanded: expandsPreferences) { setPreference($0) }
             .disabled(!canEdit)
+          TripPlanSection(
+            trip: trip,
+            onSetDates: { start, end in enqueue { await setDates(start, end) } },
+            onSetStay: { stay in enqueue { await setStay(stay) } },
+            onAddFlight: { flight in enqueue { await addFlight(flight) } },
+            onRemoveFlight: { id in enqueue { await removeFlight(id) } }
+          )
+            .disabled(!canEdit)
           ForEach(trip.days, id: \.id) { day in daySection(day, trip: trip) }
           if !trip.legs.isEmpty { legsSection(trip.legs) }
           TripExportSection(trip: trip, isPro: side.isPro)
@@ -96,6 +105,21 @@ struct TripEditorView: View {
       ToolbarItem(placement: .primaryAction) { Button(isEditing ? "Done" : "Edit") { isEditing.toggle() }.disabled(!canEdit) }
       if let trip, !isOffline {
         ToolbarItem(placement: .secondaryAction) { TripShareMenu(trip: trip).id(trip.id) }
+      }
+      if canEdit, !isOffline {
+        ToolbarItem(placement: .primaryAction) {
+          Button { planning = true } label: { Label("Ask the planner", systemImage: "bubble.left.and.text.bubble.right") }
+        }
+      }
+    }
+    .sheet(isPresented: $planning) {
+      if let trip {
+        TripPlannerSheet(
+          trip: trip,
+          currentVersion: { self.trip?.version },
+          onTripChanged: { next in Task { await adopt(next) } },
+          onReloadTrip: { await reload() }
+        )
       }
     }
     .alert("Rename stop", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
@@ -255,13 +279,59 @@ struct TripEditorView: View {
     }
   }
 
+  // MARK: - Plan (dates, stays, flights)
+
+  private func setDates(_ start: String, _ end: String) async {
+    guard let trip else { return }
+    var request = Loci_Trip_SetTripDatesRequest()
+    request.tripID = trip.id
+    request.startDate = start
+    request.endDate = end
+    request.baseVersion = trip.version
+    await apply("Could not save the dates.", request) { await TripAPI.client.setTripDates(request: $0, headers: [:]) }
+  }
+
+  private func setStay(_ stay: Loci_Trip_TripStay) async {
+    guard let trip else { return }
+    var request = Loci_Trip_SetStayRequest()
+    request.tripID = trip.id
+    request.stay = stay
+    request.baseVersion = trip.version
+    await apply("Could not save the hotel.", request) { await TripAPI.client.setStay(request: $0, headers: [:]) }
+  }
+
+  private func addFlight(_ flight: Loci_Trip_TripFlight) async {
+    guard let trip else { return }
+    var request = Loci_Trip_AddFlightRequest()
+    request.tripID = trip.id
+    request.flight = flight
+    request.baseVersion = trip.version
+    await apply("Could not save the flight.", request) { await TripAPI.client.addFlight(request: $0, headers: [:]) }
+  }
+
+  private func removeFlight(_ id: String) async {
+    guard let trip else { return }
+    var request = Loci_Trip_RemoveFlightRequest()
+    request.tripID = trip.id
+    request.flightID = id
+    request.baseVersion = trip.version
+    await apply("Could not remove the flight.", request) { await TripAPI.client.removeFlight(request: $0, headers: [:]) }
+  }
+
   /// Preference edits run one after another: each needs the `version` the
   /// previous one returned, or the second would be refused as a conflict.
   private func setPreference(_ patch: PreferencePatch) {
+    enqueue { await sendPreference(patch) }
+  }
+
+  /// Plan and preference edits run one after another on the same queue: two
+  /// quick picks would otherwise both send the version before either landed,
+  /// and the second would be refused as a change from another device.
+  private func enqueue(_ edit: @escaping @MainActor () async -> Void) {
     let previous = preferenceQueue
     preferenceQueue = Task {
       await previous?.value
-      await sendPreference(patch)
+      await edit()
     }
   }
 
