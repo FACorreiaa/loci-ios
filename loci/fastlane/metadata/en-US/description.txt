@@ -1,3 +1,5 @@
+Explore cities with friends. Plan the trip, walk it, collect the places you've really been, and see how you stack up against your friends.
+
 Every AI can write you an itinerary. Loci is the one that knows the museum is shut for a public holiday, that it will rain on Saturday, and what the trip actually costs today — and it keeps the plan when the chat is gone.
 
 PLAN ANY CITY TRIP IN SECONDS
