@@ -25,6 +25,8 @@ nonisolated struct SearchEnvelope: Codable, Equatable, Sendable {
   /// A multi-city search's route (serialized RoutePayload), kept so a resume
   /// after it still knows the cities.
   var routeData: Data?
+  /// The trip this search is about: its turns propose changes to it (ChatRequest.trip_id).
+  var tripId: String?
 }
 
 /// One city of a multi-city search, as the stop builder hands it over.

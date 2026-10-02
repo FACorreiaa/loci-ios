@@ -68,7 +68,8 @@ import UIKit
     sessionId: String? = nil,
     useDefaultProfile: Bool = true,
     stops: [StopInput] = [],
-    suggestOrder: Bool = false
+    suggestOrder: Bool = false,
+    tripId: String? = nil
   ) async throws {
     let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return }
@@ -94,7 +95,8 @@ import UIKit
       finished: false,
       notified: false,
       stops: stops.count >= 2 ? stops : nil,
-      suggestOrder: stops.count >= 2 ? suggestOrder : nil
+      suggestOrder: stops.count >= 2 ? suggestOrder : nil,
+      tripId: tripId
     )
     self.envelope = envelope
     store.save(envelope)
@@ -403,6 +405,7 @@ import UIKit
     }
     request.suggestOrder = envelope.suggestOrder ?? false
     if resuming, let token = envelope.lastEventId { request.resumeToken = token }
+    if let tripId = envelope.tripId, !tripId.isEmpty { request.tripID = tripId }
     return request
   }
 }
