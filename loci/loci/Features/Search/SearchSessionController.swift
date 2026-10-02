@@ -36,6 +36,8 @@ import UIKit
   var viewingSessionId: String?
 
   private var envelope: SearchEnvelope?
+  /// The trip the current or last search is about, if any.
+  var currentTripId: String? { envelope?.tripId }
   private var streamTask: Task<Void, Never>?
   private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
   private var isForeground = true

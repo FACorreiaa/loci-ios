@@ -83,10 +83,10 @@ struct TripEditorView: View {
             .disabled(!canEdit)
           TripPlanSection(
             trip: trip,
-            onSetDates: { start, end in Task { await setDates(start, end) } },
-            onSetStay: { stay in Task { await setStay(stay) } },
-            onAddFlight: { flight in Task { await addFlight(flight) } },
-            onRemoveFlight: { id in Task { await removeFlight(id) } }
+            onSetDates: { start, end in enqueue { await setDates(start, end) } },
+            onSetStay: { stay in enqueue { await setStay(stay) } },
+            onAddFlight: { flight in enqueue { await addFlight(flight) } },
+            onRemoveFlight: { id in enqueue { await removeFlight(id) } }
           )
             .disabled(!canEdit)
           ForEach(trip.days, id: \.id) { day in daySection(day, trip: trip) }
@@ -321,10 +321,17 @@ struct TripEditorView: View {
   /// Preference edits run one after another: each needs the `version` the
   /// previous one returned, or the second would be refused as a conflict.
   private func setPreference(_ patch: PreferencePatch) {
+    enqueue { await sendPreference(patch) }
+  }
+
+  /// Plan and preference edits run one after another on the same queue: two
+  /// quick picks would otherwise both send the version before either landed,
+  /// and the second would be refused as a change from another device.
+  private func enqueue(_ edit: @escaping @MainActor () async -> Void) {
     let previous = preferenceQueue
     preferenceQueue = Task {
       await previous?.value
-      await sendPreference(patch)
+      await edit()
     }
   }
 

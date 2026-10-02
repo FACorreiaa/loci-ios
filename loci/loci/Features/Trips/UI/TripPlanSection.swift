@@ -30,12 +30,21 @@ struct TripPlanSection: View {
       if let error { Text(error).font(.lociCaption(13)).foregroundStyle(Color.lociDestructive) }
     } header: {
       Text("Plan").lociCoordStyle(11)
-    }.onAppear(perform: seedDates)
+    }
+    // Keyed on the dates, not onAppear: a change applied from the planner or a
+    // reload after a conflict must reach the pickers, or "Save dates" would put
+    // the old ones back.
+    .task(id: "\(trip.startDate)|\(trip.endDate)") { seedDates() }
   }
 
   private func seedDates() {
-    if let s = CalendarMath.parseDateKey(trip.startDate) { start = s }
-    if let e = CalendarMath.parseDateKey(trip.endDate) { end = e }
+    if let range = TripPlan.dates(of: trip) {
+      start = range.start
+      end = range.end
+    }
+    // The Departs picker shows a date, so the search must hold one too, or
+    // "Search flights" stays disabled under a form that looks complete.
+    if search.departDate.isEmpty { search.departDate = TripPlan.defaultDeparture(of: trip, today: Date()) }
   }
 
   private var datesRow: some View {

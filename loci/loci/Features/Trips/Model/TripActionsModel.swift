@@ -19,6 +19,33 @@ import Observation
 
   func state(_ id: String) -> CardState { states[id] ?? .ready }
 
+  /// Every card this trip's planner turns proposed, in arrival order. Kept
+  /// here, not read off the stream: each turn starts a fresh stream state, and
+  /// a card must not vanish because the traveller asked something else.
+  private(set) var collected: [Loci_Chat_ActionProposal] = []
+
+  /// The cards still waiting for a tap.
+  var cards: [Loci_Chat_ActionProposal] {
+    collected.filter { state($0.id) != .applied && state($0.id) != .dismissed }
+  }
+
+  func collect(_ proposals: [Loci_Chat_ActionProposal], forTrip tripId: String) {
+    for proposal in proposals where proposal.tripID == tripId && !collected.contains(where: { $0.id == proposal.id }) {
+      collected.append(proposal)
+    }
+  }
+
+  private static var byTrip: [String: TripActionsModel] = [:]
+
+  /// One model per trip for the app's lifetime, so closing the planner while a
+  /// turn is still running does not lose the cards it brings.
+  static func forTrip(_ tripId: String) -> TripActionsModel {
+    if let model = byTrip[tripId] { return model }
+    let model = TripActionsModel()
+    byTrip[tripId] = model
+    return model
+  }
+
   /// The trip as it now is, or nil when nothing changed. `baseVersion` is nil
   /// until the trip has loaded; a card cannot be applied before that.
   func apply(_ proposal: Loci_Chat_ActionProposal, option: Int?, baseVersion: Int64?) async -> Loci_Trip_TripDraft? {

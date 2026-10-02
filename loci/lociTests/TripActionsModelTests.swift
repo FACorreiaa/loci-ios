@@ -67,3 +67,40 @@ struct TripActionsModelTests {
     #expect(model.state("p2") == .dismissed)
   }
 }
+
+@MainActor
+struct TripActionsBookTests {
+  private func proposal(_ id: String, trip: String = "t1") -> Loci_Chat_ActionProposal {
+    var p = Loci_Chat_ActionProposal()
+    p.id = id
+    p.tripID = trip
+    return p
+  }
+
+  @Test func cardsSurviveTheNextTurnAndAreKeptOnce() {
+    let model = TripActionsModel(service: StubTripActions())
+    model.collect([proposal("p1"), proposal("p2")], forTrip: "t1")
+    model.collect([proposal("p3"), proposal("p1")], forTrip: "t1")  // turn 2: the stream state was reset
+    model.collect([proposal("x", trip: "t2")], forTrip: "t1")  // another trip's card is not this sheet's
+    #expect(model.cards.map(\.id) == ["p1", "p2", "p3"])
+  }
+
+  @Test func appliedAndDismissedCardsLeaveTheList() async {
+    let model = TripActionsModel(service: StubTripActions())
+    model.collect([proposal("p1"), proposal("p2")], forTrip: "t1")
+    await model.dismiss(proposal("p1"))
+    #expect(model.cards.map(\.id) == ["p2"])
+  }
+
+  @Test func eachTripKeepsOneModelForTheSession() {
+    #expect(TripActionsModel.forTrip("trip-a") === TripActionsModel.forTrip("trip-a"))
+    #expect(TripActionsModel.forTrip("trip-a") !== TripActionsModel.forTrip("trip-b"))
+  }
+
+  @Test func askingReplacesOnlyAnotherRunningSearch() {
+    #expect(TripPlannerSheet.replacesAnotherSearch(isActive: true, runningTripId: nil, tripId: "t1"))
+    #expect(TripPlannerSheet.replacesAnotherSearch(isActive: true, runningTripId: "t2", tripId: "t1"))
+    #expect(!TripPlannerSheet.replacesAnotherSearch(isActive: true, runningTripId: "t1", tripId: "t1"))
+    #expect(!TripPlannerSheet.replacesAnotherSearch(isActive: false, runningTripId: nil, tripId: "t1"))
+  }
+}

@@ -45,6 +45,20 @@ nonisolated enum TripPlan {
       .sorted { $0.rating > $1.rating }
   }
 
+  /// The trip's dates, when both are set.
+  @MainActor static func dates(of trip: Loci_Trip_TripDraft) -> (start: Date, end: Date)? {
+    guard trip.hasStartDate, trip.hasEndDate,
+      let start = CalendarMath.parseDateKey(trip.startDate),
+      let end = CalendarMath.parseDateKey(trip.endDate)
+    else { return nil }
+    return (start, end)
+  }
+
+  /// A new flight search departs on the trip's first day, else today.
+  @MainActor static func defaultDeparture(of trip: Loci_Trip_TripDraft, today: Date) -> String {
+    trip.hasStartDate && !trip.startDate.isEmpty ? trip.startDate : CalendarMath.dateKey(today)
+  }
+
   /// The stay set for a city, matched loosely.
   static func stay(for city: String, in trip: Loci_Trip_TripDraft) -> Loci_Trip_TripStay? {
     trip.stays.first { $0.cityName.caseInsensitiveCompare(city) == .orderedSame }

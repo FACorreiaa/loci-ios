@@ -1,3 +1,4 @@
+import Foundation
 import LociConnectProto
 import Testing
 
@@ -53,5 +54,27 @@ struct TripPlanTests {
     let all = [hotel("A", "5", 4.8), hotel("B", "4.5", 4.2), hotel("C", "", 4.9), hotel("D", "4", 4.6)]
     #expect(TripPlan.hotels(all, stars: 4).map(\.name) == ["D", "B"])
     #expect(TripPlan.hotels(all, stars: 0).map(\.name) == ["C", "A", "D", "B"], "any keeps unrated")
+  }
+}
+
+@MainActor
+struct TripPlanDatesTests {
+  @Test func datesAreTheTripsWhenBothAreSet() {
+    var t = Loci_Trip_TripDraft()
+    #expect(TripPlan.dates(of: t) == nil, "no dates yet")
+    t.startDate = "2026-11-12"
+    #expect(TripPlan.dates(of: t) == nil, "half a range is no range")
+    t.endDate = "2026-11-17"
+    let range = TripPlan.dates(of: t)
+    #expect(range.map { CalendarMath.dateKey($0.start) } == "2026-11-12")
+    #expect(range.map { CalendarMath.dateKey($0.end) } == "2026-11-17")
+  }
+
+  @Test func aFlightSearchDepartsOnTheTripsFirstDayByDefault() {
+    var t = Loci_Trip_TripDraft()
+    t.startDate = "2026-11-12"
+    t.endDate = "2026-11-17"
+    #expect(TripPlan.defaultDeparture(of: t, today: .now) == "2026-11-12")
+    #expect(TripPlan.defaultDeparture(of: Loci_Trip_TripDraft(), today: CalendarMath.parseDateKey("2026-10-02")!) == "2026-10-02")
   }
 }
