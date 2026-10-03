@@ -58,7 +58,7 @@ struct ContactMatchView: View {
       }
     }
     .settingsStyle("From your contacts")
-    .contactAccessPicker(isPresented: $showsPicker) { _ in Task { await match() } }
+    .limitedContactAccessPicker(isPresented: $showsPicker) { _ in Task { await match() } }
     .errorAlert($error)
     .task { if status == .authorized || status == .limited { await match() } }
   }
