@@ -1,0 +1,6 @@
+project: loci/loci.xcodeproj
+schemes:
+  - loci
+retain_public: false
+retain_assign_only_properties: false
+retain_swift_ui_previews: true
