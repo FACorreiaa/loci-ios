@@ -100,6 +100,7 @@ struct FriendsView: View {
     Section {
       if friends.isEmpty {
         Text("No friends yet. Send your invite link to someone you travel with.").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+        Button("Invite") { showsInvite = true }.font(.lociCaption())
       }
       ForEach(friends, id: \.user.id) { friend in
         NavigationLink { UserProfileView(username: friend.user.username) } label: {

@@ -55,6 +55,7 @@ enum YouDestination: String, CaseIterable, Identifiable {
 /// Profile's "You" rows, above Settings, headed by the account's plan chip.
 struct YouSection: View {
   var entitlements: Entitlements?
+  @State private var showsInvite = false
 
   private var plan: Entitlements { entitlements ?? EntitlementsStore.shared.current }
 
@@ -68,7 +69,12 @@ struct YouSection: View {
           Label(destination.title, systemImage: destination.systemImage)
         }
       }
-    }.listRowBackground(Color.lociCard)
+      Button { showsInvite = true } label: {
+        Label("Invite", systemImage: "square.and.arrow.up")
+      }
+    }
+    .listRowBackground(Color.lociCard)
+    .sheet(isPresented: $showsInvite) { InviteSheet() }
   }
 }
 

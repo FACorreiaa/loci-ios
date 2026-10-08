@@ -44,12 +44,15 @@ public enum NativeSignIn {
     req.idToken = idToken
     req.nonce = nonce
     req.fullName = fullName
+    // Used only if this sign-in creates the account.
+    if let code = PendingInvite.code() { req.inviteCode = code }
 
     let res = await client.signInWithIdtoken(request: req, headers: [:])
     if let err = res.error {
       throw APIError.custom(message(for: err, provider: provider))
     }
     guard let msg = res.message else { throw APIError.invalidResponse }
+    PendingInvite.clear()
 
     try await sessionManager.storeSession(
       accessToken: msg.accessToken,

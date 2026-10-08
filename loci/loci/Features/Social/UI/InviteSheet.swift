@@ -3,12 +3,15 @@ import SwiftUI
 
 /// Your invite link as a QR code to show in person, and a link to send.
 /// Opening it is consent on both sides, so it befriends in one step.
+///
+/// Sending goes through the system share sheet only: Messages, WhatsApp,
+/// Facebook and Messenger appear there when installed, and the person's own
+/// apps send the invite. Loci picks no friends and sends no texts. The code
+/// never expires, so there is no "new link".
 struct InviteSheet: View {
   @Environment(\.dismiss) private var dismiss
   @State private var invite: Loci_Social_Invite?
-  @State private var error: String?
   @State private var loadFailed = false
-  @State private var isRotating = false
 
   var body: some View {
     NavigationStack {
@@ -22,12 +25,12 @@ struct InviteSheet: View {
           }
           Text("Anyone who opens your link becomes your friend on Loci.")
             .font(.lociCaption(15)).multilineTextAlignment(.center).foregroundStyle(Color.lociMutedInk)
-          ShareLink(item: url, message: Text("Travel with me on Loci")) {
-            Label("Send invite link", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity)
+          // The message and the link are separate items, so the link is not
+          // repeated in the text.
+          ShareLink(item: url, message: Text(Self.message(for: invite))) {
+            Label("Invite", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity)
           }
           .buttonStyle(.borderedProminent).tint(.lociCoralFill).controlSize(.large)
-          Button("Make a new link", systemImage: "arrow.clockwise") { rotate() }
-            .disabled(isRotating).font(.lociCaption()).tint(.lociMutedInk)
         } else if loadFailed {
           ContentUnavailableView {
             Label("Could not load your invite", systemImage: "link.badge.plus")
@@ -46,7 +49,6 @@ struct InviteSheet: View {
       .background(Color.lociPaper.ignoresSafeArea())
       .navigationTitle("Invite a friend").navigationBarTitleDisplayMode(.inline)
       .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-      .errorAlert($error)
       .task { await load() }
     }
   }
@@ -57,12 +59,8 @@ struct InviteSheet: View {
     do { invite = try await SocialAPI.myInvite() } catch { loadFailed = true }
   }
 
-  /// The old link stops working.
-  private func rotate() {
-    isRotating = true
-    Task {
-      defer { isRotating = false }
-      do { invite = try await SocialAPI.rotateInvite() } catch { self.error = error.userMessage }
-    }
+  /// The server's wording; a fixed line if an older server sent none.
+  static func message(for invite: Loci_Social_Invite) -> String {
+    invite.shareText.isEmpty ? "I'm using Loci to plan places that fit. Join me:" : invite.shareText
   }
 }
