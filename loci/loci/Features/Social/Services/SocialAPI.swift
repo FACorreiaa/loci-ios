@@ -77,10 +77,6 @@ nonisolated enum SocialAPI {
     try await rpc("Could not load your invite.", Loci_Social_GetMyInviteRequest()) { await client.getMyInvite(request: $0, headers: [:]) }.invite
   }
 
-  static func rotateInvite() async throws -> Loci_Social_Invite {
-    try await rpc("Could not make a new link.", Loci_Social_RotateInviteRequest()) { await client.rotateInvite(request: $0, headers: [:]) }.invite
-  }
-
   static func invite(code: String) async throws -> Loci_Social_GetInviteResponse {
     var request = Loci_Social_GetInviteRequest()
     request.code = code

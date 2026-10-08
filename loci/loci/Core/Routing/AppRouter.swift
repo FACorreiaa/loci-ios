@@ -238,6 +238,8 @@ nonisolated extension AppLink {
   }
 
   public func open(_ link: AppLink) {
+    // Kept for the sign-up that may follow, which records who invited it.
+    if case let .invite(code) = link { PendingInvite.remember(code) }
     selectedTab = Self.tab(for: link)
     pendingLink = link
   }

@@ -40,10 +40,14 @@ import LociConnectProto
     req.email = email
     req.username = username
     req.password = password
+    // From an invite link opened on this device; the server ignores a bad one.
+    if let code = PendingInvite.code() { req.inviteCode = code }
 
     let res = await client.register(request: req, headers: [:])
     if let err = res.error { throw APIError.custom(err.message ?? "Registration failed.") }
     guard let message = res.message else { throw APIError.invalidResponse }
+    // Spent whether or not it applied: one sign-up per link.
+    PendingInvite.clear()
     return message
   }
 
