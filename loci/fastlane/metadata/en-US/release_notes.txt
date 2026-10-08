@@ -1,0 +1,8 @@
+Invite friends from your profile
+• A new Invite row in Profile opens your phone's share sheet (Messages, WhatsApp, Messenger or whatever you use) with a ready-made message and your link.
+• Your invite link no longer expires, so a link you sent weeks ago still works.
+• An empty Friends list now has an Invite button.
+• If someone opens your link before they have an account, Loci remembers who invited them all the way through sign-up, with email, Apple or Google.
+
+Find friends from your contacts
+• Works when you've shared only some of your contacts with Loci: add more people right from Find friends, without changing your settings.
