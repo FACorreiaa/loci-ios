@@ -59,28 +59,26 @@ struct SearchResultsView: View {
 
   var body: some View {
     ScrollView {
-      ScrollViewReader { proxy in
-        VStack(alignment: .leading, spacing: 12) {
-          if let state {
-            SearchTranscript(state: state, caption: caption) { query in Task { await rerun(query) } }
-            actions(state)
-            MuseThreadTail(thread: thread, sessionId: state.sessionId ?? sessionId)
-          } else if isRestoring || awaitingRerun {
-            ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
-          } else {
-            unavailable
-          }
-        }
-        .padding(.horizontal, LociTheme.defaultPadding)
-        .padding(.vertical, 12)
-        .onChange(of: revealMessageId) { _, id in
-          guard let id else { return }
-          withAnimation(LociTheme.resultArrive) { proxy.scrollTo(id, anchor: .top) }
-          revealMessageId = nil
+      VStack(alignment: .leading, spacing: 12) {
+        if let state {
+          SearchTranscript(state: state, caption: caption) { query in Task { await rerun(query) } }
+          actions(state)
+          MuseThreadTail(thread: thread, sessionId: state.sessionId ?? sessionId)
+        } else if isRestoring || awaitingRerun {
+          ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
+        } else {
+          unavailable
         }
       }
+      .padding(.horizontal, LociTheme.defaultPadding)
+      .padding(.vertical, 12)
     }
     .scrollPosition($scroll)
+    .onChange(of: revealMessageId) { _, id in
+      guard let id else { return }
+      withAnimation(LociTheme.resultArrive) { scroll.scrollTo(id: id, anchor: .top) }
+      revealMessageId = nil
+    }
     // A card or a confirmation lands under a long answer: bring it into view.
     .onChange(of: thread.card != nil) { _, hasCard in if hasCard { scrollToEnd() } }
     .onChange(of: thread.confirmedWatchId) { _, id in if id != nil { scrollToEnd() } }
@@ -150,7 +148,10 @@ struct SearchResultsView: View {
   /// The city above the answer, and the place count once it has finished.
   /// Progress lives in the header's status line.
   private var caption: String? {
-    let count = state.flatMap { !$0.isActive && !$0.places.isEmpty ? "\($0.places.count) places" : nil }
+    let count = state.flatMap { state in
+      !state.isActive && !state.places.isEmpty
+        ? String(AttributedString(localized: "^[\(state.places.count) place](inflect: true)").characters) : nil
+    }
     let parts = [state?.cityName ?? link.cityName, count].compactMap { $0 }.filter { !$0.isEmpty }
     return parts.isEmpty ? nil : parts.joined(separator: " · ")
   }
@@ -346,6 +347,7 @@ struct SkeletonCards: View {
       }
     }
     .redacted(reason: .placeholder)
+    .accessibilityElement()
     .accessibilityLabel("Loading results")
   }
 }

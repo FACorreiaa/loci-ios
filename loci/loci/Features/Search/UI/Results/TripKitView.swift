@@ -94,7 +94,7 @@ struct TripKitView: View {
       }
       .buttonStyle(MusePillButtonStyle())
       .disabled(calendarStatus != nil)
-      Text("\(unlocked.reduce(0) { $0 + $1.stops.count }) events, 09:00 start").lociCoordStyle(9)
+      Text("^[\(unlocked.reduce(0) { $0 + $1.stops.count }) event](inflect: true), 09:00 start").lociCoordStyle(9)
     }
   }
 
@@ -106,7 +106,7 @@ struct TripKitView: View {
       }
       let events = CalendarSchedule.events(groups: unlocked, startDate: startDate, cityName: cityName, summary: summary)
       let count = try store.writeStops(events)
-      calendarStatus = "Added \(count) events"
+      calendarStatus = String(AttributedString(localized: "Added ^[\(count) event](inflect: true)").characters)
     } catch { self.error = error.userMessage }
   }
 

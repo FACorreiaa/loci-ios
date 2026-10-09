@@ -17,6 +17,8 @@ struct CompareView: View {
   @State private var window = CompareView.defaultWeekend()
   @State private var result: Loci_Compare_V1_CompareWeekendResponse?
   @State private var isComparing = false
+  /// A save in flight: a second tap would save a second copy of the trip.
+  @State private var isSaving = false
   @State private var savedTrip: Loci_Trip_TripDraft?
   @State private var error: String?
 
@@ -65,6 +67,7 @@ struct CompareView: View {
               candidates = preset.candidates
               Task { await compare() }
             }
+            .disabled(isComparing)
           }
         }
       }
@@ -96,9 +99,10 @@ struct CompareView: View {
         Text(result.recommendationReason).font(.lociBody())
       }
     }
-    ForEach(Array(result.columns.enumerated()), id: \.offset) { _, column in
+    // Candidates are unique (addCandidate), so each column's city is too.
+    ForEach(result.columns, id: \.cityName) { column in
       Section {
-        LabeledContent("Distance", value: "\(Int(column.distanceKm)) km · \(column.travelMins / 60)h \(column.travelMins % 60)m")
+        LabeledContent("Distance", value: "\(Self.distance(column.distanceKm)) · \(Self.travelTime(minutes: Int(column.travelMins)))")
         if column.hasGoScore { LabeledContent("GoScore", value: "\(column.goScore.score) · \(column.goScore.verdict)") }
         if !column.weather.isEmpty {
           LabeledContent(column.weatherIsEstimated ? "Weather (typical)" : "Weather") {
@@ -117,6 +121,7 @@ struct CompareView: View {
           if let url = URL(string: option.url) { Link(option.label, destination: url) }
         }
         Button("Save \(column.cityName) as a trip") { Task { await save(column: column, dual: false, columns: result.columns) } }
+          .disabled(isSaving)
       } header: {
         Text("\(column.cityName), \(column.country)").font(.lociTitle(18)).textCase(nil)
       }
@@ -128,6 +133,7 @@ struct CompareView: View {
           Text("Pro plans both cities in one weekend.").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
         } else {
           Button("Save both as one trip") { Task { await save(column: result.columns[0], dual: true, columns: result.columns) } }
+            .disabled(isSaving)
         }
       }
     }
@@ -139,9 +145,21 @@ struct CompareView: View {
           Text("Pro plans multi-city routes.").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
         } else {
           Button("Save the route as a trip") { Task { await save(plan: result.multiCityPlan) } }
+            .disabled(isSaving)
         }
       }
     }
+  }
+
+  /// "274 km", in the locale's digits.
+  static func distance(_ kilometers: Double) -> String {
+    Measurement(value: kilometers, unit: UnitLength.kilometers)
+      .formatted(.measurement(width: .abbreviated, usage: .asProvided, numberFormatStyle: .number.precision(.fractionLength(0))))
+  }
+
+  /// "3h 14m", in the locale's units.
+  static func travelTime(minutes: Int) -> String {
+    Duration.seconds(minutes * 60).formatted(.units(allowed: [.hours, .minutes], width: .narrow))
   }
 
   private func recommendationTitle(_ result: Loci_Compare_V1_CompareWeekendResponse) -> String {
@@ -190,6 +208,9 @@ struct CompareView: View {
   }
 
   private func saveTrip(_ trip: Loci_Trip_TripDraft) async {
+    guard !isSaving else { return }
+    isSaving = true
+    defer { isSaving = false }
     var request = Loci_Trip_SaveTripRequest()
     request.trip = trip
     request.baseVersion = 0

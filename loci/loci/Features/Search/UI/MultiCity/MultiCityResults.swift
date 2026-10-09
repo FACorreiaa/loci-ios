@@ -17,7 +17,7 @@ struct MultiCityResults: View {
           Text(outline).font(.caption).foregroundStyle(.secondary)
         }
         if let dropped = state.route?.dropped, !dropped.isEmpty {
-          Text("Left out: " + dropped.map { "\($0.cityName) (\($0.reason))" }.joined(separator: "; "))
+          Text("Left out: \(dropped.map { "\($0.cityName) (\($0.reason))" }.joined(separator: "; "))")
             .font(.caption2).foregroundStyle(.secondary)
         }
         if let index = selection, let stop = state.stops.first(where: { $0.index == index }) {

@@ -152,7 +152,7 @@ struct PlaceDetailView: View {
     HStack(spacing: 8) {
       if stop.rating > 0 { StatTile(kicker: "Rating", value: stop.rating.formatted(.number.precision(.fractionLength(1))), symbol: "star.fill") }
       if let price = StopMeta.price(stop) { StatTile(kicker: "Price", value: price, symbol: "creditcard") }
-      if stop.distance > 0 { StatTile(kicker: "Distance", value: String(format: "%.1f km", stop.distance), symbol: "figure.walk") }
+      if stop.distance > 0 { StatTile(kicker: "Distance", value: StopMeta.distance(stop.distance), symbol: "figure.walk") }
       if stop.hasStarRating, !stop.starRating.isEmpty { StatTile(kicker: "Stars", value: stop.starRating, symbol: "bed.double") }
     }
   }
@@ -336,7 +336,7 @@ private struct ContactRow: View {
 
   var body: some View {
     HStack(spacing: 8) {
-      Image(systemName: symbol).foregroundStyle(Color.lociForest).frame(width: 18)
+      Image(systemName: symbol).foregroundStyle(Color.lociForest).frame(width: 18).accessibilityHidden(true)
       if let url {
         Link(text, destination: url).font(.lociBody(14)).lineLimit(1)
       } else {
@@ -350,12 +350,14 @@ private struct ContactRow: View {
 private struct PlaceFactsList: View {
   let facts: Loci_Place_PlaceFacts
 
+  @ScaledMetric(relativeTo: .caption) private var labelWidth: CGFloat = 96
+
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
       Text("Verified by travellers").lociCoordStyle(10)
       ForEach(Array(facts.facts.enumerated()), id: \.offset) { _, fact in
         HStack(alignment: .firstTextBaseline) {
-          Text(Self.label(fact.field)).font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk).frame(width: 96, alignment: .leading)
+          Text(Self.label(fact.field)).font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk).frame(width: labelWidth, alignment: .leading)
           Text(PlaceFactVocabulary.displayValue(fact.field, fact.value)).font(.lociBody(14)).foregroundStyle(Color.lociInk)
           Spacer()
           Text("\(Int((fact.confidence * 100).rounded()))%").lociCoordStyle(9)
@@ -404,7 +406,7 @@ private struct FlowChips: View {
   let items: [String]
 
   var body: some View {
-    ScrollView(.horizontal, showsIndicators: false) {
+    ScrollView(.horizontal) {
       HStack(spacing: 6) {
         ForEach(Array(items.prefix(12).enumerated()), id: \.offset) { _, item in
           Text(item).font(.lociCaption(11)).foregroundStyle(Color.lociInk)
@@ -413,6 +415,7 @@ private struct FlowChips: View {
         }
       }
     }
+    .scrollIndicators(.hidden)
     .scrollClipDisabled()
   }
 }

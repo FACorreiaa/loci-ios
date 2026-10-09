@@ -16,10 +16,10 @@ struct LegRowView: View {
       Text("Estimate").font(.caption2).foregroundStyle(.secondary)
     }
     .padding(12)
-    .background(
+    .background {
       RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous)
         .strokeBorder(Color.lociBorder, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-    )
+    }
     .accessibilityElement(children: .combine)
   }
 }

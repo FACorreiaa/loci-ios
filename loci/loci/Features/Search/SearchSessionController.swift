@@ -39,6 +39,9 @@ import UIKit
   /// The trip the current or last search is about, if any.
   var currentTripId: String? { envelope?.tripId }
   private var streamTask: Task<Void, Never>?
+  /// Bumped for every reader `streamTask` holds. A replaced reader's late exit
+  /// compares its own number and leaves the new search's handle alone.
+  private var streamGeneration = 0
   private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
   private var isForeground = true
 
@@ -131,37 +134,58 @@ import UIKit
 
   private func open(_ request: Loci_Chat_ChatRequest) {
     let events = streams.events(request)
+    let generation = nextStreamGeneration()
     streamTask = Task { [weak self] in
       do {
         for try await event in events {
-          guard let self else { return }
+          guard let self, !Task.isCancelled else { return }
           await self.receive(event)
         }
-        await self?.streamEnded()
+        // A cancelled stream ends without throwing. Stop, a replacing search or
+        // the background expiring cancelled it; whichever it was handled the rest.
+        guard !Task.isCancelled else { return }
+        await self?.streamEnded(generation)
       } catch is CancellationError {
         // Stopped by the user or detached for the background; both handled by the caller.
       } catch {
-        await self?.streamFailed(error)
+        guard !Task.isCancelled else { return }
+        await self?.streamFailed(error, generation)
       }
     }
   }
 
+  private func nextStreamGeneration() -> Int {
+    streamGeneration += 1
+    return streamGeneration
+  }
+
+  /// Let go of `streamTask` only if it is still the reader `generation` numbered.
+  private func releaseStream(_ generation: Int) {
+    if generation == streamGeneration { streamTask = nil }
+  }
+
   private func receive(_ event: Loci_Chat_StreamEvent) async {
     let effect = state.apply(event)
-    if var envelope {
+    if let current = envelope {
+      var envelope = current
       envelope.sessionId = state.sessionId ?? envelope.sessionId
       envelope.lastEventId = state.lastEventId ?? envelope.lastEventId
       envelope.domain = state.domain ?? envelope.domain
       envelope.cityName = state.cityName ?? envelope.cityName
       if case .route = event.payload, let route = state.route { envelope.routeData = try? route.serializedData() }
-      self.envelope = envelope
-      store.save(envelope)
+      // Most events (tokens without an id, progress) change nothing worth a disk write.
+      if envelope != current {
+        self.envelope = envelope
+        store.save(envelope)
+      }
     }
     switch effect {
     case .started(let link): startedLink = link
     case .completed:
       // COMPLETE with load_from_session: the result is stored, not streamed (web fetches it too).
       if state.needsSessionFetch, let sessionId = state.sessionId { await fetchStoredResult(sessionId: sessionId) }
+      // Replaced or stopped while fetching: this search is no longer the one in `state`.
+      guard !Task.isCancelled else { return }
       await finish()
     case .failed: await finish()
     case nil: break
@@ -172,15 +196,15 @@ import UIKit
   /// (a resume replays only what was buffered), so poll for the stored result.
   /// `streamTask` stays set while polling, so a return to the foreground does
   /// not start a second reader for the same search.
-  private func streamEnded() async {
-    defer { streamTask = nil }
+  private func streamEnded(_ generation: Int) async {
+    defer { releaseStream(generation) }
     guard state.isActive else { return }
     state.status = .detached
     await pollUntilFinished()
   }
 
-  private func streamFailed(_ error: Error) async {
-    defer { streamTask = nil }
+  private func streamFailed(_ error: Error, _ generation: Int) async {
+    defer { releaseStream(generation) }
     // A dropped connection mid-search is not the search failing: the server keeps going.
     if case APIError.network = error, state.sessionId != nil {
       state.status = .detached
@@ -228,9 +252,10 @@ import UIKit
     // Without a resume token the server would start the search again (and spend
     // quota), so only ask the stored session.
     guard envelope.lastEventId != nil else {
+      let generation = nextStreamGeneration()
       streamTask = Task { [weak self] in
         await self?.pollUntilFinished()
-        self?.streamTask = nil
+        self?.releaseStream(generation)
       }
       return
     }
@@ -257,7 +282,9 @@ import UIKit
     request.sessionID = sessionId
     guard
       let session = try? await rpc("", request, { await self.chat.getChatSession(request: $0, headers: [:]) }).session,
-      session.hasCurrentItinerary, session.updatedAt.date >= started.addingTimeInterval(-5)
+      session.hasCurrentItinerary, session.updatedAt.date >= started.addingTimeInterval(-5),
+      // Stopped, or replaced by another search, while the call was out.
+      !Task.isCancelled, state.sessionId == sessionId
     else { return false }
     if state.destination == .itinerary || !state.hasResult { state.adopt(session.currentItinerary) }
     state.status = .completed
@@ -281,8 +308,10 @@ import UIKit
   func sceneDidEnterBackground() {
     isForeground = false
     guard state.isActive, backgroundTask == .invalid else { return }
+    // The handler runs on the main thread and must end the task before it
+    // returns, or iOS kills the app; a hop through a Task would be too late.
     backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "loci-search") { [weak self] in
-      Task { @MainActor in self?.backgroundTimeExpired() }
+      MainActor.assumeIsolated { self?.backgroundTimeExpired() }
     }
   }
 
@@ -313,7 +342,9 @@ import UIKit
   // MARK: - Background refresh
 
   static func registerBackgroundTask() {
-    BGTaskScheduler.shared.register(forTaskWithIdentifier: reconcileTaskID, using: nil) { task in
+    // `.main`: the launch handler is main-actor isolated (the type is), so a
+    // background queue would trip the isolation check at runtime.
+    BGTaskScheduler.shared.register(forTaskWithIdentifier: reconcileTaskID, using: .main) { task in
       guard let task = task as? BGAppRefreshTask else { return }
       let work = Task { @MainActor in
         let done = await SearchSessionController.shared.reconcileInBackground()

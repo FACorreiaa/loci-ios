@@ -60,10 +60,10 @@ struct SearchComposer: View {
           style == .muse ? Color.musePill : Color.lociCard,
           in: RoundedRectangle(cornerRadius: fieldRadius, style: .continuous)
         )
-        .overlay(
+        .overlay {
           RoundedRectangle(cornerRadius: fieldRadius, style: .continuous)
             .stroke(style == .muse ? Color.clear : Color.lociBorder)
-        )
+        }
 
       if !isStreaming, !dictation.isUnavailable {
         micButton
