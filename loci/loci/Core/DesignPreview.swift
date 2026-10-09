@@ -189,7 +189,8 @@ enum DesignPreview: String {
     case .sharedList: SharedContentPreview.view(SharedContentPreview.list())
     case .sharedItinerary: SharedContentPreview.view(SharedContentPreview.itinerary())
     case .recents: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService())).appRouteDestinations() }
-    case .recentsCities: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService()), segment: .cities).appRouteDestinations() }
+    case .recentsCities:
+      NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService()), segment: .cities).appRouteDestinations() }
     case .recentCity: NavigationStack { RecentCityView(city: RecentCity.previewLisbon) }
     case .lists: NavigationStack { ListsView(store: ListsStore(service: PreviewListsService())) }
     case .listDetail: NavigationStack { ListDetailView(store: .preview) }
@@ -218,16 +219,23 @@ enum DesignPreview: String {
     case .openingHours: NavigationStack { ClaimFormPreview(field: .openingHours) }
     case .addToTrip: AddToTripPreview()
     case .resultsTripSaved: MuseChatPreview(state: .resultsSample.with { $0.savedTripID = "preview-rome" }, caption: "Rome · 12 places")
-    case .globe: NavigationStack { GlobeView(store: GlobeStore(service: PreviewTravelHistoryService()), recents: PreviewRecentsService()).appRouteDestinations() }
+    case .globe:
+      NavigationStack {
+        GlobeView(store: GlobeStore(service: PreviewTravelHistoryService()), recents: PreviewRecentsService()).appRouteDestinations()
+      }
     case .globeEmpty:
-      NavigationStack { GlobeView(store: GlobeStore(service: PreviewTravelHistoryService(data: .previewEmpty)), recents: PreviewRecentsService()).appRouteDestinations() }
+      NavigationStack {
+        GlobeView(store: GlobeStore(service: PreviewTravelHistoryService(data: .previewEmpty)), recents: PreviewRecentsService())
+          .appRouteDestinations()
+      }
     case .leaderboard: NavigationStack { LeaderboardView(store: ProgressStore(service: PreviewProgressService())) }
     case .myProgress: NavigationStack { MyProgressView(store: ProgressStore(service: PreviewProgressService())) }
     case .tripSetup: TripSetupPreview()
     case .compare: NavigationStack { CompareView(preview: .previewPorto, origin: "Porto", candidates: ["Évora", "Beja"]) }
     case .gastronomy: NavigationStack { GastronomyView(store: GastronomyStore(service: PreviewGastronomyService()), city: "Porto") }
     case .walkDay: NavigationStack { WalkDayView(day: .previewBaixa) }
-    case .boards: NavigationStack { BoardsHomeView(store: BoardsFeedStore(service: PreviewBoardsService(), myID: { "u-ana" })).appRouteDestinations() }
+    case .boards:
+      NavigationStack { BoardsHomeView(store: BoardsFeedStore(service: PreviewBoardsService(), myID: { "u-ana" })).appRouteDestinations() }
     case .boardsPost:
       NavigationStack {
         PostDetailView(store: BoardPostStore(postID: "p-trams", feed: BoardsFeedStore(service: PreviewBoardsService(), myID: { "u-ana" })))

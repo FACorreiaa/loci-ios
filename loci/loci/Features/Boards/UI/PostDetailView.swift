@@ -69,13 +69,17 @@ struct PostDetailView: View {
             Label(post.domain.isEmpty ? post.url : post.domain, systemImage: "arrow.up.right.square").font(.lociCaption(14))
           }.tint(.lociForest)
         }
-        if !post.body.isEmpty { Text(
-            (try? AttributedString(markdown: post.body, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
-              ?? AttributedString(post.body)
-          ).font(.lociBody(15)).foregroundStyle(Color.lociInk).textSelection(.enabled) }
+        if !post.body.isEmpty {
+          Text(Self.bodyText(post.body)).font(.lociBody(15)).foregroundStyle(Color.lociInk).textSelection(.enabled)
+        }
         if post.hasAttachment { BoardAttachmentCard(attachment: post.attachment) }
       }
     }.lociCard()
+  }
+
+  /// User text, so inline markdown, never a localization key.
+  private static func bodyText(_ body: String) -> AttributedString {
+    (try? AttributedString(markdown: body, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(body)
   }
 
   private func comments(_ post: Loci_Boards_V1_Post) -> some View {

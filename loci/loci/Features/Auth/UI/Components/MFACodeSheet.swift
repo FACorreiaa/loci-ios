@@ -45,7 +45,12 @@ public struct MFACodeSheet: View {
           if !useRecoveryCode {
             LociTextField(title: "6-Digit Code", placeholder: "123456", systemImage: "key.fill", text: $code, keyboardType: .numberPad)
           } else {
-            LociTextField(title: "Recovery Code", placeholder: "Enter backup recovery code", systemImage: "shield.lefthalf.filled", text: $recoveryCode)
+            LociTextField(
+              title: "Recovery Code",
+              placeholder: "Enter backup recovery code",
+              systemImage: "shield.lefthalf.filled",
+              text: $recoveryCode
+            )
           }
 
           Button {

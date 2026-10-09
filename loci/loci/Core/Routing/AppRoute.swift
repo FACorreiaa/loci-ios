@@ -47,8 +47,8 @@ private struct AppRouteDestination: View {
     case .savedPlace(let item): SavedPlaceDetailView(item: item)
     case .myReports(let contribute): MyReportsView(store: MyReportsStore(service: contribute.object.service))
     case .placeReviews(let reviews): PlaceReviewsListView(store: reviews.object)
-    case .board(let slug, let from): BoardView(store: BoardsFeedStore(slug: slug, service: from.object.service))
-    case .boardPost(let id, let feed): PostDetailView(store: BoardPostStore(postID: id, feed: feed.object))
+    case let .board(slug, from): BoardView(store: BoardsFeedStore(slug: slug, service: from.object.service))
+    case let .boardPost(id, feed): PostDetailView(store: BoardPostStore(postID: id, feed: feed.object))
     case .sanctions(let feed): SanctionsView(service: feed.object.service)
     }
   }

@@ -45,6 +45,7 @@ struct ResultsPage: View {
 
   private var summary: String { state.itinerary?.itineraryResponse.overallDescription ?? "" }
   private var arrival: AnyTransition { reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity) }
+
   private func derive() -> Derived {
     let groups = state.dayGroups
     let extras = state.extras
@@ -117,7 +118,13 @@ struct ResultsPage: View {
       ResultsMapCard(data: derived.mapData, selectedID: selectedID) { showFullMap = true }
     }
     ForEach(visibleGroups, id: \.number) { group in
-      DaySection(group: group, sequence: derived.sequence, destination: state.destination, showsDayLabel: showsDays, selectedID: $selectedID) { detail = $0 }
+      DaySection(
+        group: group,
+        sequence: derived.sequence,
+        destination: state.destination,
+        showsDayLabel: showsDays,
+        selectedID: $selectedID
+      ) { detail = $0 }
         .id(group.number == 1 ? Anchor.days : "results-day-\(group.number)")
     }
     if !showAllDays, hiddenDays > 0 {

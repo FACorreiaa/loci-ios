@@ -92,12 +92,14 @@ struct TravelProfileEditor: View {
       Stepper(
         "From \(Int(draft.pricePerNightMin)) / night",
         value: $draft.pricePerNightMin,
-        in: TravelProfileDraft.pricePerNightRange.lowerBound...draft.pricePerNightMax, step: 10
+        in: TravelProfileDraft.pricePerNightRange.lowerBound...draft.pricePerNightMax,
+        step: 10
       )
       Stepper(
         "Up to \(Int(draft.pricePerNightMax)) / night",
         value: $draft.pricePerNightMax,
-        in: draft.pricePerNightMin...TravelProfileDraft.pricePerNightRange.upperBound, step: 10
+        in: draft.pricePerNightMin...TravelProfileDraft.pricePerNightRange.upperBound,
+        step: 10
       )
     }
     SwiftUI.Section("Amenities") { ChipGrid(values: TravelProfileDraft.amenities, selection: $draft.amenities) }
@@ -110,12 +112,14 @@ struct TravelProfileEditor: View {
       Stepper(
         "From \(Int(draft.pricePerPersonMin))",
         value: $draft.pricePerPersonMin,
-        in: TravelProfileDraft.pricePerPersonRange.lowerBound...draft.pricePerPersonMax, step: 5
+        in: TravelProfileDraft.pricePerPersonRange.lowerBound...draft.pricePerPersonMax,
+        step: 5
       )
       Stepper(
         "Up to \(Int(draft.pricePerPersonMax))",
         value: $draft.pricePerPersonMax,
-        in: draft.pricePerPersonMin...TravelProfileDraft.pricePerPersonRange.upperBound, step: 5
+        in: draft.pricePerPersonMin...TravelProfileDraft.pricePerPersonRange.upperBound,
+        step: 5
       )
     }
     SwiftUI.Section {
