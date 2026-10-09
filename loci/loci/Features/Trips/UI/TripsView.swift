@@ -25,7 +25,7 @@ public struct TripsView: View {
             Text(trip.title.isEmpty ? trip.cityName : trip.title).font(.lociHeadline()).foregroundStyle(Color.lociInk)
             HStack {
               Text(trip.cityName)
-              Text("\(trip.days.count) day\(trip.days.count == 1 ? "" : "s")")
+              Text("^[\(trip.days.count) day](inflect: true)")
               if trip.hasUpdatedAt { Text(trip.updatedAt.date, style: .date) }
             }
             .lociCoordStyle(10)

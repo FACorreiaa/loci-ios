@@ -17,6 +17,7 @@ struct WalkDayView: View {
   @State private var didBegin = false
   @State private var starting = false
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     Map(position: $camera) {
@@ -77,7 +78,7 @@ struct WalkDayView: View {
     }
     .onChange(of: walk.location) { _, location in
       guard walk.navigator.isNavigating, following, let location else { return }
-      withAnimation(.easeInOut(duration: 0.8)) {
+      withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.8)) {
         camera = WalkMapLayer.followCamera(at: location, heading: WalkMapLayer.heading(location: location, navigator: walk.navigator))
       }
     }
@@ -85,12 +86,9 @@ struct WalkDayView: View {
       if position.positionedByUser, walk.navigator.isNavigating { withAnimation { following = false } }
     }
     .onChange(of: walk.phase) { _, phase in
-      switch phase {
-      case .arrived, .done: UINotificationFeedbackGenerator().notificationOccurred(.success)
-      case .walking: follow()
-      case .idle: break
-      }
+      if phase == .walking { follow() }
     }
+    .sensoryFeedback(.success, trigger: walk.phase) { (_: StopWalk.Phase, phase: StopWalk.Phase) -> Bool in phase == .arrived || phase == .done }
     .onChange(of: walk.tracker.steps) {
       lastStepAt = Date()
       walk.refreshActivity()
@@ -124,7 +122,7 @@ struct WalkDayView: View {
       camera = .userLocation(followsHeading: true, fallback: .automatic)
       return
     }
-    withAnimation(.easeInOut(duration: 0.8)) {
+    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.8)) {
       camera = WalkMapLayer.followCamera(at: location, heading: WalkMapLayer.heading(location: location, navigator: walk.navigator))
     }
   }

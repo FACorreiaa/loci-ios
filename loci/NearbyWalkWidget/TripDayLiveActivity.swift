@@ -8,15 +8,16 @@ struct TripDayLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: TripDayAttributes.self) { context in
       TripDayLockScreen(state: context.state, attributes: context.attributes)
+        .environment(\.colorScheme, .light)
         .activityBackgroundTint(Palette.paper)
         .activitySystemActionForegroundColor(Palette.forest)
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
-          Text(context.state.currentName).font(.headline).foregroundStyle(Palette.ink).lineLimit(1)
+          Text(context.state.currentName).font(.headline).foregroundStyle(.white).lineLimit(1)
         }
         DynamicIslandExpandedRegion(.trailing) {
-          TripDayCountdown(state: context.state).font(.headline).foregroundStyle(Palette.ink)
+          TripDayCountdown(state: context.state).font(.headline).foregroundStyle(.white)
         }
         DynamicIslandExpandedRegion(.bottom) {
           if let next = context.state.nextText {

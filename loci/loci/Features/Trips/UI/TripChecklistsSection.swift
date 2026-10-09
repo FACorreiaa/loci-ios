@@ -141,12 +141,13 @@ struct TripChecklistsSection: View {
 
   @ViewBuilder private var expensesSection: some View {
     if store.availability != .unavailable, !store.isFailed {
+      let currency = store.currency
       Section {
         ForEach(store.expenses, id: \.id) { item in
           HStack {
             Text(item.text).font(.lociBody(15)).foregroundStyle(Color.lociInk)
             Spacer()
-            Text(TripChecklist.formatMoney(item.amountMinor, currency: item.currency.isEmpty ? store.currency : item.currency))
+            Text(TripChecklist.formatMoney(item.amountMinor, currency: item.currency.isEmpty ? currency : item.currency))
               .font(.lociCoord(12)).monospacedDigit().foregroundStyle(Color.lociInk)
           }
           .swipeActions { Button("Remove", role: .destructive) { Task { await store.delete(item) } } }

@@ -7,25 +7,41 @@ struct StopRow: View {
   let isEditing: Bool
   let onDuration: (Int) -> Void
 
+  @ScaledMetric(relativeTo: .caption) private var numberWidth = 20
+  /// The stepper's value, shown at once; the server's copy catches up after
+  /// the debounced edit lands.
+  @State private var duration = 60
+  @State private var pending: Task<Void, Never>?
+
+  private var savedDuration: Int { stop.hasDurationMinutes ? Int(stop.durationMinutes) : 60 }
+
   var body: some View {
     HStack(alignment: .top, spacing: 12) {
-      Text("\(stop.orderIndex + 1)").lociCoordStyle(11).frame(width: 20)
+      Text("\(stop.orderIndex + 1)").lociCoordStyle(11).frame(minWidth: numberWidth)
       VStack(alignment: .leading, spacing: 3) {
         Text(stop.name).font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
         if !stop.notes.isEmpty { Text(stop.notes).font(.lociCaption()).foregroundStyle(Color.lociMutedInk).lineLimit(2) }
         if isEditing {
-          Stepper(
-            "\(stop.hasDurationMinutes ? Int(stop.durationMinutes) : 60) min",
-            value: Binding(get: { stop.hasDurationMinutes ? Int(stop.durationMinutes) : 60 }, set: onDuration),
-            in: 15...480,
-            step: 15
-          ).font(.lociCaption())
+          Stepper("\(duration) min", value: $duration, in: 15...480, step: 15).font(.lociCaption())
         } else if stop.hasDurationMinutes {
           Text("\(stop.durationMinutes) min").lociCoordStyle(10)
         }
       }
     }
     .listRowBackground(Color.lociCard)
+    .onAppear { duration = savedDuration }
+    .onChange(of: savedDuration) { _, new in duration = new }
+    // Debounced like the day window's TimeRow: a run of taps sends one edit,
+    // not one per step racing the last for the trip's `version`.
+    .onChange(of: duration) { _, new in
+      pending?.cancel()
+      guard new != savedDuration else { return }
+      pending = Task {
+        try? await Task.sleep(for: .milliseconds(700))
+        guard !Task.isCancelled else { return }
+        onDuration(new)
+      }
+    }
   }
 }
 
@@ -60,7 +76,9 @@ struct PlacePicker: View {
       .searchable(text: $query, prompt: cityName.isEmpty ? "Search places" : "Search places in \(cityName)")
       .onSubmit(of: .search) { Task { await search() } }
       .navigationTitle("Add a place").navigationBarTitleDisplayMode(.inline)
-      .toolbar { Button("Cancel") { dismiss() } }
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+      }
       .errorAlert($error)
     }
   }

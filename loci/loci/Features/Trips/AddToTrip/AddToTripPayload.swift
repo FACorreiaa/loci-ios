@@ -82,7 +82,7 @@ nonisolated enum AddToTripPayload {
   }
 
   static func stopCount(_ day: Loci_Trip_TripDay) -> String {
-    day.stops.count == 1 ? "1 stop" : "\(day.stops.count) stops"
+    String(AttributedString(localized: "^[\(day.stops.count) stop](inflect: true)").characters)
   }
 
   static func addedMessage(dayNumber: Int32) -> String { "Added to Day \(dayNumber)" }

@@ -47,6 +47,8 @@ import UserNotifications
 
   private(set) var running: Running?
   private(set) var manualIndex: Int?
+  /// Why the last Start today did not take (the system refused the activity).
+  private(set) var startError: String?
   private var activity: Activity<TripDayAttributes>?
   private let fences = POIProximityMonitor(name: POIProximityMonitor.tripDayName)
 
@@ -65,12 +67,19 @@ import UserNotifications
     let slots = DayTimeline.slots(day: day, legs: trip.legs, dayStartMinute: dayStart)
     guard !slots.isEmpty else { return }
     let cityName = day.cityName.isEmpty ? trip.cityName : day.cityName
-    let run = Running(tripId: trip.id, dayId: day.id, cityName: cityName, startedAt: now, slots: slots)
-    running = run
-    manualIndex = nil
     let attributes = TripDayAttributes(tripId: trip.id, dayId: day.id, cityName: cityName, stopCount: slots.count, startedAt: now)
     let (state, _) = Self.state(slots: slots, manualIndex: nil, startedAt: now, now: now)
-    activity = try? Activity.request(attributes: attributes, content: ActivityContent(state: state, staleDate: state.slotEnd), pushType: nil)
+    // The day only counts as running once the system holds its activity;
+    // otherwise Next/Done would drive nothing and the record would linger.
+    do {
+      activity = try Activity.request(attributes: attributes, content: ActivityContent(state: state, staleDate: state.slotEnd), pushType: nil)
+      startError = nil
+    } catch {
+      startError = "Couldn't start the Live Activity for today. Try again in a moment."
+      return
+    }
+    running = Running(tripId: trip.id, dayId: day.id, cityName: cityName, startedAt: now, slots: slots)
+    manualIndex = nil
     UserDefaults.standard.set(RunningRecord(tripId: trip.id, dayId: day.id, startedAt: now).raw, forKey: Self.runningKey)
     await fences.arm(places: Self.fenceable(slots), from: slots.first?.coordinate)
     await scheduleReminders(slots)

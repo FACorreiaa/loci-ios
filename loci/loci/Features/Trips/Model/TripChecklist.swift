@@ -1,5 +1,6 @@
 import Foundation
 import LociConnectProto
+import Synchronization
 
 /// Pure checklist logic (web: components/trip/TripChecklists.tsx), kept apart
 /// from the store so every rule has a test.
@@ -91,15 +92,21 @@ nonisolated enum TripChecklist {
     code.count == 3 && code.allSatisfy { $0.isASCII && $0.isUppercase }
   }
 
-  /// Minor units per major unit: 100 for EUR, 1 for JPY.
+  /// Minor units per major unit: 100 for EUR, 1 for JPY. Asked per expense row
+  /// on every redraw, so each currency's answer is kept rather than building
+  /// a NumberFormatter each time.
   static func minorUnitScale(_ currency: String) -> Int64 {
+    if let known = scales.withLock({ $0[currency] }) { return known }
     let formatter = NumberFormatter()
     formatter.numberStyle = .currency
     formatter.currencyCode = currency
     var scale: Int64 = 1
     for _ in 0..<formatter.maximumFractionDigits { scale *= 10 }
+    scales.withLock { $0[currency] = scale }
     return scale
   }
+
+  private static let scales = Mutex<[String: Int64]>([:])
 
   /// "12,50" or "12.50" → 1250 (EUR). Accepts either decimal mark, rounds to the
   /// currency's minor unit, rejects negatives and anything that is not a number.

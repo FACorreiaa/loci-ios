@@ -9,12 +9,24 @@ public struct CalendarConnectionsView: View {
   @State private var calendlyID: String?
   @State private var message: String?
   @State private var busy = false
+  @Environment(\.openURL) private var openURL
 
   public var body: some View {
     List {
       Section {
-        row(title: "Apple Calendar", subtitle: appleOn ? "This iPhone" : "Events on this iPhone", connected: appleOn) {
-          Task { await connectApple() }
+        // Calendar access can't be revoked from inside the app; once it's on,
+        // the row sends the user to Loci's page in Settings instead.
+        row(
+          title: "Apple Calendar",
+          subtitle: appleOn ? "This iPhone" : "Events on this iPhone",
+          connected: appleOn,
+          connectedAction: "Manage in Settings"
+        ) {
+          if appleOn {
+            if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+          } else {
+            Task { await connectApple() }
+          }
         }
         row(title: "Google Calendar", subtitle: googleLabel ?? "Read events and add Loci trips", connected: googleLabel != nil) {
           Task { await toggle(.google) }
@@ -25,21 +37,31 @@ public struct CalendarConnectionsView: View {
       }
       TripCalendarFeedSection()
       if let message {
-        Section { Text(message).font(.footnote).foregroundColor(.lociInk.opacity(0.7)) }
+        Section { Text(message).font(.footnote).foregroundStyle(Color.lociInk.opacity(0.7)) }
       }
-    }.navigationTitle("Calendars").scrollContentBackground(.hidden).background(Color.lociPaper.ignoresSafeArea())
+    }.navigationTitle("Calendars").scrollContentBackground(.hidden).background { Color.lociPaper.ignoresSafeArea() }
       .task { await refresh() }
   }
 
-  private func row(title: String, subtitle: String, connected: Bool, action: @escaping () -> Void) -> some View {
+  private func row(
+    title: String,
+    subtitle: String,
+    connected: Bool,
+    connectedAction: String = "Disconnect",
+    action: @escaping () -> Void
+  ) -> some View {
     Button(action: action) {
       HStack {
         VStack(alignment: .leading, spacing: 2) {
-          Text(title).foregroundColor(.lociInk)
-          Text(subtitle).font(.caption).foregroundColor(.secondary)
+          Text(title).foregroundStyle(Color.lociInk)
+          Text(subtitle).font(.caption).foregroundStyle(.secondary)
         }
         Spacer()
-        Text(connected ? "Disconnect" : "Connect").foregroundColor(connected ? .secondary : .lociCoral)
+        if connected {
+          Text(connectedAction).foregroundStyle(.secondary)
+        } else {
+          Text("Connect").foregroundStyle(Color.lociCoral)
+        }
       }
     }.disabled(busy)
   }

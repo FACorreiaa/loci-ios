@@ -45,6 +45,8 @@ struct TodayControls: View {
       if !controller.liveActivitiesEnabled {
         Text("Turn on Live Activities for Loci in Settings to follow the day from the Lock Screen.")
           .font(.lociCaption(11)).foregroundStyle(Color.lociMutedInk)
+      } else if !controller.isRunning, let startError = controller.startError {
+        Text(startError).font(.lociCaption(11)).foregroundStyle(Color.lociDestructive)
       }
     }
   }

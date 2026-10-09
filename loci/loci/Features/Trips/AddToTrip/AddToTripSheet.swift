@@ -5,7 +5,7 @@ import SwiftUI
 /// a day, "Add to Day N". Stays open on success with "Open trip". With no
 /// trips it offers to start one for this city, or to open Trips.
 struct AddToTripSheet: View {
-  @State var store: AddToTripStore
+  @State private var store: AddToTripStore
   @State private var route: Route?
   @Environment(\.dismiss) private var dismiss
 
@@ -34,7 +34,7 @@ struct AddToTripSheet: View {
       }
       .listStyle(.insetGrouped)
       .scrollContentBackground(.hidden)
-      .background(Color.lociPaper.ignoresSafeArea())
+      .background { Color.lociPaper.ignoresSafeArea() }
       .navigationTitle("Add to trip")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
