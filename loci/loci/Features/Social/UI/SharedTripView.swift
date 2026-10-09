@@ -111,10 +111,10 @@ struct FriendTripRow: View {
     }
   }
 
-  private var summary: String {
+  private var summary: AttributedString {
     let stops = trip.days.reduce(0) { $0 + $1.stops.count }
     let owner = showsOwner && trip.hasOwner ? "\(trip.owner.shownName) · " : ""
     let city = trip.cityName.isEmpty ? "" : "\(trip.cityName) · "
-    return "\(owner)\(city)\(trip.days.count) day\(trip.days.count == 1 ? "" : "s") · \(stops) stop\(stops == 1 ? "" : "s")"
+    return AttributedString(owner + city) + AttributedString(localized: "^[\(trip.days.count) day](inflect: true) · ^[\(stops) stop](inflect: true)")
   }
 }

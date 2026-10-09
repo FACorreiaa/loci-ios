@@ -15,37 +15,42 @@ struct InviteSheet: View {
 
   var body: some View {
     NavigationStack {
-      VStack(spacing: 20) {
-        if let invite, let url = URL(string: invite.url) {
-          if let image = QRCode.image(for: invite.url) {
-            Image(uiImage: image).interpolation(.none).resizable().scaledToFit()
-              .frame(width: 220, height: 220).padding(12)
-              .background(.white, in: RoundedRectangle(cornerRadius: 16))
-              .accessibilityLabel("QR code for your invite link")
+      ScrollView {
+        VStack(spacing: 20) {
+          if let invite, let url = URL(string: invite.url) {
+            if let image = QRCode.image(for: invite.url) {
+              Image(uiImage: image).interpolation(.none).resizable().scaledToFit()
+                .frame(width: 220, height: 220).padding(12)
+                .background(.white, in: RoundedRectangle(cornerRadius: 16))
+                .accessibilityLabel("QR code for your invite link")
+            }
+            Text("Anyone who opens your link becomes your friend on Loci.")
+              .font(.lociCaption(15)).multilineTextAlignment(.center).foregroundStyle(Color.lociMutedInk)
+            // The message and the link are separate items, so the link is not
+            // repeated in the text.
+            ShareLink(item: url, message: Text(Self.message(for: invite))) {
+              Label("Invite", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent).tint(.lociCoralFill).controlSize(.large)
+          } else if loadFailed {
+            ContentUnavailableView {
+              Label("Could not load your invite", systemImage: "link.badge.plus")
+            } description: {
+              Text("Check your connection and try again.")
+            } actions: {
+              Button("Try again") { Task { await load() } }
+                .buttonStyle(.borderedProminent).tint(.lociCoralFill)
+            }
+          } else {
+            ProgressView()
           }
-          Text("Anyone who opens your link becomes your friend on Loci.")
-            .font(.lociCaption(15)).multilineTextAlignment(.center).foregroundStyle(Color.lociMutedInk)
-          // The message and the link are separate items, so the link is not
-          // repeated in the text.
-          ShareLink(item: url, message: Text(Self.message(for: invite))) {
-            Label("Invite", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity)
-          }
-          .buttonStyle(.borderedProminent).tint(.lociCoralFill).controlSize(.large)
-        } else if loadFailed {
-          ContentUnavailableView {
-            Label("Could not load your invite", systemImage: "link.badge.plus")
-          } description: {
-            Text("Check your connection and try again.")
-          } actions: {
-            Button("Try again") { Task { await load() } }
-              .buttonStyle(.borderedProminent).tint(.lociCoralFill)
-          }
-        } else {
-          ProgressView()
         }
+        .padding(24)
+        .frame(maxWidth: .infinity)
       }
-      .padding(24)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      // Centred while it fits; scrolls at large text sizes instead of clipping.
+      .defaultScrollAnchor(.center, for: .alignment)
+      .scrollBounceBehavior(.basedOnSize)
       .background(Color.lociPaper.ignoresSafeArea())
       .navigationTitle("Invite a friend").navigationBarTitleDisplayMode(.inline)
       .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }

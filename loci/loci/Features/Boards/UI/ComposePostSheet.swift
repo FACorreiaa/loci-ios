@@ -190,7 +190,7 @@ struct CreateBoardSheet: View {
           }
         }
         Section("What it's for (optional)") {
-          TextField("", text: $about, axis: .vertical).lineLimit(2...5).onChange(of: about) { _, v in
+          TextField("What it's for", text: $about, prompt: Text("A sentence or two"), axis: .vertical).lineLimit(2...5).onChange(of: about) { _, v in
             if v.count > 500 { about = String(v.prefix(500)) }
           }
         }

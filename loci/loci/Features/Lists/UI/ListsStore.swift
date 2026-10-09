@@ -99,9 +99,14 @@ import SwiftUI
   }
 
   let listID: String
-  private(set) var detail: ListDetail?
+  private(set) var detail: ListDetail? { didSet { refreshMap() } }
   private(set) var phase = Phase.loading
   var error: String?
+  /// The places as one map day, their pin numbers and the map built from them,
+  /// worked out once per change to `detail` rather than on every render.
+  private(set) var mapGroups: [DayGroup] = []
+  private(set) var mapSequence: [String: Int] = [:]
+  private(set) var mapData = ResultsMapData(groups: [], extras: [], sequence: [:], showsDays: false, alerts: [])
 
   private let service: ListsService
 
@@ -109,6 +114,13 @@ import SwiftUI
     self.listID = listID
     self.service = service
     if let initial { detail = ListDetail(list: initial, entries: []) }
+    refreshMap()
+  }
+
+  private func refreshMap() {
+    mapGroups = [DayGroup(number: 1, stops: (detail?.entries ?? []).map(\.stop))]
+    mapSequence = DayGrouping.sequence(mapGroups)
+    mapData = ResultsMapData(groups: mapGroups, extras: [], sequence: mapSequence, showsDays: false, alerts: [])
   }
 
   func load() async {

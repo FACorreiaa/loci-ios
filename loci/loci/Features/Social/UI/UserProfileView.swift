@@ -61,7 +61,14 @@ struct UserProfileView: View {
     }
     .errorAlert($error)
     .task { await load() }
-    .onChange(of: relationship) { Task { await loadTrips() } }
+    // Once the profile is in, and again whenever the relationship changes
+    // (befriending or blocking changes which trips are visible).
+    .task(id: TripsKey(userID: profile?.user.id, relationship: relationship)) { await loadTrips() }
+  }
+
+  private struct TripsKey: Equatable {
+    let userID: String?
+    let relationship: Relationship
   }
 
   private var emptyTrips: String {
@@ -82,7 +89,6 @@ struct UserProfileView: View {
       let loaded = try await SocialAPI.profile(username: username)
       profile = loaded
       relationship = Relationship(loaded.relationship)
-      await loadTrips()
     } catch {
       failure = error.userMessage
     }
@@ -105,22 +111,38 @@ struct UserProfileView: View {
 }
 
 /// Cities, countries, trips shared and friends, as four figures.
+/// Two by two at accessibility sizes, where four across would truncate.
 struct TravelStatsRow: View {
   let stats: Loci_Social_ProfileStats
 
+  @Environment(\.dynamicTypeSize) private var typeSize
+
   var body: some View {
-    HStack {
-      figure(stats.cities, "Cities")
-      figure(stats.countries, "Countries")
-      figure(stats.visibleTrips, "Trips")
-      figure(stats.friends, "Friends")
+    if typeSize.isAccessibilitySize {
+      Grid(horizontalSpacing: 12, verticalSpacing: 12) {
+        GridRow {
+          figure(stats.cities, "Cities")
+          figure(stats.countries, "Countries")
+        }
+        GridRow {
+          figure(stats.visibleTrips, "Trips")
+          figure(stats.friends, "Friends")
+        }
+      }
+    } else {
+      HStack {
+        figure(stats.cities, "Cities")
+        figure(stats.countries, "Countries")
+        figure(stats.visibleTrips, "Trips")
+        figure(stats.friends, "Friends")
+      }
     }
   }
 
-  private func figure(_ value: Int32, _ label: String) -> some View {
+  private func figure(_ value: Int32, _ label: LocalizedStringKey) -> some View {
     VStack(spacing: 2) {
-      Text("\(value)").font(.lociDisplay(22)).foregroundStyle(Color.lociInk)
-      Text(label.uppercased()).font(.lociCoord(9)).tracking(1.2).foregroundStyle(Color.lociMutedInk)
+      Text(value, format: .number).font(.lociDisplay(22)).foregroundStyle(Color.lociInk)
+      Text(label).textCase(.uppercase).font(.lociCoord(9)).tracking(1.2).foregroundStyle(Color.lociMutedInk)
     }
     .frame(maxWidth: .infinity)
     .accessibilityElement(children: .combine)

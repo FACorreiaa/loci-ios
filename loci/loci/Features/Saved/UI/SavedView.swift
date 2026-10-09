@@ -6,7 +6,17 @@ import SwiftUI
 /// FavoritesService.GetFavorites, itineraries from ItineraryService.GetUserItineraries,
 /// lists from ListService (`ListsRows`, the same rows as Profile › Lists).
 struct SavedView: View {
-  enum Segment: String, CaseIterable { case places = "Places", itineraries = "Itineraries", lists = "Lists" }
+  enum Segment: String, CaseIterable {
+    case places = "Places", itineraries = "Itineraries", lists = "Lists"
+
+    var title: LocalizedStringKey {
+      switch self {
+      case .places: "Places"
+      case .itineraries: "Itineraries"
+      case .lists: "Lists"
+      }
+    }
+  }
 
   @State private var segment = Segment.places
   @State private var favorites: [Loci_Favorites_V1_FavoriteItem] = []
@@ -21,7 +31,7 @@ struct SavedView: View {
   var body: some View {
     NavigationStack {
       List {
-        Picker("Saved", selection: $segment) { ForEach(Segment.allCases, id: \.self) { Text($0.rawValue) } }
+        Picker("Saved", selection: $segment) { ForEach(Segment.allCases, id: \.self) { Text($0.title) } }
           .pickerStyle(.segmented).listRowBackground(Color.clear).listRowInsets(EdgeInsets())
 
         switch segment {
@@ -39,7 +49,7 @@ struct SavedView: View {
                     Text(SavedPlace.kindLabel(item.contentType))
                     if !item.cityName.isEmpty { Text(item.cityName) }
                     if !item.category.isEmpty { Text(item.category) }
-                    if item.rating > 0 { Text(String(format: "★ %.1f", item.rating)) }
+                    if item.rating > 0 { Text("★ \(item.rating, format: .number.precision(.fractionLength(1)))") }
                   }
                   .lociCoordStyle(10)
                   if !item.notes.isEmpty { Text(item.notes).font(.lociCaption()).foregroundStyle(Color.lociMutedInk).lineLimit(2) }
@@ -55,7 +65,7 @@ struct SavedView: View {
               VStack(alignment: .leading, spacing: 3) {
                 Text(itinerary.title).font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
                 HStack {
-                  if itinerary.hasEstimatedDurationDays { Text("\(itinerary.estimatedDurationDays) days") }
+                  if itinerary.hasEstimatedDurationDays { Text("^[\(Int(itinerary.estimatedDurationDays)) day](inflect: true)") }
                   if itinerary.hasCreatedAt { Text(itinerary.createdAt.date, style: .date) }
                 }
                 .lociCoordStyle(10)

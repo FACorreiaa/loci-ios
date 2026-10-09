@@ -8,20 +8,20 @@ struct VoteButtons: View {
   let onVote: (Int32) -> Void
 
   var body: some View {
-    VStack(spacing: 2) {
+    VStack(spacing: 0) {
       arrow(1, symbol: "arrowshape.up")
       Text("\(score)").font(.lociCoord(12)).monospacedDigit().foregroundStyle(myVote != 0 ? Color.lociForest : Color.lociMutedInk)
       arrow(-1, symbol: "arrowshape.down")
-    }.frame(width: 36).accessibilityElement(children: .contain)
+    }.frame(width: LociTheme.minTapTarget).accessibilityElement(children: .contain)
   }
 
   private func arrow(_ value: Int32, symbol: String) -> some View {
     Button {
       onVote(value)
     } label: {
-      Image(systemName: myVote == value ? "\(symbol).fill" : symbol).font(.system(size: 16, weight: .semibold)).foregroundStyle(
+      Image(systemName: myVote == value ? "\(symbol).fill" : symbol).font(.callout.weight(.semibold)).foregroundStyle(
         myVote == value ? Color.lociForest : Color.lociMutedInk
-      ).frame(width: 32, height: 28).contentShape(Rectangle())
+      ).frame(minWidth: LociTheme.minTapTarget, minHeight: LociTheme.minTapTarget).contentShape(.rect)
     }.buttonStyle(.plain).accessibilityLabel(value == 1 ? "Upvote" : "Downvote").accessibilityAddTraits(myVote == value ? .isSelected : [])
   }
 }
@@ -34,7 +34,7 @@ struct PostByline: View {
   var body: some View {
     HStack(spacing: 6) {
       if showBoard, post.hasBoard {
-        Text(post.board.name).font(.lociCaption(11)).padding(.horizontal, 6).padding(.vertical, 2).overlay(Capsule().stroke(Color.lociBorder))
+        Text(post.board.name).font(.lociCaption(11)).padding(.horizontal, 6).padding(.vertical, 2).overlay { Capsule().stroke(Color.lociBorder) }
       }
       if post.hasAuthor {
         UserAvatar(user: post.author, size: 18)

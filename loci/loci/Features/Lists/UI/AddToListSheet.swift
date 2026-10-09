@@ -4,7 +4,7 @@ import SwiftUI
 /// Add a place to one of your lists, or to a new one (web: AddToListButton's
 /// modal). Closes once the place is in; a free-plan refusal opens the limit sheet.
 struct AddToListSheet: View {
-  @State var store: AddToListStore
+  @State private var store: AddToListStore
   @State private var newName = ""
   @State private var added = false
   @FocusState private var nameFocused: Bool

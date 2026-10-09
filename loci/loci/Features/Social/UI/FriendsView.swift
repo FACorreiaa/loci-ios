@@ -20,6 +20,8 @@ struct FriendsView: View {
   @State private var outgoing: [Loci_Social_FriendRequest] = []
   @State private var query = ""
   @State private var results: [SearchHit] = []
+  @State private var searching = false
+  @State private var searchError: String?
   @State private var showsInvite = false
   @State private var showsPhone = false
   @State private var error: String?
@@ -53,7 +55,9 @@ struct FriendsView: View {
     .task { await load() }
   }
 
-  private var isSearching: Bool { query.trimmingCharacters(in: .whitespaces).count >= 2 }
+  /// The username typed, without spaces or the "@".
+  private var searchText: String { query.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "@", with: "") }
+  private var isSearching: Bool { searchText.count >= 2 }
 
   // MARK: Sections
 
@@ -120,7 +124,6 @@ struct FriendsView: View {
             Button("Accept") { respond(request, accept: true) }.buttonStyle(.borderedProminent).tint(.lociCoralFill)
             Button("Decline") { respond(request, accept: false) }.buttonStyle(.bordered)
           }
-          .controlSize(.small)
         }
       }
     }
@@ -129,7 +132,7 @@ struct FriendsView: View {
       Section("Sent") {
         ForEach(outgoing, id: \.id) { request in
           PersonRow(user: request.to) {
-            Button("Cancel") { cancel(request) }.buttonStyle(.bordered).controlSize(.small)
+            Button("Cancel") { cancel(request) }.buttonStyle(.bordered)
           }
         }
       }
@@ -155,7 +158,15 @@ struct FriendsView: View {
 
   @ViewBuilder private var searchResults: some View {
     Section {
-      if results.isEmpty { Text("Nobody by that username.").font(.lociCaption()).foregroundStyle(Color.lociMutedInk) }
+      if let searchError {
+        Text(searchError).font(.lociCaption()).foregroundStyle(Color.lociDestructive)
+      } else if results.isEmpty {
+        if searching {
+          ProgressView().frame(maxWidth: .infinity)
+        } else {
+          Text("Nobody by that username.").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+        }
+      }
       ForEach($results) { $hit in
         NavigationLink { UserProfileView(username: hit.user.username) } label: {
           PersonRow(user: hit.user) {
@@ -190,15 +201,26 @@ struct FriendsView: View {
     }
   }
 
+  /// Debounced; a failure says so rather than reading as "nobody found".
   private func search() async {
-    let text = query.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "@", with: "")
+    let text = searchText
+    searchError = nil
     guard text.count >= 2 else {
       results = []
+      searching = false
       return
     }
+    searching = true
     try? await Task.sleep(for: .milliseconds(300))
     guard !Task.isCancelled else { return }
-    results = ((try? await SocialAPI.search(text)) ?? []).map { SearchHit(user: $0.user, relationship: Relationship($0.relationship)) }
+    do {
+      results = try await SocialAPI.search(text).map { SearchHit(user: $0.user, relationship: Relationship($0.relationship)) }
+    } catch {
+      guard !error.isCancellation else { return }
+      results = []
+      searchError = error.userMessage
+    }
+    searching = false
   }
 
   private func respond(_ request: Loci_Social_FriendRequest, accept: Bool) {

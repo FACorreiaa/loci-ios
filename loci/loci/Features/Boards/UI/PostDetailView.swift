@@ -6,16 +6,16 @@ struct PostDetailView: View {
   /// Past this depth replies stop indenting, so deep threads stay readable.
   static let maxIndent = 4
 
-  @State var store: BoardPostStore
-  @State private var draft = ""
+  @State private var store: BoardPostStore
   @State private var replyingTo: Loci_Boards_V1_Comment?
   @State private var pendingDeleteComment: Loci_Boards_V1_Comment?
   @State private var confirmDeletePost = false
   @State private var sanctionTarget: SanctionTarget?
-  @State private var sending = false
   @FocusState private var composerFocused: Bool
   @Environment(\.dismiss) private var dismiss
   @Environment(\.openURL) private var openURL
+
+  init(store: BoardPostStore) { _store = State(initialValue: store) }
 
   private var feed: BoardsFeedStore { store.feed }
 
@@ -32,15 +32,15 @@ struct PostDetailView: View {
         }
       }.padding(LociTheme.defaultPadding)
     }.background(Color.lociPaper.ignoresSafeArea()).navigationTitle(store.post?.board.name ?? "Post").navigationBarTitleDisplayMode(.inline)
-      .safeAreaInset(edge: .bottom) { composer }.toolbar {
+      .safeAreaInset(edge: .bottom) {
+        if store.post != nil, feed.canWrite { CommentComposer(store: store, replyingTo: $replyingTo, focused: $composerFocused) }
+      }.toolbar {
         if let post = store.post {
           ToolbarItem(placement: .topBarTrailing) {
-            Menu {
+            Menu("Post actions", systemImage: "ellipsis.circle") {
               if !post.url.isEmpty, let url = URL(string: post.url) { ShareLink(item: url) }
               postMenu(post)
-            } label: {
-              Image(systemName: "ellipsis.circle")
-            }.accessibilityLabel("Post actions")
+            }.labelStyle(.iconOnly)
           }
         }
       }.confirmationDialog("Delete this post?", isPresented: $confirmDeletePost, titleVisibility: .visible) {
@@ -69,15 +69,18 @@ struct PostDetailView: View {
             Label(post.domain.isEmpty ? post.url : post.domain, systemImage: "arrow.up.right.square").font(.lociCaption(14))
           }.tint(.lociForest)
         }
-        if !post.body.isEmpty { Text(LocalizedStringKey(post.body)).font(.lociBody(15)).foregroundStyle(Color.lociInk).textSelection(.enabled) }
+        if !post.body.isEmpty { Text(
+            (try? AttributedString(markdown: post.body, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
+              ?? AttributedString(post.body)
+          ).font(.lociBody(15)).foregroundStyle(Color.lociInk).textSelection(.enabled) }
         if post.hasAttachment { BoardAttachmentCard(attachment: post.attachment) }
       }
     }.lociCard()
   }
 
   private func comments(_ post: Loci_Boards_V1_Post) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Text("\(post.commentCount) \(post.commentCount == 1 ? "comment" : "comments")").font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
+    LazyVStack(alignment: .leading, spacing: 12) {
+      Text("^[\(Int(post.commentCount)) comment](inflect: true)").font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
       if let sanction = feed.sanction { Text(sanction.viewerExplanation).font(.lociCaption(13)).foregroundStyle(Color.lociDestructive) }
       ForEach(store.rows, id: \.comment.id) { row in
         commentRow(row.comment).padding(.leading, CGFloat(min(row.depth, Self.maxIndent)) * 14).overlay(alignment: .leading) {
@@ -127,39 +130,43 @@ struct PostDetailView: View {
       Button("Ban author", systemImage: "nosign", role: .destructive) { sanctionTarget = SanctionTarget(user: post.author, kind: .ban) }
     }
   }
+}
 
-  @ViewBuilder private var composer: some View {
-    if store.post != nil, feed.canWrite {
-      VStack(alignment: .leading, spacing: 6) {
-        if let parent = replyingTo {
-          HStack {
-            Text("Replying to \(parent.hasAuthor ? parent.author.displayName : "a comment")").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
-            Spacer()
-            Button("Cancel") { replyingTo = nil }.font(.lociCaption())
-          }
+/// The comment box under a post. Owns the draft, so typing re-renders only
+/// this bar and not the whole thread above it.
+private struct CommentComposer: View {
+  let store: BoardPostStore
+  @Binding var replyingTo: Loci_Boards_V1_Comment?
+  @FocusState.Binding var focused: Bool
+  @State private var draft = ""
+  @State private var sending = false
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      if let parent = replyingTo {
+        HStack {
+          Text("Replying to \(parent.hasAuthor ? parent.author.shownName : "a comment")").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+          Spacer()
+          Button("Cancel") { replyingTo = nil }.font(.lociCaption())
         }
-        HStack(alignment: .bottom, spacing: 8) {
-          TextField(replyingTo == nil ? "Add a comment" : "Write a reply", text: $draft, axis: .vertical).lineLimit(1...5).textFieldStyle(
-            .roundedBorder
-          ).focused($composerFocused).onChange(of: draft) { _, value in if value.count > 5000 { draft = String(value.prefix(5000)) } }
-          Button {
-            Task {
-              sending = true
-              defer { sending = false }
-              if await store.comment(draft, parentID: replyingTo?.id) {
-                draft = ""
-                replyingTo = nil
-                composerFocused = false
-              }
+      }
+      HStack(alignment: .bottom, spacing: 8) {
+        TextField(replyingTo == nil ? "Add a comment" : "Write a reply", text: $draft, axis: .vertical).lineLimit(1...5).textFieldStyle(
+          .roundedBorder
+        ).focused($focused).onChange(of: draft) { _, value in if value.count > 5000 { draft = String(value.prefix(5000)) } }
+        Button(replyingTo == nil ? "Send comment" : "Send reply", systemImage: "arrow.up.circle.fill") {
+          Task {
+            sending = true
+            defer { sending = false }
+            if await store.comment(draft, parentID: replyingTo?.id) {
+              draft = ""
+              replyingTo = nil
+              focused = false
             }
-          } label: {
-            Image(systemName: "arrow.up.circle.fill").font(.title2)
-          }.tint(.lociForest).disabled(sending || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty).accessibilityLabel(
-            replyingTo == nil ? "Send comment" : "Send reply"
-          )
-        }
-      }.padding(.horizontal, LociTheme.defaultPadding).padding(.vertical, 10).background(.bar)
-    }
+          }
+        }.labelStyle(.iconOnly).font(.title2).tint(.lociForest).disabled(sending || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+      }
+    }.padding(.horizontal, LociTheme.defaultPadding).padding(.vertical, 10).background(.bar)
   }
 }
 

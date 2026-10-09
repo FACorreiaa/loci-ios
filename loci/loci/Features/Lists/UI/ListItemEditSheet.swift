@@ -39,16 +39,12 @@ struct ListItemEditSheet: View {
           Toggle("On a day", isOn: $hasDay)
             .onChange(of: hasDay) { _, on in edit.dayNumber = on ? (edit.dayNumber ?? entry.dayNumber ?? 1) : nil }
           if hasDay {
-            Stepper("Day \(edit.dayNumber ?? 1)", value: Binding(get: { edit.dayNumber ?? 1 }, set: { edit.dayNumber = $0 }), in: 1...30)
+            Stepper("Day \(edit.dayValue)", value: $edit.dayValue, in: 1...30)
           }
           Toggle("At a time", isOn: $hasTime)
-            .onChange(of: hasTime) { _, on in edit.timeSlot = on ? (edit.timeSlot ?? entry.timeSlot ?? Date()) : nil }
+            .onChange(of: hasTime) { _, on in edit.timeSlot = on ? (edit.timeSlot ?? entry.timeSlot ?? .now) : nil }
           if hasTime {
-            DatePicker(
-              "Time",
-              selection: Binding(get: { edit.timeSlot ?? Date() }, set: { edit.timeSlot = $0 }),
-              displayedComponents: .hourAndMinute
-            )
+            DatePicker("Time", selection: $edit.timeValue, displayedComponents: .hourAndMinute)
           }
         }
         if let problem {
