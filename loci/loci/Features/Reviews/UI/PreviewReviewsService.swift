@@ -179,6 +179,7 @@ struct PlaceReviewsPreview: View {
       .background(Color.lociPaper)
       .navigationTitle("Miradouro da Senhora do Monte")
       .navigationBarTitleDisplayMode(.inline)
+      .appRouteDestinations()
     }
   }
 }

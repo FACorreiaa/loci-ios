@@ -177,9 +177,7 @@ struct BoardAttachmentCard: View {
 
   var body: some View {
     if attachment.kind == .poi {
-      NavigationLink {
-        SavedPlaceDetailView(item: placeItem)
-      } label: {
+      NavigationLink(value: AppRoute.savedPlace(placeItem)) {
         card
       }.buttonStyle(.plain)
     } else {

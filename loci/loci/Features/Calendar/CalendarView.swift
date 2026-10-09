@@ -69,7 +69,7 @@ public struct CalendarView: View {
         }.padding(.horizontal, 16).padding(.bottom, 24)
       }.background { Color.lociPaper.ignoresSafeArea() }.navigationTitle("Calendar").toolbar {
         ToolbarItem(placement: .topBarLeading) {
-          NavigationLink { TripsView() } label: { Label("Trips", systemImage: "list.bullet") }
+          NavigationLink(value: AppRoute.trips) { Label("Trips", systemImage: "list.bullet") }
         }
         ToolbarItem(placement: .primaryAction) {
           if isLoading {
@@ -85,6 +85,7 @@ public struct CalendarView: View {
         pinSheet(trip)
       }
       .errorAlert($errorMessage)
+      .appRouteDestinations()
       .navigationDestination(item: $linked) { AppLinkDestination(link: $0) }
       .onAppear(perform: openPending)
       .onChange(of: router.pendingLink) { openPending() }

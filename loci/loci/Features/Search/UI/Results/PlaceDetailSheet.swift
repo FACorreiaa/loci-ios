@@ -20,6 +20,7 @@ struct PlaceDetailSheet: View {
     NavigationStack {
       PlaceDetailView(stop: stop, destination: destination, cityName: cityName)
         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
+        .appRouteDestinations()
     }
     .adaptiveDetents([.medium, .large])
     .presentationDragIndicator(.visible)

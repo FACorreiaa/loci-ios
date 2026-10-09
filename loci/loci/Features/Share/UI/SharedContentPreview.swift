@@ -36,6 +36,6 @@ enum SharedContentPreview {
   }
 
   static func view(_ content: Loci_Share_SharedContent) -> some View {
-    NavigationStack { SharedContentView(code: "preview", load: { _ in content }) }
+    NavigationStack { SharedContentView(code: "preview", load: { _ in content }).appRouteDestinations() }
   }
 }

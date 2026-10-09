@@ -9,8 +9,8 @@ struct SecuritySettingsView: View {
   var body: some View {
     List {
       Section {
-        NavigationLink("Change password") { ChangePasswordView() }
-        NavigationLink("Change email") { ChangeEmailView() }
+        NavigationLink("Change password", value: SettingsRoute.changePassword)
+        NavigationLink("Change email", value: SettingsRoute.changeEmail)
       }
       TwoFactorSection()
       SignedInDevicesSection()

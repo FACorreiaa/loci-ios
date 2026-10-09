@@ -47,9 +47,7 @@ struct PlaceReviewsSection: View {
         PlaceReviewCard(store: store, review: review, composer: $composer, pendingDelete: $pendingDelete)
       }
       if store.showsSeeAll {
-        NavigationLink {
-          PlaceReviewsListView(store: store)
-        } label: {
+        NavigationLink(value: AppRoute.placeReviews(RouteRef(store))) {
           HStack {
             Text("See all \(store.stats.countText)")
             Spacer()

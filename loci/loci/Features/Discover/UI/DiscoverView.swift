@@ -19,7 +19,7 @@ struct DiscoverView: View {
     "Three chill days in Lisbon for food and views", "A rainy afternoon in Porto", "A weekend of markets and street food in Mexico City",
   ]
 
-  @State private var path: [SessionLink] = []
+  @State private var path = NavigationPath()
   @State private var page: Loci_Discover_DiscoverPageData?
   @State private var city = ""
   @State private var composerSeed = ""
@@ -52,9 +52,7 @@ struct DiscoverView: View {
             ProgressView().frame(maxWidth: .infinity)
           }
         }.padding(LociTheme.defaultPadding)
-      }.background { Color.lociPaper.ignoresSafeArea() }.navigationTitle("Discover").navigationDestination(for: SessionLink.self) {
-        SearchResultsView(link: $0)
-      }.refreshable {
+      }.background { Color.lociPaper.ignoresSafeArea() }.navigationTitle("Discover").appRouteDestinations().refreshable {
         async let brief: Void = here.load()
         await load()
         await brief
@@ -88,14 +86,10 @@ struct DiscoverView: View {
         useDefaultProfile: false
       ) { path.append($0) }
       HStack(spacing: 12) {
-        NavigationLink {
-          NearbyView()
-        } label: {
+        NavigationLink(value: AppRoute.nearby) {
           Label("Near me", systemImage: "location")
         }
-        NavigationLink {
-          CompareView()
-        } label: {
+        NavigationLink(value: AppRoute.compare) {
           Label("Weekend: compare two cities", systemImage: "arrow.left.arrow.right")
         }
       }.font(.lociCaption(13)).buttonStyle(.bordered).tint(.lociForest)
@@ -109,9 +103,7 @@ struct DiscoverView: View {
   /// Typical gastronomy (web: /gastronomy), styled like the City Packs card.
   /// Community boards (web: /boards), styled like the City Packs card.
   private var boardsEntry: some View {
-    NavigationLink {
-      BoardsHomeView()
-    } label: {
+    NavigationLink(value: AppRoute.boards) {
       HStack(spacing: 12) {
         Image(systemName: BoardsHomeView.symbol).font(.title3).foregroundStyle(Color.lociForest).accessibilityHidden(true)
         VStack(alignment: .leading, spacing: 2) {
@@ -125,9 +117,7 @@ struct DiscoverView: View {
   }
 
   private var gastronomyEntry: some View {
-    NavigationLink {
-      GastronomyView()
-    } label: {
+    NavigationLink(value: AppRoute.gastronomy) {
       HStack(spacing: 12) {
         Image(systemName: GastronomyView.symbol).font(.title3).foregroundStyle(Color.lociForest).accessibilityHidden(true)
         VStack(alignment: .leading, spacing: 2) {
@@ -141,9 +131,7 @@ struct DiscoverView: View {
   }
 
   private var packsEntry: some View {
-    NavigationLink {
-      PacksView()
-    } label: {
+    NavigationLink(value: AppRoute.packs) {
       HStack(spacing: 12) {
         Image(systemName: PacksView.symbol).font(.title3).foregroundStyle(Color.lociForest).accessibilityHidden(true)
         VStack(alignment: .leading, spacing: 2) {

@@ -341,7 +341,7 @@ struct RecentCityLink: View {
       } description: {
         Text("Recents lists the cities you asked Loci about. You haven't asked about this one.")
       } actions: {
-        NavigationLink("Open Recents") { RecentsView(segment: .cities) }.buttonStyle(.bordered).tint(Color.lociForest)
+        NavigationLink("Open Recents", value: AppRoute.recents(.cities)).buttonStyle(.bordered).tint(Color.lociForest)
       }
     }
   }

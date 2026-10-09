@@ -24,7 +24,7 @@ struct InviteView: View {
             .font(.lociCaption(15)).multilineTextAlignment(.center).foregroundStyle(Color.lociMutedInk)
           switch Relationship(invite.relationship) {
           case .friends:
-            NavigationLink("See their trips") { UserProfileView(username: inviter.username) }.buttonStyle(.bordered)
+            NavigationLink("See their trips", value: AppRoute.user(username: inviter.username)).buttonStyle(.bordered)
           case .isSelf:
             Text("This is your own invite. Send it to a friend.").font(.lociCaption())
           default:

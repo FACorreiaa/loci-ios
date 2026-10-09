@@ -89,6 +89,7 @@ struct SavedView: View {
         }
       }
       .navigationTitle("Saved")
+      .appRouteDestinations()
       .navigationDestination(for: Loci_Itinerary_UserSavedItinerary.self) { SavedItineraryView(itinerary: $0) }
       .navigationDestination(for: Loci_Favorites_V1_FavoriteItem.self) { item in
         // Unsaving from the detail takes the row out here too; saving it
@@ -209,9 +210,10 @@ struct SavedItineraryView: View {
           }
           .buttonStyle(.borderedProminent).tint(.lociForest)
           .disabled(loading)
-          NavigationLink("Open the search that made it") {
-            SearchResultsView(link: SessionLink(destination: .itinerary, sessionId: itinerary.sessionID, domain: "itinerary"))
-          }
+          NavigationLink(
+            "Open the search that made it",
+            value: SessionLink(destination: .itinerary, sessionId: itinerary.sessionID, domain: "itinerary")
+          )
         }
       }
       .padding(LociTheme.defaultPadding)

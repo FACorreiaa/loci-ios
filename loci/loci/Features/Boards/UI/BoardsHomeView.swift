@@ -21,9 +21,7 @@ struct BoardsHomeView: View {
     }.background(Color.lociPaper.ignoresSafeArea()).navigationTitle("Boards").navigationBarTitleDisplayMode(.inline).toolbar {
       if store.isAdmin {
         ToolbarItem(placement: .topBarTrailing) {
-          NavigationLink {
-            SanctionsView(service: store.service)
-          } label: {
+          NavigationLink(value: AppRoute.sanctions(RouteRef(store))) {
             Label("Moderation", systemImage: "checkmark.shield").labelStyle(.iconOnly)
           }
         }
@@ -47,9 +45,7 @@ struct BoardsHomeView: View {
       ScrollView(.horizontal) {
         HStack(spacing: 8) {
           ForEach(store.boards, id: \.id) { board in
-            NavigationLink {
-              BoardView(store: BoardsFeedStore(slug: board.slug, service: store.service))
-            } label: {
+            NavigationLink(value: AppRoute.board(slug: board.slug, from: RouteRef(store))) {
               VStack(alignment: .leading, spacing: 2) {
                 Text(board.name).font(.lociHeadline(15)).foregroundStyle(Color.lociInk)
                 Text("^[\(Int(board.postCount)) post](inflect: true)").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)

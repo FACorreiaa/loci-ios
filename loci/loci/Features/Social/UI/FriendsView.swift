@@ -107,7 +107,7 @@ struct FriendsView: View {
         Button("Invite") { showsInvite = true }.font(.lociCaption())
       }
       ForEach(friends, id: \.user.id) { friend in
-        NavigationLink { UserProfileView(username: friend.user.username) } label: {
+        NavigationLink(value: AppRoute.user(username: friend.user.username)) {
           PersonRow(user: friend.user) { EmptyView() }
         }
       }
@@ -142,9 +142,9 @@ struct FriendsView: View {
 
   private var addSection: some View {
     Section {
-      NavigationLink { ContactMatchView() } label: { Label("From your contacts", systemImage: "person.crop.rectangle.stack") }
+      NavigationLink(value: AppRoute.contactMatch) { Label("From your contacts", systemImage: "person.crop.rectangle.stack") }
       if FacebookConnect.isAvailable {
-        NavigationLink { FacebookFriendsView() } label: { Label("From Facebook", systemImage: "person.2.badge.key") }
+        NavigationLink(value: AppRoute.facebookFriends) { Label("From Facebook", systemImage: "person.2.badge.key") }
       }
       Button("Share your invite link", systemImage: "qrcode") { showsInvite = true }
       Button("Let friends find you by number", systemImage: "phone.badge.checkmark") { showsPhone = true }
@@ -168,14 +168,16 @@ struct FriendsView: View {
         }
       }
       ForEach($results) { $hit in
-        NavigationLink { UserProfileView(username: hit.user.username) } label: {
-          PersonRow(user: hit.user) {
-            RelationshipButton(
-              user: hit.user,
-              relationship: $hit.relationship,
-              outgoingRequestID: outgoing.first { $0.to.id == hit.user.id }?.id
-            )
+        // The button sits beside the link, not in its label, so a tap on it never opens the profile.
+        HStack(spacing: 8) {
+          NavigationLink(value: AppRoute.user(username: hit.user.username)) {
+            PersonRow(user: hit.user) { EmptyView() }
           }
+          RelationshipButton(
+            user: hit.user,
+            relationship: $hit.relationship,
+            outgoingRequestID: outgoing.first { $0.to.id == hit.user.id }?.id
+          )
         }
       }
     }

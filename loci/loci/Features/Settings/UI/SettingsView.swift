@@ -7,31 +7,31 @@ struct SettingsView: View {
   var body: some View {
     List {
       Section("Account") {
-        NavigationLink { AccountProfileView() } label: { Label("Profile", systemImage: "person.crop.circle") }
-        NavigationLink { LocaleSettingsView() } label: { Label("Region and units", systemImage: "globe") }
-        NavigationLink { SecuritySettingsView() } label: { Label("Security", systemImage: "lock.shield") }
-        NavigationLink { AccountDataView() } label: { Label("Your data", systemImage: "tray.and.arrow.down") }
+        NavigationLink(value: SettingsRoute.profile) { Label("Profile", systemImage: "person.crop.circle") }
+        NavigationLink(value: SettingsRoute.locale) { Label("Region and units", systemImage: "globe") }
+        NavigationLink(value: SettingsRoute.security) { Label("Security", systemImage: "lock.shield") }
+        NavigationLink(value: SettingsRoute.data) { Label("Your data", systemImage: "tray.and.arrow.down") }
       }
 
       Section("Planning") {
-        NavigationLink { TravelProfilesView() } label: { Label("Travel profiles", systemImage: "suitcase") }
-        NavigationLink { InterestsSettingsView() } label: { Label("Interests", systemImage: "heart.text.square") }
-        NavigationLink { TagsSettingsView() } label: { Label("Tags", systemImage: "tag") }
+        NavigationLink(value: SettingsRoute.travelProfiles) { Label("Travel profiles", systemImage: "suitcase") }
+        NavigationLink(value: SettingsRoute.interests) { Label("Interests", systemImage: "heart.text.square") }
+        NavigationLink(value: SettingsRoute.tags) { Label("Tags", systemImage: "tag") }
       }
 
       Section("Personalisation") {
-        NavigationLink { PersonalizationSettingsView() } label: { Label("Taste and privacy", systemImage: "sparkles") }
-        NavigationLink { MemoryView() } label: { Label("What Loci remembers", systemImage: "brain") }
-        NavigationLink { StandingTasksView() } label: { Label("Standing tasks", systemImage: "clock.arrow.circlepath") }
+        NavigationLink(value: SettingsRoute.personalization) { Label("Taste and privacy", systemImage: "sparkles") }
+        NavigationLink(value: SettingsRoute.memory) { Label("What Loci remembers", systemImage: "brain") }
+        NavigationLink(value: SettingsRoute.standingTasks) { Label("Standing tasks", systemImage: "clock.arrow.circlepath") }
       }
 
       Section("Connections") {
-        NavigationLink { ConnectionsView() } label: { Label("MCP and agents", systemImage: "point.3.connected.trianglepath.dotted") }
-        NavigationLink { CalendarConnectionsView() } label: { Label("Calendars", systemImage: "calendar") }
+        NavigationLink(value: SettingsRoute.connections) { Label("MCP and agents", systemImage: "point.3.connected.trianglepath.dotted") }
+        NavigationLink(value: SettingsRoute.calendars) { Label("Calendars", systemImage: "calendar") }
       }
 
       Section("App") {
-        NavigationLink { NotificationSettingsView() } label: { Label("Notifications", systemImage: "bell.badge") }
+        NavigationLink(value: SettingsRoute.notifications) { Label("Notifications", systemImage: "bell.badge") }
         NewsTickerToggle()
         ReviewPromptToggle()
       }

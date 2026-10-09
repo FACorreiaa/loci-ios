@@ -137,8 +137,6 @@ struct RecentsView: View {
     .overlay { overlay(visible: visible, visibleCities: visibleCities) }
     .searchable(text: $query, prompt: segment == .feed ? "Search your activity…" : "Search cities…")
     .navigationTitle("Recents")
-    .navigationDestination(for: ActivityDestination.self) { ActivityDestinationView(destination: $0) }
-    .navigationDestination(for: RecentCity.self) { RecentCityView(city: $0) }
     .refreshable { await store.reload(segment) }
     .task(id: segment) { await store.loadIfNeeded(segment) }
     .errorAlert($store.error)

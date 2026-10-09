@@ -25,9 +25,7 @@ public struct ProfileView: View {
         YouSection()
 
         Section {
-          NavigationLink {
-            SettingsView()
-          } label: {
+          NavigationLink(value: AppRoute.settings) {
             Label("Settings", systemImage: "gearshape")
           }
         }.listRowBackground(Color.lociCard)
@@ -62,6 +60,7 @@ public struct ProfileView: View {
           .disabled(isSigningOut)
         }.listRowBackground(Color.lociCard)
       }.listStyle(.insetGrouped).scrollContentBackground(.hidden).background(Color.lociPaper.ignoresSafeArea()).navigationTitle("Profile")
+        .appRouteDestinations()
         .navigationDestination(item: $linked) { AppLinkDestination(link: $0) }
         .onAppear(perform: openPending)
         .onChange(of: router.pendingLink) { openPending() }

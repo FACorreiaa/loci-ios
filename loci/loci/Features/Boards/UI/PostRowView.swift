@@ -48,16 +48,16 @@ struct PostByline: View {
 
 /// One line of a feed: arrows, then title, domain and byline opening the post.
 /// The arrows sit outside the link so a vote never opens the post.
-struct PostRowView<Destination: View>: View {
+struct PostRowView: View {
   let post: Loci_Boards_V1_Post
   var showBoard = false
+  let route: AppRoute
   let onVote: (Int32) -> Void
-  @ViewBuilder let destination: () -> Destination
 
   var body: some View {
     HStack(alignment: .top, spacing: 10) {
       VoteButtons(score: post.score, myVote: post.myVote, onVote: onVote)
-      NavigationLink(destination: destination) {
+      NavigationLink(value: route) {
         VStack(alignment: .leading, spacing: 6) {
           HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text(post.title).font(.lociHeadline(16)).foregroundStyle(Color.lociInk).multilineTextAlignment(.leading)

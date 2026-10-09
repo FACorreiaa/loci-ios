@@ -19,7 +19,7 @@ struct ContributeView: View {
     ScrollViewReader { proxy in
       ScrollView {
         VStack(alignment: .leading, spacing: 20) {
-          ScoutHero(profile: store.profile, service: store.service)
+          ScoutHero(profile: store.profile, reports: .myReports(RouteRef(store)))
           missingPlace
           if !store.shownPending.isEmpty { pendingSection }
           tasksSection(proxy: proxy)
@@ -247,7 +247,7 @@ struct ContributeView: View {
 /// own wording), and the way into Your reports.
 private struct ScoutHero: View {
   let profile: ContributorProfile
-  let service: ContributeService
+  let reports: AppRoute
 
   var body: some View {
     VStack(alignment: .leading, spacing: 14) {
@@ -276,9 +276,7 @@ private struct ScoutHero: View {
           Text(detail).font(.lociCaption(12)).foregroundStyle(Color.heroInk.opacity(0.7))
         }
       }
-      NavigationLink {
-        MyReportsView(store: MyReportsStore(service: service))
-      } label: {
+      NavigationLink(value: reports) {
         HStack(spacing: 8) {
           Image(systemName: "list.bullet.clipboard").accessibilityHidden(true)
           Text("Your reports").font(.lociCaption(14).weight(.semibold))

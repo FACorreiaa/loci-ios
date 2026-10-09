@@ -144,9 +144,7 @@ struct PacksView: View {
     case .loaded:
       LazyVGrid(columns: columns, spacing: 12) {
         ForEach(store.packs) { pack in
-          NavigationLink {
-            PackDetailView(slug: pack.slug)
-          } label: {
+          NavigationLink(value: AppRoute.pack(slug: pack.slug)) {
             PackCard(pack: pack)
           }.buttonStyle(.plain)
         }

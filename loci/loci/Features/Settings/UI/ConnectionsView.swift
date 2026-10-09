@@ -44,9 +44,7 @@ struct McpKeysSection: View {
   var body: some View {
     Section {
       ForEach(keys.filter { !$0.hasRevokedAt }, id: \.id) { key in
-        NavigationLink {
-          SetupInstructionsView(clientKind: key.clientKind)
-        } label: {
+        NavigationLink(value: SettingsRoute.setupInstructions(clientKind: key.clientKind)) {
           VStack(alignment: .leading, spacing: 2) {
             Text(key.name)
             Text("\(Self.label(for: key.clientKind)) · \(key.keyPrefix)… · \(key.scopes.joined(separator: ", "))")

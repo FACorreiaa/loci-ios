@@ -20,7 +20,7 @@ public struct TripsView: View {
         Section { CacheChip(loaded: loaded) }.listRowBackground(Color.clear)
       }
       ForEach(trips, id: \.id) { trip in
-        NavigationLink(value: trip.id) {
+        NavigationLink(value: AppRoute.trip(id: trip.id)) {
           VStack(alignment: .leading, spacing: 3) {
             Text(trip.title.isEmpty ? trip.cityName : trip.title).font(.lociHeadline()).foregroundStyle(Color.lociInk)
             HStack {
@@ -39,7 +39,6 @@ public struct TripsView: View {
       }
     }
     .settingsStyle("My trips")
-    .navigationDestination(for: String.self) { TripEditorView(tripID: $0) }
     .refreshable { await load() }
     .errorAlert($error)
     .task { await load() }

@@ -41,6 +41,7 @@ struct AddToTripSheet: View {
         ToolbarItem(placement: .cancellationAction) { Button(store.added == nil ? "Cancel" : "Done") { dismiss() } }
       }
       .safeAreaInset(edge: .bottom) { addBar }
+      .appRouteDestinations()
       .navigationDestination(item: $route) { route in
         switch route {
         case .trip(let id): TripEditorView(tripID: id)

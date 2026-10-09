@@ -54,7 +54,7 @@ struct SharedContentView: View {
 
   @ViewBuilder private func openButton(_ content: Loci_Share_SharedContent) -> some View {
     if content.hasList {
-      NavigationLink { ListDetailView(listID: content.list.id) } label: { openLabel("Open the list") }
+      NavigationLink(value: AppRoute.list(id: content.list.id)) { openLabel("Open the list") }
         .buttonStyle(.borderedProminent).tint(Color.lociForest)
     } else if content.hasItinerary {
       Button { Task { await openItinerary(content.itinerary.id) } } label: { openLabel(opening ? "Opening…" : "Open the itinerary") }
