@@ -112,15 +112,20 @@ struct SharedContentView: View {
     }
     if content.hasList { return content.list.itemCount == 1 ? "1 place" : "\(content.list.itemCount) places" }
     if content.hasRestaurant {
-      return [content.restaurant.rating > 0 ? String(format: "%.1f", content.restaurant.rating) : "", content.restaurant.cuisineType]
+      return [ratingText(content.restaurant.rating), content.restaurant.cuisineType]
         .filter { !$0.isEmpty }.joined(separator: " · ")
     }
     if content.hasHotel {
-      return [content.hotel.rating > 0 ? String(format: "%.1f", content.hotel.rating) : "", content.hotel.priceRange]
+      return [ratingText(content.hotel.rating), content.hotel.priceRange]
         .filter { !$0.isEmpty }.joined(separator: " · ")
     }
     if content.hasPoi { return content.poi.category }
     return nil
+  }
+
+  /// "4.6" ("4,6" where the locale says so); empty when unrated.
+  private static func ratingText(_ rating: Double) -> String {
+    rating > 0 ? rating.formatted(.number.precision(.fractionLength(1))) : ""
   }
 
   static func placeID(for content: Loci_Share_SharedContent) -> String? {
@@ -139,13 +144,27 @@ struct SharedContentView: View {
     }
   }
 
+  /// The `content_type` analytics value: the raw type, not the kicker's copy
+  /// (same spelling as `ListPayload.analyticsName`).
+  static func analyticsName(for type: Loci_Share_ShareContentType) -> String {
+    switch type {
+    case .hotel: "hotel"
+    case .restaurant: "restaurant"
+    case .activity: "activity"
+    case .itinerary: "itinerary"
+    case .trip: "trip"
+    case .list: "list"
+    case .poi, .unspecified, .UNRECOGNIZED: "poi"
+    }
+  }
+
   // MARK: - Actions
 
   private func fetch() async {
     do {
       let loaded = try await load(code)
       content = loaded
-      Analytics.capture(.sharedContentOpened, ["content_type": Self.kicker(for: loaded)])
+      Analytics.capture(.sharedContentOpened, ["content_type": Self.analyticsName(for: loaded.metadata.contentType)])
     } catch {
       if !error.isCancellation { failure = error.userMessage }
     }

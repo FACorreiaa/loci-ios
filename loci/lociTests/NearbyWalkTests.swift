@@ -52,9 +52,10 @@ import Testing
 
   @Test func liveActivityTextIsSharedWithTheWidget() {
     let state = NearbyWalkAttributes.ContentState(steps: 1840, distanceMeters: 1234, placesNearby: 4, nearestName: "Bolhão", nearestMeters: 40)
-    // Grouping follows the device locale ("1,840" or "1 840"); the suffix and pluralisation are ours.
+    // Grouping and the decimal mark follow the device locale ("1,840" or "1 840", "1.2" or "1,2");
+    // the suffix and pluralisation are ours.
     #expect(state.stepsText == 1840.formatted(.number) + " steps")
-    #expect(state.distanceText == "1.2 km")
+    #expect(state.distanceText == 1.2.formatted(.number.precision(.fractionLength(1))) + " km")
     #expect(state.nearestText == "Bolhão · 40 m")
     #expect(NearbyWalkAttributes.ContentState(steps: 1, distanceMeters: 999.4, placesNearby: 0).stepsText == "1 step")
     #expect(NearbyWalkAttributes.ContentState.format(meters: 999.4) == "999 m")

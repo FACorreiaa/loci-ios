@@ -13,10 +13,10 @@ public struct ProfileView: View {
       List {
         Section {
           HStack(spacing: 16) {
-            Image("LociMascot").resizable().scaledToFit().frame(width: 56, height: 56).background(Color.lociSage.opacity(0.3)).clipShape(Circle())
+            Image(decorative: "LociMascot").resizable().scaledToFit().frame(width: 56, height: 56).background(Color.lociSage.opacity(0.3)).clipShape(Circle())
 
             VStack(alignment: .leading, spacing: 4) {
-              Text(AuthSessionManager.shared.currentUsername ?? "Traveler").font(.headline.weight(.bold)).foregroundColor(.lociInk)
+              Text(AuthSessionManager.shared.currentUsername ?? "Traveler").font(.headline.weight(.bold)).foregroundStyle(Color.lociInk)
               ProgressSummaryLine()
             }
           }.padding(.vertical, 8)
@@ -36,7 +36,7 @@ public struct ProfileView: View {
           HStack {
             Text("Version")
             Spacer()
-            Text("1.0.0 (Beta)").foregroundColor(.secondary)
+            Text(Self.versionText).foregroundStyle(.secondary)
           }
           ExternalLinkRow(title: "Loci Web", destination: URL(string: "https://lociai.fyi")!)
           // Hidden until the app has an App Store ID (Info.plist `AppStoreID`).
@@ -51,10 +51,15 @@ public struct ProfileView: View {
           } label: {
             HStack {
               Spacer()
-              if isSigningOut { ProgressView() } else { Text("Sign Out").fontWeight(.semibold) }
+              if isSigningOut {
+                ProgressView().accessibilityLabel("Signing out")
+              } else {
+                Text("Sign Out").fontWeight(.semibold)
+              }
               Spacer()
             }
           }
+          .disabled(isSigningOut)
         }.listRowBackground(Color.lociCard)
       }.listStyle(.insetGrouped).scrollContentBackground(.hidden).background(Color.lociPaper.ignoresSafeArea()).navigationTitle("Profile")
         .navigationDestination(item: $linked) { AppLinkDestination(link: $0) }
@@ -72,11 +77,17 @@ public struct ProfileView: View {
     isSigningOut = true
     Task {
       await AuthService.shared.logout()
-      await MainActor.run {
-        isSigningOut = false
-        onSignOut()
-      }
+      isSigningOut = false
+      onSignOut()
     }
+  }
+
+  /// "1.2 (34)", from the bundle so it never drifts from the build.
+  private static var versionText: String {
+    let info = Bundle.main.infoDictionary
+    let version = info?["CFBundleShortVersionString"] as? String ?? "—"
+    guard let build = info?["CFBundleVersion"] as? String else { return version }
+    return "\(version) (\(build))"
   }
 }
 
@@ -90,7 +101,7 @@ struct ExternalLinkRow: View {
       HStack {
         Text(title)
         Spacer()
-        Image(systemName: "arrow.up.right").font(.caption).foregroundColor(.secondary)
+        Image(systemName: "arrow.up.right").font(.caption).foregroundStyle(.secondary)
       }
     }
   }

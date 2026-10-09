@@ -87,7 +87,8 @@ public nonisolated extension NearbyWalkAttributes.ContentState {
     return minutes < 60 ? "\(minutes) min" : "\(minutes / 60) h \(minutes % 60) min"
   }
 
+  /// "400 m", "1.2 km" ("1,2 km" where the locale uses a decimal comma).
   static func format(meters: Double) -> String {
-    meters < 1000 ? "\(Int(meters.rounded())) m" : String(format: "%.1f km", meters / 1000)
+    meters < 1000 ? "\(Int(meters.rounded())) m" : (meters / 1000).formatted(.number.precision(.fractionLength(1))) + " km"
   }
 }

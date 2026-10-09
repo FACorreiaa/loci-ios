@@ -247,7 +247,7 @@ private struct InSeasonPreview: View {
         TextField("Ask Loci", text: $text).font(.lociBody()).padding(.horizontal, 14).padding(.vertical, 10).background(
           Color.lociCard,
           in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous)
-        ).overlay(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder))
+        ).overlay { RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder) }
         InSeasonBand(seed: $seed)
       }.padding(LociTheme.defaultPadding)
     }.background(Color.lociPaper.ignoresSafeArea()).onChange(of: seed) { _, value in

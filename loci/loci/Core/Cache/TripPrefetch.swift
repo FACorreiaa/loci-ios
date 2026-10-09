@@ -13,7 +13,9 @@ import SwiftProtobuf
   static let staleAfter: TimeInterval = 3 * 3600
 
   static func register() {
-    BGTaskScheduler.shared.register(forTaskWithIdentifier: taskID, using: nil) { task in
+    // `.main`, not nil: the handler is MainActor-isolated, and a nil queue
+    // runs it on a background one, which trips Swift 6's executor check.
+    BGTaskScheduler.shared.register(forTaskWithIdentifier: taskID, using: .main) { task in
       guard let task = task as? BGAppRefreshTask else { return }
       let work = Task { @MainActor in
         let done = await run()
