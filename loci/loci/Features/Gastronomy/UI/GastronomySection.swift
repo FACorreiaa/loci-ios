@@ -15,14 +15,12 @@ struct GastronomySection: View {
 
   private static let compactDishes = 4
 
-  private var dishes: [Loci_Gastronomy_Dish] { filter.apply(to: gastronomy) }
-  private var visible: [Loci_Gastronomy_Dish] {
-    compact && !expanded ? Array(dishes.prefix(Self.compactDishes)) : dishes
-  }
-
   private var city: String { gastronomy.cityName }
 
   var body: some View {
+    // Filtered once per update.
+    let dishes = filter.apply(to: gastronomy)
+    let visible = compact && !expanded ? Array(dishes.prefix(Self.compactDishes)) : dishes
     VStack(alignment: .leading, spacing: 14) {
       header
       filters
@@ -33,7 +31,9 @@ struct GastronomySection: View {
         }
         .lociCard()
       } else {
-        ForEach(Array(visible.enumerated()), id: \.offset) { _, dish in
+        // The dish itself is the identity: an offset would hand a card to
+        // another dish whenever a filter changes the list.
+        ForEach(visible, id: \.self) { dish in
           DishCard(dish: dish, city: city)
         }
       }
@@ -105,12 +105,13 @@ private struct DishCard: View {
             .labelStyle(.titleAndIcon)
         }
       }
-      ScrollView(.horizontal, showsIndicators: false) {
+      ScrollView(.horizontal) {
         HStack(spacing: 6) {
           TagPill(text: dish.displayCategory.label, emphasised: true)
           ForEach(dish.tags, id: \.self) { TagPill(text: $0.capitalized) }
         }
       }
+      .scrollIndicators(.hidden)
       .scrollClipDisabled()
       if !dish.description_p.isEmpty {
         Text(dish.description_p).font(.lociBody(15)).foregroundStyle(Color.lociInk)
@@ -187,7 +188,8 @@ private struct ChipRow<Content: View>: View {
   @ViewBuilder let content: Content
 
   var body: some View {
-    ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 8) { content }.padding(.vertical, 2) }
+    ScrollView(.horizontal) { HStack(spacing: 8) { content }.padding(.vertical, 2) }
+      .scrollIndicators(.hidden)
       .scrollClipDisabled()
       .accessibilityElement(children: .contain)
       .accessibilityLabel(label)

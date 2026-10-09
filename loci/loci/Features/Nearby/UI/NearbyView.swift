@@ -20,6 +20,7 @@ struct NearbyView: View {
   }
 
   private let controller = SearchSessionController.shared
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var coordinate: CLLocationCoordinate2D?
   @State private var radiusKm = 50
   @State private var camera: MapCameraPosition = .userLocation(fallback: .automatic)
@@ -34,8 +35,9 @@ struct NearbyView: View {
   private let walk = NearbyWalk.shared
   private var navigator: WalkNavigator { walk.navigator }
 
-  /// Only this screen's search, not whatever else is running.
-  private var places: [Loci_Poi_POIDetailedInfo] {
+  /// Only this screen's search, not whatever else is running. It filters the
+  /// whole result list, so `body` reads it once and hands the result around.
+  private var currentPlaces: [Loci_Poi_POIDetailedInfo] {
     guard let sessionId, controller.state.sessionId == sessionId else { return [] }
     return controller.state.allPlaces.filter { $0.hasLatitude && $0.hasLongitude }
   }
@@ -46,6 +48,7 @@ struct NearbyView: View {
   private var here: CLLocationCoordinate2D? { walk.location?.coordinate ?? coordinate }
 
   var body: some View {
+    let places = currentPlaces
     Map(position: $camera, selection: $selectedID) {
       WalkMapLayer.content(
         navigator: navigator,
@@ -75,30 +78,30 @@ struct NearbyView: View {
         if !navigator.isNavigating { navigator.end() }
         return
       }
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
       showList = true
       guard let poi = places.first(where: { $0.stableID == id }), let here else { return }
       Task {
         await navigator.preview(to: poi, from: here)
         guard navigator.destination?.stableID == id, let rect = WalkingRoute.mapRect(for: navigator.remaining) else { return }
-        withAnimation(LociTheme.selectionSettle) { camera = .rect(rect) }
+        animate(LociTheme.selectionSettle) { camera = .rect(rect) }
       }
     }
+    .sensoryFeedback(.selection, trigger: selectedID) { (_: String?, id: String?) -> Bool in id != nil }
     .onChange(of: walk.location) { _, location in
       guard navigator.isNavigating, following, let location else { return }
-      withAnimation(.easeInOut(duration: 0.8)) {
+      animate(.easeInOut(duration: 0.8)) {
         camera = WalkMapLayer.followCamera(at: location, heading: WalkMapLayer.heading(location: location, navigator: navigator))
       }
     }
     .onChange(of: camera) { _, position in
-      if position.positionedByUser, navigator.isNavigating { withAnimation { following = false } }
+      if position.positionedByUser, navigator.isNavigating { animate { following = false } }
     }
     .onChange(of: navigator.arrivedAt) { _, arrived in
       guard arrived != nil else { return }
-      UINotificationFeedbackGenerator().notificationOccurred(.success)
       detent = .medium
-      withAnimation { camera = .userLocation(fallback: .automatic) }
+      animate { camera = .userLocation(fallback: .automatic) }
     }
+    .sensoryFeedback(.success, trigger: navigator.arrivedAt) { (_: String?, arrived: String?) -> Bool in arrived != nil }
     .navigationTitle("Near me")
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
@@ -147,7 +150,7 @@ struct NearbyView: View {
 
   private func go() {
     Task {
-      await walk.navigate(places: places, radiusKm: radiusKm)
+      await walk.navigate(places: currentPlaces, radiusKm: radiusKm)
       detent = .fraction(0.25)
       follow()
     }
@@ -157,18 +160,23 @@ struct NearbyView: View {
     navigator.end()
     selectedID = nil
     following = true
-    withAnimation { camera = .userLocation(fallback: .automatic) }
+    animate { camera = .userLocation(fallback: .automatic) }
   }
 
   private func follow() {
-    withAnimation { following = true }
+    animate { following = true }
     guard let location = walk.location else {
       camera = .userLocation(followsHeading: true, fallback: .automatic)
       return
     }
-    withAnimation(.easeInOut(duration: 0.8)) {
+    animate(.easeInOut(duration: 0.8)) {
       camera = WalkMapLayer.followCamera(at: location, heading: WalkMapLayer.heading(location: location, navigator: navigator))
     }
+  }
+
+  /// No sweeping camera under Reduce Motion: it cuts (as GlobeView's `move(to:)`).
+  private func animate(_ animation: Animation = .default, _ change: () -> Void) {
+    if reduceMotion { change() } else { withAnimation(animation, change) }
   }
 
   private func search() async {
@@ -198,6 +206,12 @@ struct NearbyList: View {
   let radiusKm: Int
   let onRetry: () -> Void
 
+  /// "1.2 km": the server's kilometres, kept in kilometres like the radius picker.
+  static func distance(_ km: Double) -> String {
+    Measurement(value: km, unit: UnitLength.kilometers)
+      .formatted(.measurement(width: .abbreviated, usage: .asProvided, numberFormatStyle: .number.precision(.fractionLength(1))))
+  }
+
   var body: some View {
     ScrollViewReader { proxy in
       List {
@@ -222,7 +236,7 @@ struct NearbyList: View {
               HStack {
                 Text(poi.name).font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
                 Spacer()
-                if poi.distance > 0 { Text(String(format: "%.1f km", poi.distance)).lociCoordStyle(10) }
+                if poi.distance > 0 { Text(Self.distance(poi.distance)).lociCoordStyle(10) }
               }
               if !poi.category.isEmpty { Text(poi.category).lociCoordStyle(10) }
               if !poi.descriptionPoi.isEmpty || !poi.description_p.isEmpty {

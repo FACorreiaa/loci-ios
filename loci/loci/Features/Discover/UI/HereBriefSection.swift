@@ -72,7 +72,7 @@ struct HereBriefSection: View {
       .padding(16)
       .frame(maxWidth: .infinity, alignment: .leading)
       .background(Color.lociCard, in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
-      .overlay(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder))
+      .overlay { RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder) }
     }
   }
 
@@ -84,10 +84,12 @@ struct HereBriefSection: View {
           .font(.lociCaption(13)).foregroundStyle(.secondary)
       }
     }
-    ForEach(Array(brief.alerts.prefix(3).enumerated()), id: \.offset) { _, alert in
-      Label(alert.title, systemImage: "exclamationmark.triangle")
+    ForEach(Array(brief.alerts.prefix(3)), id: \.self) { alert in
+      // Severe reads from the shape as well as the colour.
+      let severe = alert.severity >= 0.6
+      Label(alert.title, systemImage: severe ? "exclamationmark.octagon.fill" : "exclamationmark.triangle")
         .font(.lociCaption(13))
-        .foregroundStyle(alert.severity >= 0.6 ? Color.red : Color.lociInk)
+        .foregroundStyle(severe ? Color.red : Color.lociInk)
     }
   }
 

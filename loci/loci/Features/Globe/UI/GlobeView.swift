@@ -64,7 +64,7 @@ nonisolated extension GeoPoint { var coordinate: CLLocationCoordinate2D { CLLoca
 /// the legs in a sheet underneath. Tap a city for its visits and a way into
 /// Recents; tap a leg to fly to it.
 struct GlobeView: View {
-  @State var store: GlobeStore
+  @State private var store: GlobeStore
   @State private var camera: MapCameraPosition
   @State private var isGlobe = true
   @State private var selectedLegID: String?
@@ -81,8 +81,10 @@ struct GlobeView: View {
 
   private let recents: RecentsService
 
-  init(store: GlobeStore = GlobeStore(), recents: RecentsService = ConnectRecentsService()) {
-    _store = State(initialValue: store)
+  /// `store` is an autoclosure so a parent's re-render does not build a store
+  /// that `State` would throw away; only the first one is ever made.
+  init(store: @autoclosure @escaping () -> GlobeStore = GlobeStore(), recents: RecentsService = ConnectRecentsService()) {
+    _store = State(wrappedValue: store())
     self.recents = recents
     _camera = State(
       initialValue: .camera(MapCamera(centerCoordinate: CLLocationCoordinate2D(latitude: 25, longitude: 10), distance: Self.globeDistance))
@@ -226,9 +228,9 @@ private struct CityDot: View {
   var body: some View {
     let diameter = city.nodeRadius * 2
     Button(action: onTap) {
-      Circle().fill(Color(hex: 0x8FA6B5)).overlay(
+      Circle().fill(Color(hex: 0x8FA6B5)).overlay {
         Circle().strokeBorder(isSelected ? Color.white : Color(hex: 0x0E1114), lineWidth: isSelected ? 3 : 1.5)
-      ).frame(width: diameter, height: diameter).frame(width: 44, height: 44).contentShape(Circle())
+      }.frame(width: diameter, height: diameter).frame(width: 44, height: 44).contentShape(Circle())
     }.buttonStyle(.plain).accessibilityLabel("\(city.cityName), \(GlobeCallout.visits(city.visitCount))").accessibilityAddTraits(
       isSelected ? .isSelected : []
     )
@@ -236,7 +238,9 @@ private struct CityDot: View {
 }
 
 /// Copy shared by the callout and the dots.
-enum GlobeCallout { static func visits(_ count: Int) -> String { count == 1 ? "1 visit" : "\(count) visits" } }
+enum GlobeCallout {
+  static func visits(_ count: Int) -> String { String(AttributedString(localized: "^[\(count) visit](inflect: true)").characters) }
+}
 
 /// A tapped city: visits, last visit, and the way into its Recents page.
 /// Web wires `onSelectNode` to nothing; this is new on iOS.
@@ -254,12 +258,17 @@ private struct CityCallout: View {
           .buttonStyle(.bordered).tint(Color.lociForest).padding(.top, 4)
       }
       Spacer(minLength: 0)
-      Button(action: onClose) { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).frame(width: 44, height: 44) }.buttonStyle(
-        .plain
-      ).foregroundStyle(Color.lociMutedInk).accessibilityLabel("Close").padding(.top, -12).padding(.trailing, -12)
-    }.padding(16).background(Color.lociCard, in: RoundedRectangle(cornerRadius: LociTheme.cornerRadiusHero)).overlay(
+      Button(action: onClose) {
+        Label("Close", systemImage: "xmark")
+          .labelStyle(.iconOnly)
+          .font(.footnote.weight(.semibold))
+          .frame(width: LociTheme.minTapTarget, height: LociTheme.minTapTarget)
+          .contentShape(.rect)
+      }
+      .buttonStyle(.plain).foregroundStyle(Color.lociMutedInk).padding(.top, -12).padding(.trailing, -12)
+    }.padding(16).background(Color.lociCard, in: RoundedRectangle(cornerRadius: LociTheme.cornerRadiusHero)).overlay {
       RoundedRectangle(cornerRadius: LociTheme.cornerRadiusHero).strokeBorder(Color.lociBorder, lineWidth: LociTheme.borderWidth)
-    ).shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+    }.shadow(color: .black.opacity(0.18), radius: 12, y: 4)
   }
 
   private var subtitle: String {

@@ -17,11 +17,11 @@ struct MuseThreadTail: View {
       ForEach(thread.messages) { message in
         MuseMessageView(message: message).id(message.id).transition(arrival)
       }
-      if let request = thread.request, let card = thread.card {
+      if let request = thread.request, let card = thread.card, let sessionId {
         MuseBubble(role: .user) { Text(request) }
         StandingTaskCard(
           card: card,
-          onConfirm: { Task { if let sessionId { await thread.confirm(sessionId: sessionId) } } },
+          onConfirm: { Task { await thread.confirm(sessionId: sessionId) } },
           onNotNow: { thread.dismiss() }
         )
         .transition(arrival)
@@ -152,7 +152,9 @@ private struct MuseConfirmButtonStyle: ButtonStyle {
       .padding(.horizontal, 18)
       .frame(minWidth: 96, minHeight: LociTheme.Muse.headerButtonSize)
       .background(Color.lociForest, in: Capsule())
-      .contentShape(Capsule())
+      // The capsule stays 40pt; the touch area is the 44pt minimum.
+      .frame(minHeight: LociTheme.minTapTarget)
+      .contentShape(.rect)
       .opacity(configuration.isPressed ? 0.7 : isEnabled ? 1 : 0.8)
   }
 }

@@ -24,6 +24,8 @@ struct DiscoverView: View {
   @State private var city = ""
   @State private var composerSeed = ""
   @State private var error: String?
+  /// The page did not load: no empty-section copy, a way to try again instead.
+  @State private var loadFailed = false
   @State private var here = HereBriefModel()
   @State private var linked: AppLink?
   private let router = AppRouter.shared
@@ -33,7 +35,7 @@ struct DiscoverView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 24) {
           hero
-          if page?.recentDiscoveries.isEmpty == true { examplesSection }
+          if page?.recentDiscoveries.isEmpty ?? loadFailed { examplesSection }
           HereBriefSection(model: here)
           InSeasonBand(seed: $composerSeed)
           quickCategoriesSection
@@ -41,11 +43,16 @@ struct DiscoverView: View {
             trendingSection(page.trending)
             featuredSection(page.featured)
             recentSection(page.recentDiscoveries)
+          } else if loadFailed {
+            VStack(spacing: 8) {
+              Text("Trending and featured did not load.").font(.lociBody(15)).foregroundStyle(Color.lociMutedInk)
+              Button("Try again") { Task { await load() } }.buttonStyle(.bordered).tint(Color.lociForest)
+            }.frame(maxWidth: .infinity)
           } else {
             ProgressView().frame(maxWidth: .infinity)
           }
         }.padding(LociTheme.defaultPadding)
-      }.background(Color.lociPaper.ignoresSafeArea()).navigationTitle("Discover").navigationDestination(for: SessionLink.self) {
+      }.background { Color.lociPaper.ignoresSafeArea() }.navigationTitle("Discover").navigationDestination(for: SessionLink.self) {
         SearchResultsView(link: $0)
       }.refreshable {
         async let brief: Void = here.load()
@@ -71,9 +78,9 @@ struct DiscoverView: View {
       Text("Where to next?").font(.lociDisplay(30)).foregroundStyle(Color.lociInk)
       if !here.placeName.isEmpty { Text(here.placeName).font(.lociCaption(13)).foregroundStyle(Color.lociForest) }
       TextField("City (optional)", text: $city).font(.lociBody()).textContentType(.addressCity).padding(.horizontal, 14).padding(.vertical, 10)
-        .background(Color.lociCard, in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous)).overlay(
+        .background(Color.lociCard, in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous)).overlay {
           RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder)
-        )
+        }
       SearchComposer(
         placeholder: "Restaurants, hotels, a day out…",
         seed: $composerSeed,
@@ -166,7 +173,7 @@ struct DiscoverView: View {
   private var quickCategoriesSection: some View {
     VStack(alignment: .leading, spacing: 8) {
       Text("Quick categories").font(.lociHeadline())
-      ScrollView(.horizontal, showsIndicators: false) {
+      ScrollView(.horizontal) {
         HStack(spacing: 8) {
           ForEach(Self.quickCategories, id: \.name) { category in
             Button {
@@ -180,6 +187,7 @@ struct DiscoverView: View {
           }
         }
       }
+      .scrollIndicators(.hidden)
     }
   }
 
@@ -197,7 +205,7 @@ struct DiscoverView: View {
               Text(item.emoji)
               Text(item.cityName).font(.lociBody()).foregroundStyle(Color.lociInk)
               Spacer()
-              Text("\(item.searchCount) searches").lociCoordStyle(10)
+              Text("^[\(item.searchCount) search](inflect: true)").lociCoordStyle(10)
             }.lociCard(padding: 12)
           }
         }
@@ -211,7 +219,7 @@ struct DiscoverView: View {
       if featured.isEmpty {
         Text("No featured collections available").foregroundStyle(Color.lociMutedInk)
       } else {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(.horizontal) {
           HStack(spacing: 12) {
             ForEach(featured, id: \.category) { item in
               Button {
@@ -220,12 +228,13 @@ struct DiscoverView: View {
                 VStack(alignment: .leading, spacing: 6) {
                   Text(item.emoji).font(.title)
                   Text(item.title).font(.lociHeadline(15)).foregroundStyle(Color.lociInk).multilineTextAlignment(.leading)
-                  Text("\(item.itemCount) places").lociCoordStyle(10)
+                  Text("^[\(item.itemCount) place](inflect: true)").lociCoordStyle(10)
                 }.frame(width: 160, alignment: .leading).lociCard(padding: 14)
               }
             }
           }
         }
+        .scrollIndicators(.hidden)
       }
     }
   }
@@ -248,8 +257,10 @@ struct DiscoverView: View {
       page = try await rpc("Could not load Discover.") {
         await Loci_Discover_DiscoverServiceClient(client: ConnectTransport.shared.protocolClient).getDiscoverPage(request: .init(), headers: [:])
       }.data
+      loadFailed = false
     } catch {
-      page = Loci_Discover_DiscoverPageData()
+      // A refresh that fails keeps the page already shown.
+      loadFailed = page == nil
       self.error = error.userMessage
     }
   }

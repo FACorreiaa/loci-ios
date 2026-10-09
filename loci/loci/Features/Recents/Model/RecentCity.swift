@@ -118,6 +118,6 @@ nonisolated enum RecentCities {
   static func filter(_ cities: [RecentCity], query: String) -> [RecentCity] {
     let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !needle.isEmpty else { return cities }
-    return cities.filter { $0.name.localizedCaseInsensitiveContains(needle) }
+    return cities.filter { $0.name.localizedStandardContains(needle) }
   }
 }

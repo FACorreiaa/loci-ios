@@ -46,12 +46,14 @@ struct GastronomyView: View {
   static let symbol = "fork.knife"
   static let suggestedCities = ["Lisbon", "Porto", "Madeira", "Naples", "Mexico City", "Tokyo"]
 
-  @State var store: GastronomyStore
+  @State private var store: GastronomyStore
   @State private var query: String
   @FocusState private var fieldFocused: Bool
 
-  init(store: GastronomyStore = GastronomyStore(), city: String = "") {
-    _store = State(initialValue: store)
+  /// `store` is an autoclosure so a parent's re-render does not build a store
+  /// that `State` would throw away; only the first one is ever made.
+  init(store: @autoclosure @escaping () -> GastronomyStore = GastronomyStore(), city: String = "") {
+    _store = State(wrappedValue: store())
     _query = State(initialValue: city)
   }
 
@@ -64,7 +66,7 @@ struct GastronomyView: View {
       }
       .padding(LociTheme.defaultPadding)
     }
-    .background(Color.lociPaper.ignoresSafeArea())
+    .background { Color.lociPaper.ignoresSafeArea() }
     .navigationTitle("Local food")
     .navigationBarTitleDisplayMode(.inline)
     .refreshable { await store.load(city: store.city) }
@@ -101,13 +103,14 @@ struct GastronomyView: View {
     case .idle:
       VStack(alignment: .leading, spacing: 10) {
         Text("Or start with one of these").font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk)
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(.horizontal) {
           HStack(spacing: 8) {
             ForEach(Self.suggestedCities, id: \.self) { city in
               Button(city) { search(city) }.buttonStyle(MusePillButtonStyle())
             }
           }
         }
+        .scrollIndicators(.hidden)
         .scrollClipDisabled()
       }
     case .loading:

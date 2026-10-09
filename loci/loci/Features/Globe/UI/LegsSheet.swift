@@ -34,11 +34,7 @@ struct LegsSheet: View {
     }
   }
 
-  private var countsText: String {
-    let legs = data.legs.count == 1 ? "1 leg" : "\(data.legs.count) legs"
-    let cities = data.cities.count == 1 ? "1 city" : "\(data.cities.count) cities"
-    return "\(legs) · \(cities)"
-  }
+  private var countsText: LocalizedStringKey { "^[\(data.legs.count) leg](inflect: true) · ^[\(data.cities.count) city](inflect: true)" }
 }
 
 /// From / To on top; Mode, Distance and When under it.
@@ -47,17 +43,18 @@ private struct LegRow: View {
   let isSelected: Bool
 
   @Environment(\.dynamicTypeSize) private var typeSize
+  @ScaledMetric(relativeTo: .subheadline) private var badge: CGFloat = 30
 
   var body: some View {
     HStack(alignment: .center, spacing: 12) {
-      Image(systemName: LegMode.symbol(leg.mode)).font(.system(size: 15, weight: .medium)).foregroundStyle(Color.lociCoral).frame(
-        width: 30,
-        height: 30
+      Image(systemName: LegMode.symbol(leg.mode)).font(.subheadline.weight(.medium)).foregroundStyle(Color.lociCoral).frame(
+        width: badge,
+        height: badge
       ).background(Color.lociMuted, in: Circle()).accessibilityHidden(true)
       VStack(alignment: .leading, spacing: 3) {
         HStack(spacing: 6) {
           Text(leg.fromName.isEmpty ? "—" : leg.fromName)
-          Image(systemName: "arrow.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.lociMutedInk)
+          Image(systemName: "arrow.right").font(.caption2.weight(.semibold)).foregroundStyle(Color.lociMutedInk)
           Text(leg.toName.isEmpty ? "—" : leg.toName)
         }.font(.lociHeadline(16)).foregroundStyle(Color.lociInk).lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
         Text(detail).font(.lociCaption(12)).monospacedDigit().foregroundStyle(Color.lociMutedInk)
