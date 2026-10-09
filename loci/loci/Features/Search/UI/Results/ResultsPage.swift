@@ -23,12 +23,18 @@ struct ResultsPage: View {
   @State private var showAllDays = false
   @State private var editingTrip = false
 
-  private var groups: [DayGroup] { state.dayGroups }
-  private var extras: [Loci_Poi_POIDetailedInfo] { state.extras }
-  private var sequence: [String: Int] { DayGrouping.sequence(groups) }
+  /// The lists derived from the places, built once per body: each is a pass
+  /// over every stop, and the page reads them many times.
+  private struct Derived {
+    let groups: [DayGroup]
+    let extras: [Loci_Poi_POIDetailedInfo]
+    let sequence: [String: Int]
+    let mapData: ResultsMapData
+    /// "More to explore" numbers on from the last numbered stop.
+    let extrasStart: Int
+  }
+
   private var showsDays: Bool { state.destination == .itinerary }
-  private var visibleGroups: [DayGroup] { showAllDays ? groups : Array(groups.prefix(DayGrouping.initialDays)) }
-  private var hiddenDays: Int { max(groups.count - DayGrouping.initialDays, 0) }
   private var cityName: String { state.cityData?.city ?? state.cityName ?? "" }
   private var title: String {
     // A gastronomy search's heading is the section's own.
@@ -39,11 +45,22 @@ struct ResultsPage: View {
 
   private var summary: String { state.itinerary?.itineraryResponse.overallDescription ?? "" }
   private var arrival: AnyTransition { reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity) }
-  private var mapData: ResultsMapData {
-    ResultsMapData(groups: groups, extras: extras, sequence: sequence, showsDays: showsDays, alerts: side.localContext?.alerts ?? [])
+
+  private func derive() -> Derived {
+    let groups = state.dayGroups
+    let extras = state.extras
+    let sequence = DayGrouping.sequence(groups)
+    return Derived(
+      groups: groups,
+      extras: extras,
+      sequence: sequence,
+      mapData: ResultsMapData(groups: groups, extras: extras, sequence: sequence, showsDays: showsDays, alerts: side.localContext?.alerts ?? []),
+      extrasStart: (sequence.values.max() ?? 0) + 1
+    )
   }
 
   var body: some View {
+    let derived = derive()
     VStack(alignment: .leading, spacing: 16) {
       if let message = state.failureMessage { FailureRail(message: message, canRetry: !state.query.isEmpty) { onRerun(state.query) } }
       ResultsHeader(city: state.cityData, fallbackCityName: state.cityName)
@@ -53,7 +70,7 @@ struct ResultsPage: View {
         StatusRail(state: state)
       }
       if state.hasResult {
-        results.transition(arrival)
+        results(derived).transition(arrival)
       } else if state.isActive {
         SkeletonCards()
       }
@@ -67,9 +84,9 @@ struct ResultsPage: View {
     .sheet(item: $detail) { stop in PlaceDetailSheet(stop: stop, destination: state.destination, cityName: cityName) }
     .fullScreenCover(isPresented: $showFullMap) {
       FullMapView(
-        data: mapData,
-        groups: groups,
-        sequence: sequence,
+        data: derived.mapData,
+        groups: derived.groups,
+        sequence: derived.sequence,
         destination: state.destination,
         showsDays: showsDays,
         title: cityName.isEmpty ? state.destination.title : cityName,
@@ -83,7 +100,10 @@ struct ResultsPage: View {
     return "\(city.centerLatitude),\(city.centerLongitude)"
   }
 
-  @ViewBuilder private var results: some View {
+  @ViewBuilder private func results(_ derived: Derived) -> some View {
+    let groups = derived.groups
+    let visibleGroups = showAllDays ? groups : Array(groups.prefix(DayGrouping.initialDays))
+    let hiddenDays = max(groups.count - DayGrouping.initialDays, 0)
     if !title.isEmpty || !summary.isEmpty {
       VStack(alignment: .leading, spacing: 4) {
         if !title.isEmpty { Text(title).font(.lociTitle(22)).foregroundStyle(Color.lociInk) }
@@ -94,11 +114,17 @@ struct ResultsPage: View {
       TripSavedBanner(cityName: cityName) { editingTrip = true }
         .sheet(isPresented: $editingTrip) { TripEditorSheet(tripID: tripID) }
     }
-    if !mapData.isEmpty {
-      ResultsMapCard(data: mapData, selectedID: selectedID) { showFullMap = true }
+    if !derived.mapData.isEmpty {
+      ResultsMapCard(data: derived.mapData, selectedID: selectedID) { showFullMap = true }
     }
     ForEach(visibleGroups, id: \.number) { group in
-      DaySection(group: group, sequence: sequence, destination: state.destination, showsDayLabel: showsDays, selectedID: $selectedID) { detail = $0 }
+      DaySection(
+        group: group,
+        sequence: derived.sequence,
+        destination: state.destination,
+        showsDayLabel: showsDays,
+        selectedID: $selectedID
+      ) { detail = $0 }
         .id(group.number == 1 ? Anchor.days : "results-day-\(group.number)")
     }
     if !showAllDays, hiddenDays > 0 {
@@ -107,13 +133,13 @@ struct ResultsPage: View {
       }
       .buttonStyle(MusePillButtonStyle())
     }
-    if !extras.isEmpty {
+    if !derived.extras.isEmpty {
       VStack(alignment: .leading, spacing: 8) {
         Text("More to explore").font(.lociHeadline(15)).foregroundStyle(Color.lociInk)
-        ForEach(Array(extras.enumerated()), id: \.element.stableID) { offset, stop in
+        ForEach(Array(derived.extras.enumerated()), id: \.element.stableID) { offset, stop in
           StopCard(
             stop: stop,
-            index: (sequence.values.max() ?? 0) + offset + 1,
+            index: derived.extrasStart + offset,
             color: LociTheme.ungroupedColor,
             destination: state.destination,
             isSelected: selectedID == stop.stableID
@@ -176,26 +202,33 @@ struct StatusRail: View {
     HStack(spacing: 8) {
       if state.isActive { ProgressView().controlSize(.small) }
       Text(text).lociCoordStyle(10)
-      if state.plannedDays > 0, state.destination == .itinerary { Text("· \(state.plannedDays) days planned").lociCoordStyle(10) }
+      if state.plannedDays > 0, state.destination == .itinerary { Text("· ^[\(state.plannedDays) day](inflect: true) planned").lociCoordStyle(10) }
     }
     .accessibilityElement(children: .combine)
   }
 
-  private var text: String {
+  private var text: AttributedString {
     let count = state.places.count
     if state.isGastronomySearch {
-      if let dishes = state.gastronomy?.dishes.count { return "Local food ready · \(dishes) dishes" }
-      return state.isActive ? "Tasting the local food…" : "No typical food found"
+      if let dishes = state.gastronomy?.dishes.count { return AttributedString(localized: "Local food ready · ^[\(dishes) dish](inflect: true)") }
+      return AttributedString(localized: state.isActive ? "Tasting the local food…" : "No typical food found")
     }
     switch state.phase {
     case .skeleton:
-      if let stage = state.progressStage, !stage.isEmpty { return stage }
-      return state.destination == .itinerary ? "Sketching your days…" : "Finding \(state.destination.title.lowercased())…"
+      if let stage = state.progressStage, !stage.isEmpty { return AttributedString(stage) }
+      return state.destination == .itinerary
+        ? AttributedString(localized: "Sketching your days…")
+        : AttributedString(localized: "Finding \(state.destination.title.lowercased())…")
     case .enriching:
-      let photos = state.places.filter(\.hasPhoto).count
-      return photos < count ? "Adding photos \(photos)/\(count)" : "Finishing up…"
+      let photos = state.places.count(where: \.hasPhoto)
+      return photos < count ? AttributedString(localized: "Adding photos \(photos)/\(count)") : AttributedString(localized: "Finishing up…")
     case .done:
-      return state.destination == .itinerary ? "Itinerary ready · \(count) stops" : "\(count) \(state.destination.title.lowercased()) found"
+      return switch state.destination {
+      case .itinerary: AttributedString(localized: "Itinerary ready · ^[\(count) stop](inflect: true)")
+      case .hotels: AttributedString(localized: "^[\(count) hotel](inflect: true) found")
+      case .restaurants: AttributedString(localized: "^[\(count) restaurant](inflect: true) found")
+      case .activities: AttributedString(localized: "^[\(count) activity](inflect: true) found")
+      }
     }
   }
 }

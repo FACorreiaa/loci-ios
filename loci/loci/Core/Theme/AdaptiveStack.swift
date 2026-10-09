@@ -6,16 +6,22 @@ import SwiftUI
 struct AdaptiveStack<Content: View>: View {
   var alignment: VerticalAlignment = .center
   var spacing: CGFloat?
-  @ViewBuilder var content: () -> Content
+  let content: Content
 
   @Environment(\.dynamicTypeSize) private var typeSize
+
+  init(alignment: VerticalAlignment = .center, spacing: CGFloat? = nil, @ViewBuilder content: () -> Content) {
+    self.alignment = alignment
+    self.spacing = spacing
+    self.content = content()
+  }
 
   var body: some View {
     let layout =
       typeSize.isAccessibilitySize
       ? AnyLayout(VStackLayout(alignment: .leading, spacing: spacing))
       : AnyLayout(HStackLayout(alignment: alignment, spacing: spacing))
-    layout(content)
+    layout { content }
   }
 }
 

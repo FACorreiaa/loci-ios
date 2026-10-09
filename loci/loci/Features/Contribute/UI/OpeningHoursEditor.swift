@@ -5,6 +5,7 @@ import SwiftUI
 /// live, because that string is what gets compared with another scout's.
 struct OpeningHoursEditor: View {
   @Binding var hours: OpeningHours
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -30,19 +31,21 @@ struct OpeningHoursEditor: View {
       Text(day.label.prefix(3))
         .font(.lociBody(15).weight(.medium))
         .foregroundStyle(Color.lociInk)
-        .frame(width: 40, alignment: .leading)
+        .frame(minWidth: 40, alignment: .leading)
         .accessibilityLabel(day.label)
-      if case .open(let intervals) = hours[day] {
-        let first = intervals.first ?? OpeningHours.weekdayInterval
-        time(day, start: true, value: first.start)
-        Text("to").font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk).accessibilityHidden(true)
-        time(day, start: false, value: first.end)
-      } else {
+      if hours[day].isClosed {
         Text("Closed").font(.lociBody(15)).foregroundStyle(Color.lociMutedInk)
+      } else {
+        time(day, start: true)
+        Text("to").font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk).accessibilityHidden(true)
+        time(day, start: false)
       }
       Spacer(minLength: 4)
-      Button(hours[day].isClosed ? "Set hours" : "Closed") {
-        withAnimation(.snappy) { hours.toggleClosed(day) }
+      Button {
+        withAnimation(reduceMotion ? nil : .snappy) { hours.toggleClosed(day) }
+      } label: {
+        // The bordered style adds 7pt above and below: 30 + 14 reaches the 44pt tap target.
+        Text(hours[day].isClosed ? "Set hours" : "Closed").frame(minHeight: LociTheme.minTapTarget - 14)
       }
       .font(.lociCaption(13).weight(.semibold))
       .buttonStyle(.bordered)
@@ -52,13 +55,10 @@ struct OpeningHoursEditor: View {
     .frame(minHeight: LociTheme.minTapTarget)
   }
 
-  private func time(_ day: HoursDay, start: Bool, value: String) -> some View {
+  private func time(_ day: HoursDay, start: Bool) -> some View {
     DatePicker(
       start ? "\(day.label) opening time" : "\(day.label) closing time",
-      selection: Binding(
-        get: { OpeningHours.clockDate(value) },
-        set: { hours.setTime(day, start: start, to: OpeningHours.clockString($0)) }
-      ),
+      selection: $hours[clock: day, start: start],
       displayedComponents: .hourAndMinute
     )
     .labelsHidden()

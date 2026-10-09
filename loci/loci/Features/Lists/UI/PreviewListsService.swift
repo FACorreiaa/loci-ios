@@ -152,7 +152,7 @@ nonisolated extension ListEntry {
 
 /// `-designPreview addToList`: a place's detail with the sheet open over it.
 struct AddToListPreview: View {
-  var body: some View { NavigationStack { detail }.sheet(isPresented: .constant(true), content: sheet) }
+  var body: some View { NavigationStack { detail.appRouteDestinations() }.sheet(isPresented: .constant(true), content: sheet) }
 
   private var detail: some View { PlaceDetailView(stop: ListEntry.previewStop, destination: .activities, cityName: "Lisbon") }
 

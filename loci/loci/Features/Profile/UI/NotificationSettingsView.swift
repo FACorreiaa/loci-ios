@@ -2,7 +2,7 @@ import SwiftUI
 import UserNotifications
 
 public struct NotificationSettingsView: View {
-  @ObservedObject private var notificationManager = PushNotificationManager.shared
+  private let notificationManager = PushNotificationManager.shared
   @State private var isRequesting: Bool = false
 
   public init() {}
@@ -13,7 +13,7 @@ public struct NotificationSettingsView: View {
         HStack {
           VStack(alignment: .leading, spacing: 4) {
             Text("Status").font(.body.weight(.medium))
-            Text(statusDescription).font(.caption).foregroundColor(.secondary)
+            Text(statusDescription).font(.caption).foregroundStyle(.secondary)
           }
 
           Spacer()
@@ -37,14 +37,16 @@ public struct NotificationSettingsView: View {
 
       ServerNotificationSettingsSection()
 
-      if let token = notificationManager.deviceToken {
-        Section("APNS Device Token") {
-          VStack(alignment: .leading, spacing: 6) {
-            Text("Active Token").font(.caption.weight(.bold)).foregroundColor(.secondary)
-            Text(token).font(.system(.caption2, design: .monospaced)).lineLimit(3).foregroundColor(.lociInk).textSelection(.enabled)
-          }.padding(.vertical, 4)
-        }.listRowBackground(Color.lociCard)
-      }
+      #if DEBUG
+        if let token = notificationManager.deviceToken {
+          Section("APNS Device Token") {
+            VStack(alignment: .leading, spacing: 6) {
+              Text("Active Token").font(.caption.weight(.bold)).foregroundStyle(.secondary)
+              Text(token).font(.system(.caption2, design: .monospaced)).lineLimit(3).foregroundStyle(Color.lociInk).textSelection(.enabled)
+            }.padding(.vertical, 4)
+          }.listRowBackground(Color.lociCard)
+        }
+      #endif
     }.scrollContentBackground(.hidden).background(Color.lociPaper.ignoresSafeArea()).navigationTitle("Notifications").navigationBarTitleDisplayMode(
       .inline
     ).task { await notificationManager.refreshAuthorizationStatus() }
@@ -62,9 +64,9 @@ public struct NotificationSettingsView: View {
   @ViewBuilder private var statusBadge: some View {
     switch notificationManager.authorizationStatus {
     case .authorized, .provisional, .ephemeral:
-      Label("Active", systemImage: "checkmark.circle.fill").font(.caption.weight(.semibold)).foregroundColor(.green)
-    case .denied: Label("Disabled", systemImage: "xmark.circle.fill").font(.caption.weight(.semibold)).foregroundColor(.red)
-    case .notDetermined: Label("Not Enabled", systemImage: "questionmark.circle").font(.caption).foregroundColor(.orange)
+      Label("Active", systemImage: "checkmark.circle.fill").font(.caption.weight(.semibold)).foregroundStyle(.green)
+    case .denied: Label("Disabled", systemImage: "xmark.circle.fill").font(.caption.weight(.semibold)).foregroundStyle(.red)
+    case .notDetermined: Label("Not Enabled", systemImage: "questionmark.circle").font(.caption).foregroundStyle(.orange)
     @unknown default: EmptyView()
     }
   }

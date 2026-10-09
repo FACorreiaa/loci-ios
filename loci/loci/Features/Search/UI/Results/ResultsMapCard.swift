@@ -122,12 +122,16 @@ struct MapPin: View {
   let color: Color
   var isSelected = false
 
+  // Grow with the number inside (lociCoord scales relative to caption2).
+  @ScaledMetric(relativeTo: .caption2) private var diameter: CGFloat = 26
+  @ScaledMetric(relativeTo: .caption2) private var selectedDiameter: CGFloat = 32
+
   var body: some View {
     Text("\(number)")
       .font(.lociCoord(isSelected ? 13 : 11)).foregroundStyle(LociTheme.stampInk)
-      .frame(width: isSelected ? 32 : 26, height: isSelected ? 32 : 26)
+      .frame(width: isSelected ? selectedDiameter : diameter, height: isSelected ? selectedDiameter : diameter)
       .background(color, in: Circle())
-      .overlay(Circle().stroke(LociTheme.stampInk, lineWidth: 2))
+      .overlay { Circle().stroke(LociTheme.stampInk, lineWidth: 2) }
       .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
       .animation(LociTheme.selectionSettle, value: isSelected)
       .accessibilityLabel("Stop \(number)")
@@ -145,15 +149,19 @@ struct ResultsMapCard: View {
   @State private var size: CGSize = .zero
   /// The zoom MapKit actually settled on; until then, an estimate from the pins.
   @State private var cameraScale: Double?
+  /// PinSpread's layout, kept between renders: it compares every pin with every other.
+  @State private var spread: [String: CLLocationCoordinate2D] = [:]
+
+  private struct SpreadKey: Equatable {
+    let data: ResultsMapData
+    let cameraScale: Double?
+    let size: CGSize
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       Map(position: $camera, interactionModes: []) {
-        ResultsMapContent(
-          data: data,
-          selectedID: selectedID,
-          spread: data.spread(mapPointsPerPoint: cameraScale ?? PinSpread.fittedScale(for: data.spreadInputs, in: size))
-        )
+        ResultsMapContent(data: data, selectedID: selectedID, spread: spread)
       }
       .mapStyle(.standard(pointsOfInterest: .excludingAll))
       .mapControlVisibility(.hidden)
@@ -180,6 +188,9 @@ struct ResultsMapCard: View {
         cameraScale = nil
         camera = .automatic
       }
+      .onChange(of: SpreadKey(data: data, cameraScale: cameraScale, size: size), initial: true) {
+        spread = data.spread(mapPointsPerPoint: cameraScale ?? PinSpread.fittedScale(for: data.spreadInputs, in: size))
+      }
       .accessibilityElement(children: .ignore)
       .accessibilityLabel("Map of \(data.pins.count) places")
       .accessibilityAddTraits(.isButton)
@@ -193,7 +204,7 @@ struct MapLegend: View {
   let days: [Int]
 
   var body: some View {
-    ScrollView(.horizontal, showsIndicators: false) {
+    ScrollView(.horizontal) {
       HStack(spacing: 10) {
         ForEach(days, id: \.self) { day in
           HStack(spacing: 4) {
@@ -203,6 +214,7 @@ struct MapLegend: View {
         }
       }
     }
+    .scrollIndicators(.hidden)
     .scrollClipDisabled()
   }
 }
@@ -229,11 +241,18 @@ struct FullMapView: View {
   @State private var showLookAround = false
   @State private var mapPointsPerPoint: Double?
   @State private var mapWidth: Double = 0
+  /// PinSpread's layout for the current zoom, kept between renders (it is quadratic in the pins).
+  @State private var spread: [String: CLLocationCoordinate2D] = [:]
+
+  private struct SpreadKey: Equatable {
+    let data: ResultsMapData
+    let mapPointsPerPoint: Double?
+  }
 
   var body: some View {
     NavigationStack {
       Map(position: $camera, selection: $selectedID) {
-        ResultsMapContent(data: data, selectedID: selectedID, spread: data.spread(mapPointsPerPoint: mapPointsPerPoint))
+        ResultsMapContent(data: data, selectedID: selectedID, spread: spread)
       }
       .mapStyle(
         isPitched && satellite
@@ -247,6 +266,9 @@ struct FullMapView: View {
         if mapWidth > 0 { mapPointsPerPoint = context.rect.size.width / mapWidth }
       }
       .onGeometryChange(for: Double.self, of: { $0.size.width }) { mapWidth = $0 }
+      .onChange(of: SpreadKey(data: data, mapPointsPerPoint: mapPointsPerPoint), initial: true) {
+        spread = data.spread(mapPointsPerPoint: mapPointsPerPoint)
+      }
       .overlay(alignment: .topLeading) {
         VStack(alignment: .leading, spacing: 8) {
           if isPitched {
@@ -323,10 +345,18 @@ private struct MapStopList: View {
         ForEach(groups, id: \.number) { group in
           Section {
             ForEach(group.stops, id: \.stableID) { stop in
-              Button { selectedID = stop.stableID } label: { row(stop, day: group.number) }
-                .listRowBackground(selectedID == stop.stableID ? Color.lociSage : Color.lociCard)
-                .swipeActions(edge: .trailing) { Button("Details", systemImage: "info.circle") { onDetail(stop) }.tint(Color.lociForestFill) }
-                .id(stop.stableID)
+              // Siblings, not nested: a button inside the row's button never gets its own tap.
+              HStack(spacing: 4) {
+                Button { selectedID = stop.stableID } label: { row(stop, day: group.number) }
+                Button("Details", systemImage: "info.circle") { onDetail(stop) }
+                  .labelStyle(.iconOnly).foregroundStyle(Color.lociForest)
+                  .frame(minWidth: LociTheme.minTapTarget, minHeight: LociTheme.minTapTarget)
+                  .contentShape(Rectangle())
+              }
+              .buttonStyle(.borderless)
+              .listRowBackground(selectedID == stop.stableID ? Color.lociSage : Color.lociCard)
+              .swipeActions(edge: .trailing) { Button("Details", systemImage: "info.circle") { onDetail(stop) }.tint(Color.lociForestFill) }
+              .id(stop.stableID)
             }
           } header: {
             if showsDays { Text("Day \(group.number)").lociCoordStyle(10) }
@@ -353,7 +383,7 @@ private struct MapStopList: View {
         }
       }
       Spacer()
-      Button("Details", systemImage: "info.circle") { onDetail(stop) }.labelStyle(.iconOnly).foregroundStyle(Color.lociForest)
     }
+    .contentShape(Rectangle())
   }
 }

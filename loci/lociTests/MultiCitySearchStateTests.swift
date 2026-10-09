@@ -154,17 +154,18 @@ struct MultiCityRequestTests {
 
 @Suite("Multi-city format")
 struct MultiCityFormatTests {
-  /// The same strings web renders (multi-city-view.ts), so both apps read alike.
+  /// Web's shape (multi-city-view.ts), with the time and distance formatted for the locale.
   @Test func matchesWeb() {
+    let english = Locale(identifier: "en_US")
     var leg = Loci_Trip_TripLeg()
     leg.mode = "train"
     leg.durationMins = 194
     leg.distanceKm = 274.4
-    #expect(MultiCityFormat.leg(leg) == "Train · ≈3h14 · 274 km")
+    #expect(MultiCityFormat.leg(leg, locale: english) == "Train · ≈3h 14m · 274 km")
     leg.mode = "drive"
     leg.durationMins = 30
     leg.distanceKm = 40
-    #expect(MultiCityFormat.leg(leg) == "Drive · ≈30 min · 40 km")
+    #expect(MultiCityFormat.leg(leg, locale: english) == "Drive · ≈30m · 40 km")
     let stop = StopResult(index: 0, cityName: "Lisbon", sessionId: "s", dayNumbers: [1, 2])
     #expect(MultiCityFormat.chip(stop) == "Lisbon · 2n")
   }

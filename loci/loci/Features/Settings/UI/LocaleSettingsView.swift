@@ -10,6 +10,10 @@ struct LocaleSettingsView: View {
     ("JPY", "Japanese yen (¥)"), ("CAD", "Canadian dollar (C$)"), ("AUD", "Australian dollar (A$)"), ("BRL", "Brazilian real (R$)"),
   ]
 
+  /// Read once: the system list has ~600 entries and does not change at run time.
+  static let timeZones: [(id: String, label: String)] =
+    TimeZone.knownTimeZoneIdentifiers.map { ($0, $0.replacingOccurrences(of: "_", with: " ")) }
+
   @State private var timezone = TimeZone.current.identifier
   @State private var units = "metric"
   @State private var currency = "EUR"
@@ -26,7 +30,7 @@ struct LocaleSettingsView: View {
     Form {
       Section {
         Picker("Time zone", selection: $timezone) {
-          ForEach(TimeZone.knownTimeZoneIdentifiers, id: \.self) { Text($0.replacingOccurrences(of: "_", with: " ")).tag($0) }
+          ForEach(Self.timeZones, id: \.id) { Text($0.label).tag($0.id) }
         }.pickerStyle(.navigationLink)
       } footer: {
         Text("Used for trip days and the times in your itineraries.")

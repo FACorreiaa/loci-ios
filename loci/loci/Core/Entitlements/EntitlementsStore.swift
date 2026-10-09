@@ -39,8 +39,13 @@ import Observation
       kind: .entitlements,
       id: userID,
       cache: cache,
-      onCached: { [weak self] copy in self?.current = Entitlements(copy.value) }
+      onCached: { [weak self] copy in
+        // A sign-out or account switch while this was loading wins.
+        guard let self, self.userID == userID else { return }
+        self.current = Entitlements(copy.value)
+      }
     ) { try await fetch() }
+    guard self.userID == userID else { return }
     loaded = result
     if let value = result.value { current = Entitlements(value) }
   }

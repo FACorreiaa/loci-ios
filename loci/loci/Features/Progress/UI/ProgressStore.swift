@@ -17,6 +17,8 @@ import Observation
   private(set) var nextPageToken = ""
   var period = Loci_Gamification_LeaderboardPeriod.week
   var metric = Loci_Gamification_LeaderboardMetric.points
+  /// A failed refresh or "Show more" once something is on screen.
+  var error: String?
 
   private let service: any ProgressService
 
@@ -40,23 +42,30 @@ import Observation
       nextPageToken = h.nextPageToken
       phase = .loaded
     } catch {
-      if progress == nil { phase = .failed(error.userMessage) }
+      guard !error.isCancellation else { return }
+      if progress == nil { phase = .failed(error.userMessage) } else { self.error = error.userMessage }
     }
   }
 
   func reloadBoard() async {
     do {
       entries = try await service.leaderboard(period: period, metric: metric).entries
+      phase = .loaded
     } catch {
+      // A newer period or metric cancelled this one; its own reload follows.
+      guard !error.isCancellation else { return }
       phase = .failed(error.userMessage)
     }
   }
 
   func loadMoreHistory() async {
     guard !nextPageToken.isEmpty else { return }
-    if let page = try? await service.history(pageToken: nextPageToken) {
+    do {
+      let page = try await service.history(pageToken: nextPageToken)
       events += page.events
       nextPageToken = page.nextPageToken
+    } catch {
+      if !error.isCancellation { self.error = error.userMessage }
     }
   }
 }

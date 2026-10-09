@@ -40,7 +40,7 @@ struct PlaceReviewsListView: View {
     .listStyle(.plain)
     .scrollContentBackground(.hidden)
     .contentMargins(.horizontal, LociTheme.defaultPadding, for: .scrollContent)
-    .background(Color.lociPaper.ignoresSafeArea())
+    .background(Color.lociPaper)
     .overlay {
       if store.phase == .loaded, store.reviews.isEmpty {
         ContentUnavailableView("No reviews yet", systemImage: "star.bubble", description: Text("Be the first to say how it was."))

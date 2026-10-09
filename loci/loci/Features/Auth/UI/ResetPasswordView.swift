@@ -36,7 +36,13 @@ struct ResetPasswordView: View {
       }
       .navigationTitle(done ? "Done" : "Reset password")
       .navigationBarTitleDisplayMode(.inline)
-      .toolbar { ToolbarItem(placement: .confirmationAction) { Button(done ? "Sign in" : "Cancel") { onDone?() } } }
+      .toolbar {
+        if done {
+          ToolbarItem(placement: .confirmationAction) { Button("Sign in") { onDone?() } }
+        } else {
+          ToolbarItem(placement: .cancellationAction) { Button("Cancel") { onDone?() } }
+        }
+      }
       .errorAlert($error)
     }
   }

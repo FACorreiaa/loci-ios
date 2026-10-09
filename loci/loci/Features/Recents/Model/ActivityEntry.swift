@@ -139,7 +139,7 @@ nonisolated enum ActivityFilter {
     return entries.filter { entry in
       if let option, !option.matches(entry) { return false }
       guard !needle.isEmpty else { return true }
-      return entry.label.localizedCaseInsensitiveContains(needle) || entry.cityName.localizedCaseInsensitiveContains(needle)
+      return entry.label.localizedStandardContains(needle) || entry.cityName.localizedStandardContains(needle)
     }
   }
 }

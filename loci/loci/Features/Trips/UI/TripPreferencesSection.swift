@@ -9,6 +9,7 @@ struct TripPreferencesSection: View {
   let onChange: (PreferencePatch) -> Void
 
   @State private var isExpanded: Bool
+  @State private var pace: Loci_Trip_TripPace
   @State private var mobility = ""
   @FocusState private var mobilityFocused: Bool
 
@@ -20,6 +21,7 @@ struct TripPreferencesSection: View {
     self.constraints = constraints
     self.onChange = onChange
     _isExpanded = State(initialValue: startsExpanded)
+    _pace = State(initialValue: constraints.pace)
   }
 
   var body: some View {
@@ -46,6 +48,7 @@ struct TripPreferencesSection: View {
     .listRowBackground(Color.lociCard)
     .onAppear { mobility = constraints.hasMobility ? constraints.mobility : "" }
     .onChange(of: constraints.mobility) { _, value in if !mobilityFocused { mobility = value } }
+    .onChange(of: constraints.pace) { _, value in pace = value }
   }
 
   private var summary: some View {
@@ -62,18 +65,19 @@ struct TripPreferencesSection: View {
       Text(badge)
         .font(.lociCaption(12)).foregroundStyle(Color.lociInk)
         .padding(.horizontal, 8).padding(.vertical, 3)
-        .overlay(Capsule().stroke(Color.lociBorder))
+        .overlay { Capsule().stroke(Color.lociBorder) }
     }
   }
 
   private var paceRow: some View {
     VStack(alignment: .leading, spacing: 6) {
       Text("Pace").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
-      Picker("Pace", selection: Binding(get: { constraints.pace }, set: { onChange(.pace($0)) })) {
+      Picker("Pace", selection: $pace) {
         ForEach(TripFormat.paceOptions, id: \.self) { Text(TripFormat.paceLabel($0)).tag($0) }
       }
       .pickerStyle(.segmented)
       .labelsHidden()
+      .onChange(of: pace) { _, value in if value != constraints.pace { onChange(.pace(value)) } }
     }
   }
 
@@ -87,10 +91,10 @@ struct TripPreferencesSection: View {
             onChange(.budget(TripFormat.toggledBudget(current: constraints.hasBudgetLevel ? constraints.budgetLevel : nil, tapped: level)))
           } label: {
             Text(TripFormat.budgetLabel(level) ?? "")
-              .font(.lociCaption(14)).frame(maxWidth: .infinity, minHeight: 32)
+              .font(.lociCaption(14)).frame(maxWidth: .infinity, minHeight: LociTheme.minTapTarget)
               .foregroundStyle(selected ? LociTheme.stampInk : Color.lociInk)
               .background(selected ? Color.lociForest : Color.clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-              .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.lociBorder))
+              .overlay { RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.lociBorder) }
           }
           .buttonStyle(.plain)
           .accessibilityLabel("Budget level \(level)")

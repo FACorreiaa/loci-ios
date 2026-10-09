@@ -55,7 +55,7 @@ struct ReviewComposer: View {
         Section {
           Toggle("I remember when I went", isOn: $hasVisitDate.animation())
           if hasVisitDate {
-            DatePicker("Visited", selection: visitDate, in: ...Date(), displayedComponents: .date)
+            DatePicker("Visited", selection: $form.visitDay, in: ...Date(), displayedComponents: .date)
           }
         } footer: {
           Text("Optional. Only the month and year are shown.")
@@ -63,16 +63,16 @@ struct ReviewComposer: View {
         if let editing, onDelete != nil {
           Section {
             Button("Delete review", systemImage: "trash", role: .destructive) { confirmingDelete = true }
-          }
-          .confirmationDialog("Delete your review?", isPresented: $confirmingDelete, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) { Task { await delete(editing) } }
-          } message: {
-            Text("This can't be undone.")
+              .confirmationDialog("Delete your review?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) { Task { await delete(editing) } }
+              } message: {
+                Text("This can't be undone.")
+              }
           }
         }
       }
       .scrollContentBackground(.hidden)
-      .background(Color.lociPaper.ignoresSafeArea())
+      .background(Color.lociPaper)
       .navigationTitle(isEditing ? "Edit your review" : "Write a review")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -126,10 +126,6 @@ struct ReviewComposer: View {
     }
   }
 
-  private var visitDate: Binding<Date> {
-    Binding(get: { form.visitDate ?? Date() }, set: { form.visitDate = $0 })
-  }
-
   private func counter(_ text: String, warning: Bool) -> some View {
     Text(text).monospacedDigit().foregroundStyle(warning ? Color.lociCoral : Color.lociMutedInk)
   }
@@ -165,6 +161,7 @@ struct ReviewComposer: View {
 /// Tap a star to rate; the label under it is web's word for that rating.
 struct StarPicker: View {
   @Binding var rating: Int
+  @ScaledMetric(relativeTo: .title) private var starSize = 30.0
 
   var body: some View {
     VStack(spacing: 8) {
@@ -174,13 +171,13 @@ struct StarPicker: View {
             rating = star
           } label: {
             Image(systemName: star <= rating ? "star.fill" : "star")
-              .font(.system(size: 30, weight: .medium))
+              .font(.system(size: starSize, weight: .medium))
               .foregroundStyle(star <= rating ? Color.lociCoral : Color.lociBorder)
               .symbolEffect(.bounce, value: rating == star)
               .frame(minWidth: 44, minHeight: 44)
           }
           .buttonStyle(.plain)
-          .accessibilityLabel("\(star) star\(star == 1 ? "" : "s"), \(ReviewRating.label(star))")
+          .accessibilityLabel(Text("^[\(star) star](inflect: true), \(ReviewRating.label(star))"))
           .accessibilityAddTraits(star == rating ? .isSelected : [])
         }
       }

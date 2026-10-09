@@ -2,11 +2,12 @@ import AuthenticationServices
 import SwiftUI
 
 public struct LoginScreen: View {
-  @StateObject private var viewModel: LoginViewModel
+  @State private var viewModel: LoginViewModel
   @Namespace private var animationNamespace
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-  public init(onAuthenticated: @escaping () -> Void = {}) { _viewModel = StateObject(wrappedValue: LoginViewModel(onAuthenticated: onAuthenticated)) }
+  public init(onAuthenticated: @escaping () -> Void = {}) { _viewModel = State(initialValue: LoginViewModel(onAuthenticated: onAuthenticated)) }
 
   public var body: some View {
     NavigationStack {
@@ -17,9 +18,9 @@ public struct LoginScreen: View {
           feedbackMessages
 
           if viewModel.isSignup {
-            SignUpView(viewModel: viewModel).transition(.opacity.combined(with: .move(edge: .trailing)))
+            SignUpView(viewModel: viewModel).transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .trailing)))
           } else {
-            SignInView(viewModel: viewModel).transition(.opacity.combined(with: .move(edge: .leading)))
+            SignInView(viewModel: viewModel).transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .leading)))
           }
 
           oauthDivider
@@ -28,17 +29,13 @@ public struct LoginScreen: View {
         }.padding(.horizontal, 24).padding(.bottom, 32)
       }.background(Color.lociPaper.ignoresSafeArea()).sheet(isPresented: $viewModel.showForgotPassword) {
         ForgotPasswordSheet { viewModel.showForgotPassword = false }
-      }.sheet(isPresented: $viewModel.showMFAModal) {
-        if let token = viewModel.pendingMFAToken {
-          MFACodeSheet(
-            mfaToken: token,
-            onSubmit: { code, recoveryCode in viewModel.handleMFASubmit(code: code, recoveryCode: recoveryCode) },
-            onCancel: {
-              viewModel.showMFAModal = false
-              viewModel.pendingMFAToken = nil
-            }
-          )
-        }
+      }.sheet(item: $viewModel.pendingMFA) { _ in
+        MFACodeSheet(
+          isLoading: viewModel.isLoading,
+          errorMessage: viewModel.mfaErrorMessage,
+          onSubmit: { code, recoveryCode in viewModel.handleMFASubmit(code: code, recoveryCode: recoveryCode) },
+          onCancel: { viewModel.cancelMFA() }
+        )
       }
     }
   }
@@ -47,7 +44,7 @@ public struct LoginScreen: View {
 
   @ViewBuilder private var headerView: some View {
     VStack(spacing: 12) {
-      Image("LociMascot").resizable().scaledToFit().frame(width: 96, height: 96).padding(.top, 16)
+      Image(decorative: "LociMascot").resizable().scaledToFit().frame(width: 96, height: 96).padding(.top, 16)
 
       Text("Loci").font(.lociDisplay(34)).foregroundStyle(Color.lociInk)
 
@@ -55,10 +52,13 @@ public struct LoginScreen: View {
     }
   }
 
+  /// Opacity-only when Reduce Motion is on; the transitions above drop their slide to match.
+  private var modeAnimation: Animation { reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: 0.35, dampingFraction: 0.8) }
+
   @ViewBuilder private var modeSwitcher: some View {
     HStack(spacing: 0) {
       Button {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAnimation(modeAnimation) {
           viewModel.isSignup = false
           viewModel.clearMessages()
         }
@@ -77,10 +77,10 @@ public struct LoginScreen: View {
             }
           }
         )
-      }
+      }.accessibilityAddTraits(viewModel.isSignup ? [] : .isSelected)
 
       Button {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+        withAnimation(modeAnimation) {
           viewModel.isSignup = true
           viewModel.clearMessages()
         }
@@ -99,8 +99,8 @@ public struct LoginScreen: View {
             }
           }
         )
-      }
-    }.padding(4).background(Color.lociMuted.opacity(0.5)).cornerRadius(LociTheme.cornerRadius + 2)
+      }.accessibilityAddTraits(viewModel.isSignup ? .isSelected : [])
+    }.padding(4).background(Color.lociMuted.opacity(0.5)).clipShape(.rect(cornerRadius: LociTheme.cornerRadius + 2))
   }
 
   @ViewBuilder private var feedbackMessages: some View {
@@ -109,7 +109,7 @@ public struct LoginScreen: View {
         Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Color.lociDestructive)
         Text(errorMessage).font(.footnote).foregroundStyle(Color.lociDestructive)
         Spacer()
-      }.padding(12).background(Color.lociDestructive.opacity(0.08)).cornerRadius(LociTheme.cornerRadius)
+      }.padding(12).background(Color.lociDestructive.opacity(0.08)).clipShape(.rect(cornerRadius: LociTheme.cornerRadius))
     }
 
     if let successMessage = viewModel.successMessage {
@@ -117,7 +117,7 @@ public struct LoginScreen: View {
         Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.lociForest)
         Text(successMessage).font(.footnote).foregroundStyle(Color.lociForest)
         Spacer()
-      }.padding(12).background(Color.lociForest.opacity(0.08)).cornerRadius(LociTheme.cornerRadius)
+      }.padding(12).background(Color.lociForest.opacity(0.08)).clipShape(.rect(cornerRadius: LociTheme.cornerRadius))
     }
   }
 
@@ -133,14 +133,14 @@ public struct LoginScreen: View {
   /// to Apple's own artwork. The request itself is built in
   /// AppleSignInService, so this only starts it.
   @ViewBuilder private var appleSignInButton: some View {
-    AppleSignInLabel(style: colorScheme == .dark ? .white : .black).frame(height: 50).cornerRadius(LociTheme.cornerRadius)
-      .overlay(
+    AppleSignInLabel(style: colorScheme == .dark ? .white : .black).frame(height: 50).clipShape(.rect(cornerRadius: LociTheme.cornerRadius))
+      .overlay {
         Button {
           viewModel.performAppleSignIn()
         } label: {
           Color.clear.contentShape(Rectangle())
         }.accessibilityLabel("Sign in with Apple")
-      ).disabled(viewModel.isLoading)
+      }.disabled(viewModel.isLoading)
   }
 
   @ViewBuilder private var googleSignInButton: some View {
@@ -148,11 +148,11 @@ public struct LoginScreen: View {
       viewModel.performGoogleSignIn()
     } label: {
       HStack(spacing: 12) {
-        Image(systemName: "g.circle.fill").font(.system(size: 20, weight: .medium)).foregroundColor(.lociCoral)
-        Text("Continue with Google").font(.body.weight(.semibold)).foregroundColor(.lociInk)
-      }.frame(maxWidth: .infinity).frame(height: 50).background(Color.lociCard).cornerRadius(LociTheme.cornerRadius).overlay(
+        Image(systemName: "g.circle.fill").font(.system(size: 20, weight: .medium)).foregroundStyle(Color.lociCoral)
+        Text("Continue with Google").font(.body.weight(.semibold)).foregroundStyle(Color.lociInk)
+      }.frame(maxWidth: .infinity).frame(height: 50).background(Color.lociCard).clipShape(.rect(cornerRadius: LociTheme.cornerRadius)).overlay {
         RoundedRectangle(cornerRadius: LociTheme.cornerRadius).stroke(Color.lociBorder.opacity(0.8), lineWidth: LociTheme.borderWidth)
-      )
+      }
     }.disabled(viewModel.isLoading)
   }
 }

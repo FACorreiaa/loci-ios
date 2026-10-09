@@ -10,20 +10,22 @@ struct NearbyWalkLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: NearbyWalkAttributes.self) { context in
       LockScreenView(state: context.state, attributes: context.attributes)
+        // The tint is always cream, so `.secondary` must resolve against light.
+        .environment(\.colorScheme, .light)
         .activityBackgroundTint(Palette.paper)
         .activitySystemActionForegroundColor(Palette.forest)
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
-          Label(context.state.stepsText, systemImage: "figure.walk").font(.headline).foregroundStyle(Palette.ink)
+          Label(context.state.stepsText, systemImage: "figure.walk").font(.headline).foregroundStyle(.white)
         }
         DynamicIslandExpandedRegion(.trailing) {
-          Text(context.state.distanceText).font(.headline).foregroundStyle(Palette.ink)
+          Text(context.state.distanceText).font(.headline).foregroundStyle(.white)
         }
         DynamicIslandExpandedRegion(.bottom) {
           if let destination = context.state.routeText {
             Label(destination, systemImage: "arrow.triangle.turn.up.right.diamond.fill")
-              .font(.subheadline).foregroundStyle(Palette.forest).lineLimit(1)
+              .font(.subheadline).foregroundStyle(Palette.islandForest).lineLimit(1)
           } else if let nearest = context.state.nearestText {
             Label(nearest, systemImage: "mappin.and.ellipse").font(.subheadline).foregroundStyle(Palette.terracotta).lineLimit(1)
           } else {
@@ -82,9 +84,12 @@ private struct LockScreenView: View {
 }
 
 /// NATIVE_DESIGN light tokens. The Lock Screen tints the background itself.
+/// The Dynamic Island is always black, so it uses white and `islandForest`
+/// in place of `ink` and `forest`.
 enum Palette {
   static let paper = Color(red: 0.961, green: 0.941, blue: 0.902)
   static let ink = Color(red: 0.102, green: 0.180, blue: 0.149)
   static let forest = Color(red: 0.129, green: 0.302, blue: 0.235)
   static let terracotta = Color(red: 0.780, green: 0.420, blue: 0.290)
+  static let islandForest = Color(red: 0.561, green: 0.800, blue: 0.690)
 }

@@ -69,7 +69,9 @@ nonisolated struct PackSummary: Equatable, Hashable, Identifiable, Sendable {
   }
 
   /// "3 days · 12 stops"
-  var sizeLabel: String { "\(dayCount) \(dayCount == 1 ? "day" : "days") · \(stopCount) \(stopCount == 1 ? "stop" : "stops")" }
+  var sizeLabel: String {
+    String(AttributedString(localized: "^[\(dayCount) day](inflect: true) · ^[\(stopCount) stop](inflect: true)").characters)
+  }
 }
 
 nonisolated enum PackBadge: Equatable, Sendable {

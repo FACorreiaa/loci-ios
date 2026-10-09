@@ -1,3 +1,4 @@
+import Accessibility
 import CoreLocation
 import Foundation
 import LociConnectProto
@@ -24,6 +25,8 @@ import UserNotifications
     guard points > 0 else { return }
     let toast = Toast(points: points, label: label)
     current = toast
+    // The chip leaves before VoiceOver would reach it, so it is read out now.
+    AccessibilityNotification.Announcement(AttributedString(localized: "^[\(points) point](inflect: true): \(label)")).post()
     Task {
       try? await Task.sleep(for: .seconds(2.5))
       if current?.id == toast.id { current = nil }

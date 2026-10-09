@@ -31,7 +31,11 @@ struct MemoryView: View {
             HStack {
               Text(trait.label)
               Spacer()
-              Button("Forget") { Task { await forget(trait: trait.key) } }.font(.lociCaption()).textCase(nil)
+              Button("Forget") { Task { await forget(trait: trait.key) } }
+                .font(.lociCaption()).textCase(nil)
+                .frame(minWidth: LociTheme.minTapTarget, minHeight: LociTheme.minTapTarget)
+                .contentShape(Rectangle())
+                .accessibilityLabel("Forget \(trait.label)")
             }
           } footer: {
             Text("From \(trait.evidenceCount) signals")

@@ -101,22 +101,25 @@ import SwiftUI
 struct RecentsView: View {
   enum Segment: String, CaseIterable { case feed = "Feed", cities = "Cities" }
 
-  @State var store: RecentsStore
+  @State private var store: RecentsStore
   @State private var segment: Segment
   @State private var typeId = "all"
   @State private var query = ""
   private let router = AppRouter.shared
 
-  init(store: RecentsStore = RecentsStore(), segment: Segment = .feed) {
-    _store = State(initialValue: store)
+  /// `store` is an autoclosure so a parent's re-render does not build a store
+  /// that `State` would throw away; only the first one is ever made.
+  init(store: @autoclosure @escaping () -> RecentsStore = RecentsStore(), segment: Segment = .feed) {
+    _store = State(wrappedValue: store())
     _segment = State(initialValue: segment)
   }
 
-  private var visible: [ActivityEntry] { ActivityFilter.apply(store.entries, typeId: typeId, query: query) }
   private var isFiltered: Bool { typeId != "all" || !query.trimmingCharacters(in: .whitespaces).isEmpty }
-  private var visibleCities: [RecentCity] { RecentCities.filter(store.cities, query: query) }
 
   var body: some View {
+    // Filtered once per update, for the list and the empty states alike.
+    let visible = segment == .feed ? ActivityFilter.apply(store.entries, typeId: typeId, query: query) : []
+    let visibleCities = segment == .cities ? RecentCities.filter(store.cities, query: query) : []
     List {
       Picker("View", selection: $segment) { ForEach(Segment.allCases, id: \.self) { Text($0.rawValue) } }
         .pickerStyle(.segmented)
@@ -124,18 +127,16 @@ struct RecentsView: View {
         .listRowInsets(EdgeInsets())
 
       switch segment {
-      case .feed: feed
-      case .cities: citiesList
+      case .feed: feed(visible)
+      case .cities: citiesList(visibleCities)
       }
     }
     .listStyle(.insetGrouped)
     .scrollContentBackground(.hidden)
-    .background(Color.lociPaper.ignoresSafeArea())
-    .overlay { overlay }
+    .background { Color.lociPaper.ignoresSafeArea() }
+    .overlay { overlay(visible: visible, visibleCities: visibleCities) }
     .searchable(text: $query, prompt: segment == .feed ? "Search your activity…" : "Search cities…")
     .navigationTitle("Recents")
-    .navigationDestination(for: ActivityDestination.self) { ActivityDestinationView(destination: $0) }
-    .navigationDestination(for: RecentCity.self) { RecentCityView(city: $0) }
     .refreshable { await store.reload(segment) }
     .task(id: segment) { await store.loadIfNeeded(segment) }
     .errorAlert($store.error)
@@ -144,7 +145,7 @@ struct RecentsView: View {
 
   // MARK: - Feed
 
-  @ViewBuilder private var feed: some View {
+  @ViewBuilder private func feed(_ visible: [ActivityEntry]) -> some View {
     switch store.feedPhase {
     case .idle, .loading: SkeletonRows()
     case .failed: EmptyView()
@@ -189,13 +190,13 @@ struct RecentsView: View {
 
   // MARK: - Cities
 
-  @ViewBuilder private var citiesList: some View {
+  @ViewBuilder private func citiesList(_ visibleCities: [RecentCity]) -> some View {
     switch store.citiesPhase {
     case .idle, .loading: SkeletonRows()
     case .failed: EmptyView()
     case .loaded:
       if !visibleCities.isEmpty {
-        Section(visibleCities.count == 1 ? "1 city" : "\(visibleCities.count) cities") {
+        Section("^[\(visibleCities.count) city](inflect: true)") {
           ForEach(visibleCities) { city in
             NavigationLink(value: city) { CityRow(city: city, now: store.now) }
           }
@@ -207,7 +208,7 @@ struct RecentsView: View {
 
   // MARK: - Empty and error states (web copy)
 
-  @ViewBuilder private var overlay: some View {
+  @ViewBuilder private func overlay(visible: [ActivityEntry], visibleCities: [RecentCity]) -> some View {
     switch segment {
     case .feed:
       if case .failed = store.feedPhase {
@@ -316,7 +317,7 @@ private struct CityRow: View {
       RecentsBadgeIcon(systemImage: city.level.systemImage)
       VStack(alignment: .leading, spacing: 3) {
         Text(city.name).font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
-        MetaLine(city.interactionCount == 1 ? "1 interaction" : "\(city.interactionCount) interactions", city.level.label)
+        MetaLine(String(AttributedString(localized: "^[\(city.interactionCount) interaction](inflect: true)").characters), city.level.label)
           .lociCoordStyle(10)
         if let latest = city.interactions.first {
           Text("Latest: \(latest.prompt)").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
@@ -345,11 +346,14 @@ private struct CityRow: View {
 struct RecentsBadgeIcon: View {
   let systemImage: String
 
+  @ScaledMetric(relativeTo: .subheadline) private var glyph: CGFloat = 14
+  @ScaledMetric(relativeTo: .subheadline) private var side: CGFloat = 32
+
   var body: some View {
     Image(systemName: systemImage)
-      .font(.system(size: 14, weight: .medium))
+      .font(.system(size: glyph, weight: .medium))
       .foregroundStyle(Color.lociForest)
-      .frame(width: 32, height: 32)
+      .frame(width: side, height: side)
       .background(Color.lociMuted, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
       .accessibilityHidden(true)
   }
@@ -361,7 +365,7 @@ private struct ActivityTypeChips: View {
   let counts: [String: Int]
 
   var body: some View {
-    ScrollView(.horizontal, showsIndicators: false) {
+    ScrollView(.horizontal) {
       HStack(spacing: 8) {
         ForEach(ActivityTypeOption.all) { option in
           let isOn = selection == option.id
@@ -385,6 +389,7 @@ private struct ActivityTypeChips: View {
       .padding(.horizontal, 4)
       .padding(.vertical, 4)
     }
+    .scrollIndicators(.hidden)
     .accessibilityLabel("Filter activity by type")
   }
 }
@@ -489,7 +494,7 @@ private struct SavedItineraryLoader: View {
         RecentsError(title: "Could not load this itinerary", message: message, retry: "Try again") { Task { await load() } }
       }
     }
-    .background(Color.lociPaper.ignoresSafeArea())
+    .background { Color.lociPaper.ignoresSafeArea() }
     .task { await load() }
   }
 

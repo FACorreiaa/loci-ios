@@ -36,6 +36,8 @@ struct ResultsHeader: View {
       CityTile(kicker: "Weather", value: city?.weather ?? "", symbol: "cloud.sun")
     }
     .redacted(reason: city == nil ? .placeholder : [])
+    // A container: the label names the grid without overriding every tile.
+    .accessibilityElement(children: .contain)
     .accessibilityLabel(city == nil ? "Loading city facts" : "City facts")
   }
 }
@@ -47,7 +49,7 @@ private struct CityTile: View {
 
   var body: some View {
     HStack(spacing: 8) {
-      Image(systemName: symbol).foregroundStyle(Color.lociForest).frame(width: 20)
+      Image(systemName: symbol).foregroundStyle(Color.lociForest).frame(width: 20).accessibilityHidden(true)
       VStack(alignment: .leading, spacing: 1) {
         Text(kicker).lociCoordStyle(10)
         Text(value.isEmpty ? "N/A" : value).font(.lociCaption(13)).foregroundStyle(Color.lociInk).lineLimit(1)
@@ -56,6 +58,7 @@ private struct CityTile: View {
     }
     .padding(10)
     .background(Color.lociMuted, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    .accessibilityElement(children: .combine)
   }
 }
 
@@ -76,11 +79,12 @@ struct LocalContextStrip: View {
                 .background(Color.lociMuted, in: Capsule())
             }
           }
-          ScrollView(.horizontal, showsIndicators: false) {
+          ScrollView(.horizontal) {
             HStack(spacing: 8) {
               ForEach(Array(context.weather.enumerated()), id: \.offset) { _, day in WeatherChip(day: day) }
             }
           }
+          .scrollIndicators(.hidden)
           .scrollClipDisabled()
         }
         if let context, !context.alerts.isEmpty {
@@ -99,6 +103,8 @@ struct LocalContextStrip: View {
 private struct WeatherChip: View {
   let day: Loci_Localcontext_WeatherDay
 
+  @ScaledMetric(relativeTo: .caption) private var width: CGFloat = 64
+
   var body: some View {
     VStack(spacing: 3) {
       Text(day.hasDate ? day.date.date.formatted(.dateTime.weekday(.abbreviated)) : "—").lociCoordStyle(10)
@@ -108,7 +114,7 @@ private struct WeatherChip: View {
         Text("\(Int((day.precipProb * 100).rounded()))% rain").font(.lociCaption(10)).foregroundStyle(Color.lociMutedInk)
       }
     }
-    .frame(width: 64)
+    .frame(width: width)
     .padding(.vertical, 8)
     .background(Color.lociMuted, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     .accessibilityElement(children: .combine)

@@ -6,7 +6,7 @@ import SwiftUI
 struct TravelProfileEditor: View {
   enum Section: String, CaseIterable { case basic = "Basic", hotels = "Hotels", dining = "Dining", activities = "Activities", planning = "Planning" }
 
-  @State var draft: TravelProfileDraft
+  @State private var draft: TravelProfileDraft
   let onSave: (TravelProfileDraft) async -> Bool
 
   @Environment(\.dismiss) private var dismiss
@@ -59,8 +59,8 @@ struct TravelProfileEditor: View {
       Toggle("Default profile", isOn: $draft.isDefault)
     }
     SwiftUI.Section("Search") {
-      Stepper("Radius: \(Int(draft.searchRadiusKm)) km", value: $draft.searchRadiusKm, in: 1...100, step: 1)
-      Stepper("Budget: \(String(repeating: "€", count: draft.budgetLevel))", value: $draft.budgetLevel, in: 1...5)
+      Stepper("Radius: \(Int(draft.searchRadiusKm)) km", value: $draft.searchRadiusKm, in: TravelProfileDraft.radiusRange, step: 1)
+      Stepper("Budget: \(String(repeating: "€", count: draft.budgetLevel))", value: $draft.budgetLevel, in: TravelProfileDraft.budgetRange)
       Picker("Time of day", selection: $draft.preferredTime) {
         ForEach(Loci_Profile_DayPreference.choices, id: \.self) { Text($0.label).tag($0) }
       }
@@ -87,10 +87,20 @@ struct TravelProfileEditor: View {
   @ViewBuilder private var hotels: some View {
     SwiftUI.Section("Accommodation types") { ChipGrid(values: TravelProfileDraft.accommodationTypes, selection: $draft.accommodationTypes) }
     SwiftUI.Section("Stars and price") {
-      Stepper("Stars from \(Int(draft.starMin))", value: $draft.starMin, in: 1...draft.starMax)
-      Stepper("Stars up to \(Int(draft.starMax))", value: $draft.starMax, in: draft.starMin...5)
-      Stepper("From \(Int(draft.pricePerNightMin)) / night", value: $draft.pricePerNightMin, in: 0...draft.pricePerNightMax, step: 10)
-      Stepper("Up to \(Int(draft.pricePerNightMax)) / night", value: $draft.pricePerNightMax, in: draft.pricePerNightMin...5000, step: 10)
+      Stepper("Stars from \(Int(draft.starMin))", value: $draft.starMin, in: TravelProfileDraft.starRange.lowerBound...draft.starMax)
+      Stepper("Stars up to \(Int(draft.starMax))", value: $draft.starMax, in: draft.starMin...TravelProfileDraft.starRange.upperBound)
+      Stepper(
+        "From \(Int(draft.pricePerNightMin)) / night",
+        value: $draft.pricePerNightMin,
+        in: TravelProfileDraft.pricePerNightRange.lowerBound...draft.pricePerNightMax,
+        step: 10
+      )
+      Stepper(
+        "Up to \(Int(draft.pricePerNightMax)) / night",
+        value: $draft.pricePerNightMax,
+        in: draft.pricePerNightMin...TravelProfileDraft.pricePerNightRange.upperBound,
+        step: 10
+      )
     }
     SwiftUI.Section("Amenities") { ChipGrid(values: TravelProfileDraft.amenities, selection: $draft.amenities) }
   }
@@ -99,8 +109,18 @@ struct TravelProfileEditor: View {
     SwiftUI.Section("Cuisines") { ChipGrid(values: TravelProfileDraft.cuisines, selection: $draft.cuisines) }
     SwiftUI.Section("Service style") { ChipGrid(values: TravelProfileDraft.serviceStyles, selection: $draft.serviceStyles) }
     SwiftUI.Section("Price per person") {
-      Stepper("From \(Int(draft.pricePerPersonMin))", value: $draft.pricePerPersonMin, in: 0...draft.pricePerPersonMax, step: 5)
-      Stepper("Up to \(Int(draft.pricePerPersonMax))", value: $draft.pricePerPersonMax, in: draft.pricePerPersonMin...1000, step: 5)
+      Stepper(
+        "From \(Int(draft.pricePerPersonMin))",
+        value: $draft.pricePerPersonMin,
+        in: TravelProfileDraft.pricePerPersonRange.lowerBound...draft.pricePerPersonMax,
+        step: 5
+      )
+      Stepper(
+        "Up to \(Int(draft.pricePerPersonMax))",
+        value: $draft.pricePerPersonMax,
+        in: draft.pricePerPersonMin...TravelProfileDraft.pricePerPersonRange.upperBound,
+        step: 5
+      )
     }
     SwiftUI.Section {
       Picker("Chains or local", selection: $draft.chainVsLocal) {
@@ -176,6 +196,9 @@ struct ChipGrid: View {
           Text(option.label).font(.lociCaption(13)).padding(.horizontal, 12).padding(.vertical, 7)
             .background(isOn ? Color.lociForest : Color.lociMuted, in: Capsule())
             .foregroundStyle(isOn ? Color.lociPaper : Color.lociInk)
+            // The capsule stays compact; the tap target is the 44pt minimum.
+            .frame(minHeight: LociTheme.minTapTarget)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isOn ? .isSelected : [])

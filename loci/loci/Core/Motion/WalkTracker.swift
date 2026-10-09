@@ -23,19 +23,29 @@ import Observation
     distanceMeters = 0
     deniedByUser = false
     isRunning = true
-    pedometer.startUpdates(from: Date()) { [weak self] data, error in
-      Task { @MainActor in
-        guard let self else { return }
-        if let error {
-          // Permission refused (or motion unavailable): stop counting, keep the walk.
-          if (error as NSError).code == CMErrorMotionActivityNotAuthorized.rawValue { self.deniedByUser = true }
-          return
-        }
-        guard let data else { return }
-        self.steps = data.numberOfSteps.intValue
-        if let distance = data.distance { self.distanceMeters = distance.doubleValue }
+    // CoreMotion calls this on its own queue: read plain values here and hop
+    // to the main actor with those, never with `CMPedometerData` itself.
+    pedometer.startUpdates(from: Date()) { @Sendable [weak self] data, error in
+      if let error {
+        // Permission refused (or motion unavailable): stop counting, keep the walk.
+        let denied = (error as NSError).code == CMErrorMotionActivityNotAuthorized.rawValue
+        Task { @MainActor in self?.apply(denied: denied) }
+        return
       }
+      guard let data else { return }
+      let steps = data.numberOfSteps.intValue
+      let meters = data.distance?.doubleValue
+      Task { @MainActor in self?.apply(steps: steps, meters: meters) }
     }
+  }
+
+  private func apply(denied: Bool) {
+    if denied { deniedByUser = true }
+  }
+
+  private func apply(steps: Int, meters: Double?) {
+    self.steps = steps
+    if let meters { distanceMeters = meters }
   }
 
   func stop() {

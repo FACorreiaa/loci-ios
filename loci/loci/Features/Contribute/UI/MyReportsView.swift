@@ -67,12 +67,12 @@ struct MyReportsView: View {
   var body: some View {
     List {
       if store.phase == .loaded, store.total > 0 {
-        Text(store.total == 1 ? "1 report" : "\(store.total) reports").lociCoordStyle(10)
+        Text("^[\(store.total) report](inflect: true)").lociCoordStyle(10)
           .listRowBackground(Color.clear)
           .listRowSeparator(.hidden)
       }
       ForEach(store.claims) { claim in
-        Group {
+        VStack(alignment: .leading, spacing: 0) {
           if claim.opensPlace {
             NavigationLink(value: claim) { MyClaimRow(claim: claim) }
           } else {
@@ -101,7 +101,7 @@ struct MyReportsView: View {
     .listStyle(.plain)
     .scrollContentBackground(.hidden)
     .contentMargins(.horizontal, LociTheme.defaultPadding, for: .scrollContent)
-    .background(Color.lociPaper.ignoresSafeArea())
+    .background(Color.lociPaper)
     .overlay { overlay }
     .navigationTitle("Your reports")
     .navigationBarTitleDisplayMode(.inline)
@@ -148,9 +148,9 @@ struct MyClaimRow: View {
   var body: some View {
     HStack(alignment: .top, spacing: 12) {
       Image(systemName: claim.symbol)
-        .font(.system(size: 18))
+        .font(.body)
         .foregroundStyle(claim.status == .accepted ? Color.lociForest : Color.lociMutedInk)
-        .frame(width: 24)
+        .frame(minWidth: 24)
         .accessibilityHidden(true)
       VStack(alignment: .leading, spacing: 3) {
         Text(claim.placeName).font(.lociBody(15).weight(.semibold)).foregroundStyle(Color.lociInk)

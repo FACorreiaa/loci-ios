@@ -47,7 +47,12 @@ import UIKit
         session.presentationContextProvider = self
         session.prefersEphemeralWebBrowserSession = false
         self.webAuthSession = session
-        session.start()
+        // A session that doesn't start never calls its handler; resume here
+        // or the connect would wait forever.
+        if !session.start() {
+          self.webAuthSession = nil
+          continuation.resume(throwing: APIError.custom("Calendar connect couldn't open. Please try again."))
+        }
       }
     } catch let error as APIError {
       throw error

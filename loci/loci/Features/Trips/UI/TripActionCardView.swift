@@ -18,7 +18,7 @@ struct TripActionCardView: View {
       VStack(alignment: .leading, spacing: 10) {
         Text(proposal.summary).font(.museBody)
         if isHotels {
-          ForEach(Array(proposal.options.enumerated()), id: \.offset) { index, option in
+          ForEach(proposal.options.enumerated(), id: \.offset) { index, option in
             Button { onApply(index) } label: {
               VStack(alignment: .leading) {
                 Text(option.label)

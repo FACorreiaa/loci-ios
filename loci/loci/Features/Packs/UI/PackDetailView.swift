@@ -78,13 +78,14 @@ import SwiftUI
 /// A City Pack (web: /packs/:slug): header, map hero, the days, then what
 /// the caller can do with it. Opened from the catalog and by `loci://packs/:slug`.
 struct PackDetailView: View {
-  @State var store: PackDetailStore
+  @State private var store: PackDetailStore
   @State private var selectedID: String?
   @State private var detailPlace: Loci_Poi_POIDetailedInfo?
   @State private var showFullMap = false
   @Environment(\.dismiss) private var dismiss
 
-  init(slug: String, service: PacksService = ConnectPacksService()) { _store = State(initialValue: PackDetailStore(slug: slug, service: service)) }
+  /// `State(wrappedValue:)` takes an autoclosure: the store is built once, not on every parent re-render.
+  init(slug: String, service: PacksService = ConnectPacksService()) { _store = State(wrappedValue: PackDetailStore(slug: slug, service: service)) }
 
   var body: some View {
     ScrollView {
@@ -108,16 +109,17 @@ struct PackDetailView: View {
           }
         }
       }.frame(maxWidth: .infinity, alignment: .leading).padding(LociTheme.defaultPadding)
-    }.background(Color.lociPaper.ignoresSafeArea()).navigationTitle(store.detail?.pack.title ?? "City Pack").navigationBarTitleDisplayMode(.inline)
+    }.background { Color.lociPaper.ignoresSafeArea() }.navigationTitle(store.detail?.pack.title ?? "City Pack").navigationBarTitleDisplayMode(.inline)
       .refreshable { await store.load() }.task { if store.detail == nil { await store.load() } }.navigationDestination(item: $store.openTripID) {
         TripEditorView(tripID: $0)
       }.sheet(item: $detailPlace) { place in PlaceDetailSheet(stop: place, destination: .itinerary, cityName: store.detail?.pack.cityName ?? "") }
       .fullScreenCover(isPresented: $showFullMap) {
         if let detail = store.detail {
+          let layout = PackLayout(detail)
           FullMapView(
-            data: Self.mapData(detail),
-            groups: detail.groups,
-            sequence: DayGrouping.sequence(detail.groups),
+            data: layout.mapData,
+            groups: layout.groups,
+            sequence: layout.sequence,
             destination: .itinerary,
             showsDays: true,
             title: detail.pack.cityName.isEmpty ? detail.pack.title : detail.pack.cityName,
@@ -127,17 +129,10 @@ struct PackDetailView: View {
       }.onAppear { Analytics.screen("pack_detail", ["slug": store.slug]) }
   }
 
-  /// Pins numbered like the cards (so card 3 is pin 3 even when an earlier
-  /// stop has no position) and coloured by the server's day.
-  static func mapData(_ detail: PackDetail) -> ResultsMapData {
-    let groups = detail.groups
-    return ResultsMapData(groups: groups, extras: [], sequence: DayGrouping.sequence(groups), showsDays: true, alerts: [])
-  }
-
   @ViewBuilder private func content(_ detail: PackDetail) -> some View {
-    let groups = detail.groups
-    let sequence = DayGrouping.sequence(groups)
-    let mapData = Self.mapData(detail)
+    let layout = PackLayout(detail)
+    let sequence = layout.sequence
+    let mapData = layout.mapData
 
     PackHeader(pack: detail.pack)
     if !mapData.isEmpty { ResultsMapCard(data: mapData, selectedID: selectedID) { showFullMap = true } }
@@ -160,6 +155,21 @@ struct PackDetailView: View {
 }
 
 // MARK: - Pieces
+
+/// The pack laid out once per update: its day groups, the pin numbers, and
+/// the map's pins, numbered like the cards (so card 3 is pin 3 even when an
+/// earlier stop has no position) and coloured by the server's day.
+private struct PackLayout {
+  let groups: [DayGroup]
+  let sequence: [String: Int]
+  let mapData: ResultsMapData
+
+  init(_ detail: PackDetail) {
+    groups = detail.groups
+    sequence = DayGrouping.sequence(groups)
+    mapData = ResultsMapData(groups: groups, extras: [], sequence: sequence, showsDays: true, alerts: [])
+  }
+}
 
 /// The `ResultsHeader` shape for a pack: city kicker, title, summary, tags.
 private struct PackHeader: View {
@@ -200,7 +210,7 @@ private struct PackDaySection: View {
           Text(day.title).font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk).lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
         }
         Spacer(minLength: 4)
-        Text("\(day.stops.count) \(day.stops.count == 1 ? "stop" : "stops")").lociCoordStyle(10)
+        Text("^[\(day.stops.count) stop](inflect: true)").lociCoordStyle(10)
       }.accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
       ForEach(day.stops, id: \.key) { stop in
         let card = stop.card
@@ -249,7 +259,7 @@ private struct PackAccessCard: View {
         if claimFailed { Text("That did not save. Try again in a moment.").font(.lociCaption(13)).foregroundStyle(Color.lociDestructive) }
       case .locked(let days):
         Image(systemName: "lock.fill").foregroundStyle(Color.lociMutedInk).accessibilityHidden(true)
-        Text("\(days) more \(days == 1 ? "day" : "days") in this pack").font(.lociHeadline(17)).foregroundStyle(Color.lociInk)
+        Text("^[\(days) more day](inflect: true) in this pack").font(.lociHeadline(17)).foregroundStyle(Color.lociInk)
         Text("Day one is free to read. The other days are part of the full pack.").font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk)
       }
     }.multilineTextAlignment(.center).frame(maxWidth: .infinity).lociCard(padding: 20)

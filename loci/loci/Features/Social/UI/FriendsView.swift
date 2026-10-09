@@ -20,6 +20,8 @@ struct FriendsView: View {
   @State private var outgoing: [Loci_Social_FriendRequest] = []
   @State private var query = ""
   @State private var results: [SearchHit] = []
+  @State private var searching = false
+  @State private var searchError: String?
   @State private var showsInvite = false
   @State private var showsPhone = false
   @State private var error: String?
@@ -53,7 +55,9 @@ struct FriendsView: View {
     .task { await load() }
   }
 
-  private var isSearching: Bool { query.trimmingCharacters(in: .whitespaces).count >= 2 }
+  /// The username typed, without spaces or the "@".
+  private var searchText: String { query.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "@", with: "") }
+  private var isSearching: Bool { searchText.count >= 2 }
 
   // MARK: Sections
 
@@ -103,7 +107,7 @@ struct FriendsView: View {
         Button("Invite") { showsInvite = true }.font(.lociCaption())
       }
       ForEach(friends, id: \.user.id) { friend in
-        NavigationLink { UserProfileView(username: friend.user.username) } label: {
+        NavigationLink(value: AppRoute.user(username: friend.user.username)) {
           PersonRow(user: friend.user) { EmptyView() }
         }
       }
@@ -120,7 +124,6 @@ struct FriendsView: View {
             Button("Accept") { respond(request, accept: true) }.buttonStyle(.borderedProminent).tint(.lociCoralFill)
             Button("Decline") { respond(request, accept: false) }.buttonStyle(.bordered)
           }
-          .controlSize(.small)
         }
       }
     }
@@ -129,7 +132,7 @@ struct FriendsView: View {
       Section("Sent") {
         ForEach(outgoing, id: \.id) { request in
           PersonRow(user: request.to) {
-            Button("Cancel") { cancel(request) }.buttonStyle(.bordered).controlSize(.small)
+            Button("Cancel") { cancel(request) }.buttonStyle(.bordered)
           }
         }
       }
@@ -139,9 +142,9 @@ struct FriendsView: View {
 
   private var addSection: some View {
     Section {
-      NavigationLink { ContactMatchView() } label: { Label("From your contacts", systemImage: "person.crop.rectangle.stack") }
+      NavigationLink(value: AppRoute.contactMatch) { Label("From your contacts", systemImage: "person.crop.rectangle.stack") }
       if FacebookConnect.isAvailable {
-        NavigationLink { FacebookFriendsView() } label: { Label("From Facebook", systemImage: "person.2.badge.key") }
+        NavigationLink(value: AppRoute.facebookFriends) { Label("From Facebook", systemImage: "person.2.badge.key") }
       }
       Button("Share your invite link", systemImage: "qrcode") { showsInvite = true }
       Button("Let friends find you by number", systemImage: "phone.badge.checkmark") { showsPhone = true }
@@ -155,16 +158,26 @@ struct FriendsView: View {
 
   @ViewBuilder private var searchResults: some View {
     Section {
-      if results.isEmpty { Text("Nobody by that username.").font(.lociCaption()).foregroundStyle(Color.lociMutedInk) }
+      if let searchError {
+        Text(searchError).font(.lociCaption()).foregroundStyle(Color.lociDestructive)
+      } else if results.isEmpty {
+        if searching {
+          ProgressView().frame(maxWidth: .infinity)
+        } else {
+          Text("Nobody by that username.").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+        }
+      }
       ForEach($results) { $hit in
-        NavigationLink { UserProfileView(username: hit.user.username) } label: {
-          PersonRow(user: hit.user) {
-            RelationshipButton(
-              user: hit.user,
-              relationship: $hit.relationship,
-              outgoingRequestID: outgoing.first { $0.to.id == hit.user.id }?.id
-            )
+        // The button sits beside the link, not in its label, so a tap on it never opens the profile.
+        HStack(spacing: 8) {
+          NavigationLink(value: AppRoute.user(username: hit.user.username)) {
+            PersonRow(user: hit.user) { EmptyView() }
           }
+          RelationshipButton(
+            user: hit.user,
+            relationship: $hit.relationship,
+            outgoingRequestID: outgoing.first { $0.to.id == hit.user.id }?.id
+          )
         }
       }
     }
@@ -190,15 +203,26 @@ struct FriendsView: View {
     }
   }
 
+  /// Debounced; a failure says so rather than reading as "nobody found".
   private func search() async {
-    let text = query.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "@", with: "")
+    let text = searchText
+    searchError = nil
     guard text.count >= 2 else {
       results = []
+      searching = false
       return
     }
+    searching = true
     try? await Task.sleep(for: .milliseconds(300))
     guard !Task.isCancelled else { return }
-    results = ((try? await SocialAPI.search(text)) ?? []).map { SearchHit(user: $0.user, relationship: Relationship($0.relationship)) }
+    do {
+      results = try await SocialAPI.search(text).map { SearchHit(user: $0.user, relationship: Relationship($0.relationship)) }
+    } catch {
+      guard !error.isCancellation else { return }
+      results = []
+      searchError = error.userMessage
+    }
+    searching = false
   }
 
   private func respond(_ request: Loci_Social_FriendRequest, accept: Bool) {

@@ -22,13 +22,14 @@ struct TripEditorView: View {
   @State private var loaded: Loaded<Loci_Trip_TripDraft>?
   @State private var isEditing = false
   @State private var renaming: Loci_Trip_TripStop?
+  @State private var isRenaming = false
   @State private var renameText = ""
   @State private var picking: PickerTarget?
   @State private var error: String?
   @State private var hasConflict = false
   @State private var side = ResultsSideData()
   @State private var checklist: TripChecklistStore
-  @State private var preferenceQueue: Task<Void, Never>?
+  @State private var editQueue: Task<Void, Never>?
   /// The day being walked stop by stop (pushed as WalkDayView).
   @State private var walkingDay: WalkDay?
   @State private var planning = false
@@ -122,10 +123,10 @@ struct TripEditorView: View {
         )
       }
     }
-    .alert("Rename stop", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+    .alert("Rename stop", isPresented: $isRenaming, presenting: renaming) { stop in
       TextField("Name", text: $renameText)
       Button("Cancel", role: .cancel) {}
-      Button("Save") { if let stop = renaming { Task { await rename(stop, to: renameText) } } }
+      Button("Save") { enqueue { await rename(stop, to: renameText) } }
     }
     .alert("This trip changed on another device", isPresented: $hasConflict) {
       Button("Reload") { Task { await reload() } }
@@ -135,7 +136,7 @@ struct TripEditorView: View {
     .navigationDestination(item: $walkingDay) { WalkDayView(day: $0) }
     .sheet(item: $picking) { target in
       PlacePicker(cityName: trip?.cityName ?? "") { poi in
-        Task {
+        enqueue {
           switch target {
           case .add(let dayID): await add(poi, toDay: dayID)
           case .replace(let stopID): await replace(stopID, with: poi)
@@ -154,12 +155,12 @@ struct TripEditorView: View {
     Section {
       ForEach(day.stops, id: \.id) { stop in
         StopRow(stop: stop, color: LociTheme.dayColor(Int(day.dayNumber)), isEditing: isEditing) { minutes in
-          Task { await setDuration(stop, minutes: minutes) }
+          enqueue { await setDuration(stop, minutes: minutes) }
         }
         .moveDisabled(!canEdit)
         .swipeActions(edge: .trailing) {
           if canEdit {
-            Button("Remove", role: .destructive) { Task { await remove(stop) } }
+            Button("Remove", role: .destructive) { enqueue { await remove(stop) } }
             Button("Replace") { picking = .replace(stopID: stop.id) }.tint(.lociCoralFill)
           }
         }
@@ -168,6 +169,7 @@ struct TripEditorView: View {
             Button("Rename") {
               renameText = stop.name
               renaming = stop
+              isRenaming = true
             }.tint(.lociForest)
           }
         }
@@ -175,7 +177,7 @@ struct TripEditorView: View {
       .onMove { from, to in
         var ids = day.stops.map(\.id)
         ids.move(fromOffsets: from, toOffset: to)
-        Task { await reorder(day, ids: ids) }
+        enqueue { await reorder(day, ids: ids) }
       }
       if isEditing {
         Button("Add a place to day \(day.dayNumber)", systemImage: "plus") { picking = .add(dayID: day.id) }
@@ -183,7 +185,11 @@ struct TripEditorView: View {
     } header: {
       HStack {
         Circle().fill(LociTheme.dayColor(Int(day.dayNumber))).frame(width: 10, height: 10)
-        Text("Day \(day.dayNumber)" + (day.cityName.isEmpty || day.cityName == trip.cityName ? "" : " · \(day.cityName)"))
+        if day.cityName.isEmpty || day.cityName == trip.cityName {
+          Text("Day \(day.dayNumber)")
+        } else {
+          Text("Day \(day.dayNumber) · \(day.cityName)")
+        }
         let walkDay = WalkDay.from(trip: trip, day: day)
         Button("Walk", systemImage: "figure.walk") { walkingDay = walkDay }
           .labelStyle(.iconOnly)
@@ -324,12 +330,13 @@ struct TripEditorView: View {
     enqueue { await sendPreference(patch) }
   }
 
-  /// Plan and preference edits run one after another on the same queue: two
-  /// quick picks would otherwise both send the version before either landed,
-  /// and the second would be refused as a change from another device.
+  /// Every edit that sends `baseVersion` runs one after another on the same
+  /// queue: two quick edits would otherwise both send the version before
+  /// either landed, and the second would be refused as a change from another
+  /// device.
   private func enqueue(_ edit: @escaping @MainActor () async -> Void) {
-    let previous = preferenceQueue
-    preferenceQueue = Task {
+    let previous = editQueue
+    editQueue = Task {
       await previous?.value
       await edit()
     }

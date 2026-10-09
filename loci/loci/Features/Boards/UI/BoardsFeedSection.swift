@@ -59,8 +59,8 @@ struct BoardsFeedSection: View {
       } else {
         LazyVStack(alignment: .leading, spacing: 0) {
           ForEach(store.posts, id: \.id) { post in
-            PostRowView(post: post, showBoard: store.slug.isEmpty, onVote: { value in Task { await store.vote(post, pressed: value) } }) {
-              PostDetailView(store: BoardPostStore(postID: post.id, feed: store))
+            PostRowView(post: post, showBoard: store.slug.isEmpty, route: .boardPost(id: post.id, feed: RouteRef(store))) { value in
+              Task { await store.vote(post, pressed: value) }
             }.contextMenu { menu(for: post) }
             Divider()
           }

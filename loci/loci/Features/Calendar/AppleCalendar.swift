@@ -26,21 +26,47 @@ import SwiftProtobuf
     return store.events(matching: pred)
   }
 
+  /// One event per dated day. Writing the same trip again replaces its events
+  /// rather than adding a second set: each carries the trip's `loci://trips/<id>`
+  /// link, and the Loci calendar's events with that link go first.
   public func writeTrip(_ trip: Loci_Trip_TripDraft) throws {
     guard isAuthorized else { throw APIError.custom("Calendar access was not granted.") }
     let cal = try lociCalendar()
-    for day in trip.days where day.hasDate {
-      let start = Date(timeIntervalSince1970: TimeInterval(day.date.seconds))
-      let event = EKEvent(eventStore: store)
-      event.calendar = cal
-      event.title = trip.title.isEmpty ? (trip.cityName.isEmpty ? "Loci trip" : "Trip to \(trip.cityName)") : trip.title
-      event.startDate = start
-      event.endDate = start.addingTimeInterval(8 * 60 * 60)
-      event.isAllDay = day.stops.isEmpty
-      event.location = day.cityName.isEmpty ? trip.cityName : day.cityName
-      event.notes = "Day \(day.dayNumber) · Loci"
-      try store.save(event, span: .thisEvent)
+    let link = trip.id.isEmpty ? nil : URL(string: "loci://trips/\(trip.id)")
+    let days = trip.days.filter(\.hasDate)
+    let dates = days.map { Date(timeIntervalSince1970: TimeInterval($0.date.seconds)) }
+    do {
+      if let link {
+        for old in events(linkedTo: link, in: cal, around: dates) { try store.remove(old, span: .thisEvent, commit: false) }
+      }
+      for (day, start) in zip(days, dates) {
+        let event = EKEvent(eventStore: store)
+        event.calendar = cal
+        event.title = trip.title.isEmpty ? (trip.cityName.isEmpty ? "Loci trip" : "Trip to \(trip.cityName)") : trip.title
+        event.startDate = start
+        event.endDate = start.addingTimeInterval(8 * 60 * 60)
+        event.isAllDay = day.stops.isEmpty
+        event.location = day.cityName.isEmpty ? trip.cityName : day.cityName
+        event.notes = "Day \(day.dayNumber) · Loci"
+        event.url = link
+        try store.save(event, span: .thisEvent, commit: false)
+      }
+      try store.commit()
+    } catch {
+      store.reset()
+      throw error
     }
+  }
+
+  /// Events this app wrote for a trip, searched a year either side of its
+  /// dates (and today), since re-pinned days may have moved.
+  private func events(linkedTo link: URL, in cal: EKCalendar, around dates: [Date]) -> [EKEvent] {
+    let now = Date()
+    let year: TimeInterval = 365 * 24 * 60 * 60
+    let start = min(dates.min() ?? now, now).addingTimeInterval(-year)
+    let end = max(dates.max() ?? now, now).addingTimeInterval(year)
+    let pred = store.predicateForEvents(withStart: start, end: end, calendars: [cal])
+    return store.events(matching: pred).filter { $0.url == link }
   }
 
   /// One event per stop, timed by `CalendarSchedule` (web's `.ics` from the

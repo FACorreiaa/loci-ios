@@ -46,6 +46,17 @@ struct PushPrimerSheet: View {
   let primer: PushPrimer
 
   var body: some View {
+    // Full height at AX sizes, and scrolls if the text still outgrows it.
+    ViewThatFits(in: .vertical) {
+      content
+      ScrollView { content }
+    }
+    .background(Color.lociPaper.ignoresSafeArea())
+    .adaptiveDetents([.height(320)])
+    .presentationDragIndicator(.visible)
+  }
+
+  private var content: some View {
     VStack(alignment: .leading, spacing: 16) {
       Image(systemName: "bell.badge")
         .font(.title2)
@@ -69,8 +80,5 @@ struct PushPrimerSheet: View {
       .tint(.lociMutedInk)
     }
     .padding(24)
-    .background(Color.lociPaper.ignoresSafeArea())
-    .presentationDetents([.height(320)])
-    .presentationDragIndicator(.visible)
   }
 }

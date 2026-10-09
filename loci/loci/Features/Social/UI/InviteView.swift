@@ -13,31 +13,36 @@ struct InviteView: View {
   @State private var error: String?
 
   var body: some View {
-    VStack(spacing: 16) {
-      if let invite {
-        let inviter = invite.invite.inviter
-        UserAvatar(user: inviter, size: 88)
-        Text("\(inviter.shownName) wants to travel with you")
-          .font(.lociDisplay(24)).multilineTextAlignment(.center).foregroundStyle(Color.lociInk)
-        Text("Friends on Loci see each other's shared trips and can save them.")
-          .font(.lociCaption(15)).multilineTextAlignment(.center).foregroundStyle(Color.lociMutedInk)
-        switch Relationship(invite.relationship) {
-        case .friends:
-          NavigationLink("See their trips") { UserProfileView(username: inviter.username) }.buttonStyle(.bordered)
-        case .isSelf:
-          Text("This is your own invite. Send it to a friend.").font(.lociCaption())
-        default:
-          Button(isAccepting ? "Connecting…" : "Become friends") { accept() }
-            .buttonStyle(.borderedProminent).tint(.lociCoralFill).controlSize(.large).disabled(isAccepting)
+    ScrollView {
+      VStack(spacing: 16) {
+        if let invite {
+          let inviter = invite.invite.inviter
+          UserAvatar(user: inviter, size: 88)
+          Text("\(inviter.shownName) wants to travel with you")
+            .font(.lociDisplay(24)).multilineTextAlignment(.center).foregroundStyle(Color.lociInk)
+          Text("Friends on Loci see each other's shared trips and can save them.")
+            .font(.lociCaption(15)).multilineTextAlignment(.center).foregroundStyle(Color.lociMutedInk)
+          switch Relationship(invite.relationship) {
+          case .friends:
+            NavigationLink("See their trips", value: AppRoute.user(username: inviter.username)).buttonStyle(.bordered)
+          case .isSelf:
+            Text("This is your own invite. Send it to a friend.").font(.lociCaption())
+          default:
+            Button(isAccepting ? "Connecting…" : "Become friends") { accept() }
+              .buttonStyle(.borderedProminent).tint(.lociCoralFill).controlSize(.large).disabled(isAccepting)
+          }
+        } else if let failure {
+          ContentUnavailableView(failure.title(for: .open), systemImage: "link.badge.plus", description: Text(failure.hint))
+        } else {
+          ProgressView()
         }
-      } else if let failure {
-        ContentUnavailableView(failure.title(for: .open), systemImage: "link.badge.plus", description: Text(failure.hint))
-      } else {
-        ProgressView()
       }
+      .padding(24)
+      .frame(maxWidth: .infinity)
     }
-    .padding(24)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    // Centred while it fits; scrolls at large text sizes instead of clipping.
+    .defaultScrollAnchor(.center, for: .alignment)
+    .scrollBounceBehavior(.basedOnSize)
     .background(Color.lociPaper.ignoresSafeArea())
     .navigationTitle("Invite").navigationBarTitleDisplayMode(.inline)
     .navigationDestination(item: $friend) { UserProfileView(username: $0.username) }

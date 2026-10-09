@@ -12,15 +12,15 @@ public struct MainTabView: View {
 
   public var body: some View {
     TabView(selection: $router.selectedTab) {
-      DiscoverView().tabItem { Label("Discover", systemImage: "magnifyingglass") }.tag(AppRouter.Tab.discover)
+      Tab("Discover", systemImage: "magnifyingglass", value: AppRouter.Tab.discover) { DiscoverView() }
 
-      CalendarView().tabItem { Label("Calendar", systemImage: "calendar") }.tag(AppRouter.Tab.calendar)
+      Tab("Calendar", systemImage: "calendar", value: AppRouter.Tab.calendar) { CalendarView() }
 
-      AssistantView().tabItem { Label("Assistant", systemImage: "bubble.left.and.bubble.right.fill") }.tag(AppRouter.Tab.assistant)
+      Tab("Assistant", systemImage: "bubble.left.and.bubble.right.fill", value: AppRouter.Tab.assistant) { AssistantView() }
 
-      SavedView().tabItem { Label("Saved", systemImage: "bookmark.fill") }.tag(AppRouter.Tab.saved)
+      Tab("Saved", systemImage: "bookmark.fill", value: AppRouter.Tab.saved) { SavedView() }
 
-      ProfileView(onSignOut: onSignOut).tabItem { Label("Profile", systemImage: "person.fill") }.tag(AppRouter.Tab.profile)
+      Tab("Profile", systemImage: "person.fill", value: AppRouter.Tab.profile) { ProfileView(onSignOut: onSignOut) }
     }.tint(.lociForest)
       // Swiping the primer away is a "not now"; after a button this is a no-op.
       .sheet(isPresented: $pushPrimer.isAsking, onDismiss: { pushPrimer.respond(false) }) {

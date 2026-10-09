@@ -33,7 +33,6 @@ struct RelationshipButton: View {
         EmptyView()
       }
     }
-    .controlSize(.small)
     .tint(.lociCoral)
     .disabled(isBusy)
     .confirmationDialog("Remove \(user.shownName) as a friend?", isPresented: $confirmRemove, titleVisibility: .visible) {

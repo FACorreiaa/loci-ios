@@ -18,6 +18,18 @@ nonisolated struct ListItemEdit: Equatable, Sendable {
     timeSlot = entry.timeSlot
   }
 
+  /// The day for the stepper: day 1 until one is set.
+  var dayValue: Int {
+    get { dayNumber ?? 1 }
+    set { dayNumber = newValue }
+  }
+
+  /// The time for the picker: now until one is set.
+  var timeValue: Date {
+    get { timeSlot ?? .now }
+    set { timeSlot = newValue }
+  }
+
   var trimmedNotes: String { String(notes.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Self.maxNotes)) }
 
   func isChanged(from entry: ListEntry) -> Bool {

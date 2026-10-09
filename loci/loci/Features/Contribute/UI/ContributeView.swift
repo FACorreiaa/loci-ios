@@ -6,8 +6,10 @@ import SwiftUI
 /// report on, or add, a place that isn't on the list.
 struct ContributeView: View {
   @State private var store: ContributeStore
-  @State private var addingPlace = false
+  /// The open Add place form: made once per tap, so its draft survives redraws.
+  @State private var addPlace: AddPlaceStore?
   @FocusState private var searchFocused: Bool
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   init(store: ContributeStore = ContributeStore()) {
     _store = State(initialValue: store)
@@ -17,7 +19,7 @@ struct ContributeView: View {
     ScrollViewReader { proxy in
       ScrollView {
         VStack(alignment: .leading, spacing: 20) {
-          ScoutHero(profile: store.profile, service: store.service)
+          ScoutHero(profile: store.profile, reports: .myReports(RouteRef(store)))
           missingPlace
           if !store.shownPending.isEmpty { pendingSection }
           tasksSection(proxy: proxy)
@@ -26,15 +28,15 @@ struct ContributeView: View {
         .padding(LociTheme.defaultPadding)
       }
     }
-    .background(Color.lociPaper.ignoresSafeArea())
+    .background(Color.lociPaper)
     .navigationTitle("Contribute")
     .navigationBarTitleDisplayMode(.inline)
     .navigationDestination(for: VerificationTask.self) { task in
       // A filed report changes the counts and the task's open questions, so both reload.
       ClaimFormView(task: task, service: store.service) { Task { await store.load() } }
     }
-    .sheet(isPresented: $addingPlace) {
-      AddPlaceView(store: addPlaceStore)
+    .sheet(item: $addPlace) { add in
+      AddPlaceView(store: add)
     }
     .errorAlert($store.error)
     .refreshable { await store.load() }
@@ -45,7 +47,7 @@ struct ContributeView: View {
     .onAppear { Analytics.screen("contribute") }
   }
 
-  private var addPlaceStore: AddPlaceStore {
+  private func makeAddPlaceStore() -> AddPlaceStore {
     let add = AddPlaceStore(service: store.service, city: store.city)
     add.onSubmitted = { Task { await store.refreshProfile() } }
     return add
@@ -105,7 +107,7 @@ struct ContributeView: View {
     .padding(.horizontal, 12)
     .frame(minHeight: LociTheme.minTapTarget)
     .background(Color.lociPaper, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.lociBorder))
+    .overlay { RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.lociBorder) }
   }
 
   @ViewBuilder private var searchResults: some View {
@@ -126,7 +128,7 @@ struct ContributeView: View {
         }
       }
       .background(Color.lociPaper, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-      .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.lociBorder))
+      .overlay { RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.lociBorder) }
     }
   }
 
@@ -209,7 +211,7 @@ struct ContributeView: View {
           NavigationLink(value: task) { TaskRow(task: task) }.buttonStyle(.plain)
         }
         TaskPager(page: store.page, pageCount: store.pageCount, range: store.pageRange, total: store.tasks.count) { next in
-          withAnimation(.smooth) {
+          withAnimation(reduceMotion ? nil : .smooth) {
             store.goToPage(next)
             proxy.scrollTo("tasks", anchor: .top)
           }
@@ -222,7 +224,7 @@ struct ContributeView: View {
 
   private var addPlaceCard: some View {
     Button {
-      addingPlace = true
+      addPlace = makeAddPlaceStore()
     } label: {
       HStack(spacing: 12) {
         Image(systemName: "mappin.and.ellipse").font(.title3).foregroundStyle(Color.lociCoral).accessibilityHidden(true)
@@ -245,7 +247,7 @@ struct ContributeView: View {
 /// own wording), and the way into Your reports.
 private struct ScoutHero: View {
   let profile: ContributorProfile
-  let service: ContributeService
+  let reports: AppRoute
 
   var body: some View {
     VStack(alignment: .leading, spacing: 14) {
@@ -274,9 +276,7 @@ private struct ScoutHero: View {
           Text(detail).font(.lociCaption(12)).foregroundStyle(Color.heroInk.opacity(0.7))
         }
       }
-      NavigationLink {
-        MyReportsView(store: MyReportsStore(service: service))
-      } label: {
+      NavigationLink(value: reports) {
         HStack(spacing: 8) {
           Image(systemName: "list.bullet.clipboard").accessibilityHidden(true)
           Text("Your reports").font(.lociCaption(14).weight(.semibold))
@@ -359,10 +359,10 @@ private struct TaskPager: View {
         Text("Places \(range.start)–\(range.end) of \(total)").lociCoordStyle(10)
         Spacer()
         if pageCount > 1 {
-          Button("Previous page", systemImage: "chevron.left") { onChange(page - 1) }
+          pageButton("Previous page", systemImage: "chevron.left", to: page - 1)
             .disabled(page <= 1)
           Text("\(page) of \(pageCount)").font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk).monospacedDigit()
-          Button("Next page", systemImage: "chevron.right") { onChange(page + 1) }
+          pageButton("Next page", systemImage: "chevron.right", to: page + 1)
             .disabled(page >= pageCount)
         }
       }
@@ -370,6 +370,14 @@ private struct TaskPager: View {
       .buttonStyle(.bordered)
       .tint(Color.lociForest)
       .padding(.top, 4)
+    }
+  }
+
+  private func pageButton(_ title: LocalizedStringKey, systemImage: String, to target: Int) -> some View {
+    Button { onChange(target) } label: {
+      // The bordered style adds 7pt around the label: 30 + 14 reaches the 44pt tap target.
+      Label(title, systemImage: systemImage)
+        .frame(minWidth: LociTheme.minTapTarget - 14, minHeight: LociTheme.minTapTarget - 14)
     }
   }
 }
@@ -458,7 +466,7 @@ struct AddPlaceView: View {
       }
       .font(.lociBody(15))
       .scrollContentBackground(.hidden)
-      .background(Color.lociPaper.ignoresSafeArea())
+      .background(Color.lociPaper)
       .navigationTitle("Add a place")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }

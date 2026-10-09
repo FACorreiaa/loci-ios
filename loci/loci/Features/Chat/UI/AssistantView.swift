@@ -5,6 +5,10 @@ import SwiftUI
 /// Ask Loci (web: /chat). Past sessions from ChatService.GetChatSessions, a
 /// composer that starts a streaming search, and the landing point for deep
 /// links and notification taps (`AppRouter.pendingSession`).
+///
+/// The live search (`controller.state`) changes on every streamed token, so
+/// only the small pieces that show it read it: the header, the "Running now"
+/// row, the empty state and the flash tracker. This body never does.
 struct AssistantView: View {
   private let router = AppRouter.shared
   private let controller = SearchSessionController.shared
@@ -19,15 +23,7 @@ struct AssistantView: View {
     NavigationStack(path: $path) {
       ScrollViewReader { proxy in
         List {
-          if let live = controller.state.link, controller.state.isActive {
-            Section("Running now") {
-              NavigationLink(value: live) {
-                Label(controller.state.query, systemImage: "sparkles").lineLimit(2)
-              }
-              .id(Self.topRow)
-            }
-            .listRowBackground(Color.museAgentBubble)
-          }
+          RunningNowSection(rowID: Self.topRow)
           Section("Recent") {
             ForEach(sessions, id: \.id) { session in
               NavigationLink(value: Self.link(for: session)) { SessionRow(session: session) }
@@ -39,13 +35,12 @@ struct AssistantView: View {
         .scrollContentBackground(.hidden)
         .background(Color.museCanvas.ignoresSafeArea())
         .overlay {
-          if sessions.isEmpty, !controller.state.isActive {
-            ContentUnavailableView("Ask Loci anything", systemImage: "bubble.left.and.bubble.right", description: Text("Where to, and for how long?"))
-          }
+          if sessions.isEmpty { IdleEmptyState() }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-          MuseChatHeader(
-            activity: .resolve(controller.state, flash: flash, isListening: isComposing),
+          LiveMuseChatHeader(
+            flash: flash,
+            isListening: isComposing,
             onLeading: { scrollToTop(proxy) },
             onNewChat: { composerFocus += 1 }
           )
@@ -65,7 +60,7 @@ struct AssistantView: View {
       .onAppear(perform: openPending)
       .onChange(of: router.pendingSession) { openPending() }
       .onChange(of: router.newChatRequest) { Task { await startNewChat() } }
-      .museFlash($flash, status: controller.state.status, places: controller.state.places.count)
+      .modifier(LiveMuseFlash(flash: $flash))
       .errorAlert($error)
     }
   }
@@ -108,6 +103,58 @@ struct AssistantView: View {
   /// A past session opens as an itinerary page: the only kind the server can restore.
   static func link(for session: Loci_Chat_ChatSession) -> SessionLink {
     SessionLink(destination: .itinerary, sessionId: session.id, cityName: session.cityName.isEmpty ? nil : session.cityName, domain: "itinerary")
+  }
+}
+
+/// The search running right now, pinned above the history.
+private struct RunningNowSection: View {
+  let rowID: String
+  private let controller = SearchSessionController.shared
+
+  var body: some View {
+    if let live = controller.state.link, controller.state.isActive {
+      Section("Running now") {
+        NavigationLink(value: live) {
+          Label(controller.state.query, systemImage: "sparkles").lineLimit(2)
+        }
+        .id(rowID)
+      }
+      .listRowBackground(Color.museAgentBubble)
+    }
+  }
+}
+
+/// No history and nothing running.
+private struct IdleEmptyState: View {
+  private let controller = SearchSessionController.shared
+
+  var body: some View {
+    if !controller.state.isActive {
+      ContentUnavailableView("Ask Loci anything", systemImage: "bubble.left.and.bubble.right", description: Text("Where to, and for how long?"))
+    }
+  }
+}
+
+/// The Muse header, voiced by the live search.
+private struct LiveMuseChatHeader: View {
+  let flash: MuseActivity.Flash?
+  let isListening: Bool
+  let onLeading: () -> Void
+  let onNewChat: () -> Void
+  private let controller = SearchSessionController.shared
+
+  var body: some View {
+    MuseChatHeader(activity: .resolve(controller.state, flash: flash, isListening: isListening), onLeading: onLeading, onNewChat: onNewChat)
+  }
+}
+
+/// `museFlash` fed from the live search, read here so its changes stop at this modifier.
+private struct LiveMuseFlash: ViewModifier {
+  @Binding var flash: MuseActivity.Flash?
+  private let controller = SearchSessionController.shared
+
+  func body(content: Content) -> some View {
+    content.museFlash($flash, status: controller.state.status, places: controller.state.places.count)
   }
 }
 

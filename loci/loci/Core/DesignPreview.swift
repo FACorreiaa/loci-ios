@@ -174,11 +174,11 @@ enum DesignPreview: String {
     case .resultsKit: MuseChatPreview(state: .resultsSample, caption: "Rome · 12 places", scrollTo: ResultsPage.Anchor.kit)
     case .tripDay: TripDayPreview()
     case .resultsFullMap: FullMapPreview(state: .resultsSample)
-    case .savedPlace: NavigationStack { SavedPlaceDetailView(item: .savedPlaceSample) }
+    case .savedPlace: NavigationStack { SavedPlaceDetailView(item: .savedPlaceSample).appRouteDestinations() }
     case .ratingRows: NavigationStack { RatingRowsPreview() }
     case .youHub: ProfileView()
-    case .youHubPro: NavigationStack { List { YouSection(entitlements: .previewPro) } }
-    case .youHubFree: NavigationStack { List { YouSection(entitlements: .previewFree) } }
+    case .youHubPro: NavigationStack { List { YouSection(entitlements: .previewPro) }.appRouteDestinations() }
+    case .youHubFree: NavigationStack { List { YouSection(entitlements: .previewFree) }.appRouteDestinations() }
     case .goScoreGood: GoScorePreview.card(verdict: "go", score: 81)
     case .goScoreMaybe: GoScorePreview.card(verdict: "maybe", score: 54, estimated: true)
     case .driveCost: GoScorePreview.driveCost()
@@ -188,13 +188,14 @@ enum DesignPreview: String {
     case .sharedPlace: SharedContentPreview.view(SharedContentPreview.place())
     case .sharedList: SharedContentPreview.view(SharedContentPreview.list())
     case .sharedItinerary: SharedContentPreview.view(SharedContentPreview.itinerary())
-    case .recents: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService())) }
-    case .recentsCities: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService()), segment: .cities) }
+    case .recents: NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService())).appRouteDestinations() }
+    case .recentsCities:
+      NavigationStack { RecentsView(store: RecentsStore(service: PreviewRecentsService()), segment: .cities).appRouteDestinations() }
     case .recentCity: NavigationStack { RecentCityView(city: RecentCity.previewLisbon) }
     case .lists: NavigationStack { ListsView(store: ListsStore(service: PreviewListsService())) }
     case .listDetail: NavigationStack { ListDetailView(store: .preview) }
     case .addToList: AddToListPreview()
-    case .packs: NavigationStack { PacksView(store: PacksStore(service: PreviewPacksService())) }
+    case .packs: NavigationStack { PacksView(store: PacksStore(service: PreviewPacksService())).appRouteDestinations() }
     case .packDetail: NavigationStack { PackDetailView(slug: PackSummary.previewLisbon.slug, service: PreviewPacksService()) }
     case .packLocked: NavigationStack { PackDetailView(slug: PackSummary.previewLocked.slug, service: PreviewPacksService()) }
     case .placeReviews: PlaceReviewsPreview()
@@ -212,25 +213,33 @@ enum DesignPreview: String {
       }
     case .tripChecklists:
       NavigationStack { List { TripChecklistsSection(store: .preview(tripID: Loci_Trip_TripDraft.previewLisbon.id)) }.settingsStyle("Checklists") }
-    case .contribute: NavigationStack { ContributeView(store: ContributeStore(service: PreviewContributeService())) }
+    case .contribute: NavigationStack { ContributeView(store: ContributeStore(service: PreviewContributeService())).appRouteDestinations() }
     case .myReports: NavigationStack { MyReportsView(store: MyReportsStore(service: PreviewContributeService())) }
     case .claimForm: NavigationStack { ClaimFormPreview(field: .vibe, tokens: ["cosy", "local"], submits: true) }
     case .openingHours: NavigationStack { ClaimFormPreview(field: .openingHours) }
     case .addToTrip: AddToTripPreview()
     case .resultsTripSaved: MuseChatPreview(state: .resultsSample.with { $0.savedTripID = "preview-rome" }, caption: "Rome · 12 places")
-    case .globe: NavigationStack { GlobeView(store: GlobeStore(service: PreviewTravelHistoryService()), recents: PreviewRecentsService()) }
+    case .globe:
+      NavigationStack {
+        GlobeView(store: GlobeStore(service: PreviewTravelHistoryService()), recents: PreviewRecentsService()).appRouteDestinations()
+      }
     case .globeEmpty:
-      NavigationStack { GlobeView(store: GlobeStore(service: PreviewTravelHistoryService(data: .previewEmpty)), recents: PreviewRecentsService()) }
+      NavigationStack {
+        GlobeView(store: GlobeStore(service: PreviewTravelHistoryService(data: .previewEmpty)), recents: PreviewRecentsService())
+          .appRouteDestinations()
+      }
     case .leaderboard: NavigationStack { LeaderboardView(store: ProgressStore(service: PreviewProgressService())) }
     case .myProgress: NavigationStack { MyProgressView(store: ProgressStore(service: PreviewProgressService())) }
     case .tripSetup: TripSetupPreview()
     case .compare: NavigationStack { CompareView(preview: .previewPorto, origin: "Porto", candidates: ["Évora", "Beja"]) }
     case .gastronomy: NavigationStack { GastronomyView(store: GastronomyStore(service: PreviewGastronomyService()), city: "Porto") }
     case .walkDay: NavigationStack { WalkDayView(day: .previewBaixa) }
-    case .boards: NavigationStack { BoardsHomeView(store: BoardsFeedStore(service: PreviewBoardsService(), myID: { "u-ana" })) }
+    case .boards:
+      NavigationStack { BoardsHomeView(store: BoardsFeedStore(service: PreviewBoardsService(), myID: { "u-ana" })).appRouteDestinations() }
     case .boardsPost:
       NavigationStack {
         PostDetailView(store: BoardPostStore(postID: "p-trams", feed: BoardsFeedStore(service: PreviewBoardsService(), myID: { "u-ana" })))
+          .appRouteDestinations()
       }
     }
   }
@@ -247,7 +256,7 @@ private struct InSeasonPreview: View {
         TextField("Ask Loci", text: $text).font(.lociBody()).padding(.horizontal, 14).padding(.vertical, 10).background(
           Color.lociCard,
           in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous)
-        ).overlay(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder))
+        ).overlay { RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder) }
         InSeasonBand(seed: $seed)
       }.padding(LociTheme.defaultPadding)
     }.background(Color.lociPaper.ignoresSafeArea()).onChange(of: seed) { _, value in

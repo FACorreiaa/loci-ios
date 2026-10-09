@@ -176,9 +176,10 @@ struct PlaceReviewsPreview: View {
         PlaceReviewsSection(poiID: LociReview.previewPOI, placeName: "Miradouro da Senhora do Monte", service: PreviewReviewsService())
           .padding(LociTheme.defaultPadding)
       }
-      .background(Color.lociPaper.ignoresSafeArea())
+      .background(Color.lociPaper)
       .navigationTitle("Miradouro da Senhora do Monte")
       .navigationBarTitleDisplayMode(.inline)
+      .appRouteDestinations()
     }
   }
 }

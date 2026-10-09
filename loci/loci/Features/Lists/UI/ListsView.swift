@@ -3,7 +3,7 @@ import SwiftUI
 /// Lists (web: /lists), from Profile › Lists. Saved's Lists segment shows the
 /// same rows and chrome inside its own list (`ListsRows` + `.listsChrome`).
 struct ListsView: View {
-  @State var store: ListsStore
+  @State private var store: ListsStore
 
   init(store: ListsStore = ListsStore()) {
     _store = State(initialValue: store)
@@ -128,21 +128,23 @@ struct ListRow: View {
   let list: LociList
 
   @Environment(\.dynamicTypeSize) private var typeSize
+  @ScaledMetric(relativeTo: .subheadline) private var iconBox: CGFloat = 32
 
-  private var meta: String {
-    var parts: [String] = []
-    if list.isItinerary { parts.append("Itinerary") }
-    if list.itemCount > 0 { parts.append(list.itemCount == 1 ? "1 place" : "\(list.itemCount) places") }
-    if let created = list.createdAt { parts.append(created.formatted(.dateTime.month(.abbreviated).day())) }
-    return parts.joined(separator: " · ")
+  private var meta: AttributedString {
+    var parts: [AttributedString] = []
+    if list.isItinerary { parts.append(AttributedString("Itinerary")) }
+    if list.itemCount > 0 { parts.append(AttributedString(localized: "^[\(list.itemCount) place](inflect: true)")) }
+    if let created = list.createdAt { parts.append(AttributedString(created.formatted(.dateTime.month(.abbreviated).day()))) }
+    guard let first = parts.first else { return AttributedString() }
+    return parts.dropFirst().reduce(first) { $0 + AttributedString(" · ") + $1 }
   }
 
   var body: some View {
     HStack(alignment: .top, spacing: 12) {
       Image(systemName: list.isItinerary ? "map" : "list.bullet.rectangle")
-        .font(.system(size: 14, weight: .medium))
+        .font(.subheadline.weight(.medium))
         .foregroundStyle(Color.lociForest)
-        .frame(width: 32, height: 32)
+        .frame(width: iconBox, height: iconBox)
         .background(Color.lociMuted, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .accessibilityHidden(true)
       VStack(alignment: .leading, spacing: 3) {
@@ -156,7 +158,7 @@ struct ListRow: View {
         if !list.description.isEmpty {
           Text(list.description).font(.lociCaption()).foregroundStyle(Color.lociMutedInk).lineLimit(typeSize.isAccessibilitySize ? 4 : 2)
         }
-        if !meta.isEmpty { Text(meta).lociCoordStyle(10) }
+        if !meta.characters.isEmpty { Text(meta).lociCoordStyle(10) }
       }
     }
     .padding(.vertical, 2)
@@ -170,7 +172,7 @@ private struct ListsTabChips: View {
   let counts: [ListsTab: Int]
 
   var body: some View {
-    ScrollView(.horizontal, showsIndicators: false) {
+    ScrollView(.horizontal) {
       HStack(spacing: 8) {
         ForEach(ListsTab.allCases) { tab in
           let isOn = selection == tab
@@ -186,14 +188,17 @@ private struct ListsTabChips: View {
             .padding(.vertical, 7)
             .background(isOn ? Color.lociForest : Color.lociMuted, in: Capsule())
             .foregroundStyle(isOn ? Color.lociPaper : Color.lociInk)
+            .frame(minHeight: LociTheme.minTapTarget)
+            .contentShape(.rect)
           }
           .buttonStyle(.plain)
           .accessibilityAddTraits(isOn ? .isSelected : [])
         }
       }
       .padding(.horizontal, 4)
-      .padding(.vertical, 4)
     }
+    .scrollIndicators(.hidden)
+    .accessibilityElement(children: .contain)
     .accessibilityLabel("Filter lists")
   }
 }
@@ -279,13 +284,14 @@ struct EntitlementSheet: View {
   let limit: EntitlementLimit
 
   @Environment(\.dismiss) private var dismiss
+  @ScaledMetric(relativeTo: .title) private var badge: CGFloat = 64
 
   var body: some View {
     VStack(spacing: 14) {
       Image(systemName: "sparkles")
-        .font(.system(size: 30, weight: .medium))
+        .font(.title.weight(.medium))
         .foregroundStyle(Color.lociForest)
-        .frame(width: 64, height: 64)
+        .frame(width: badge, height: badge)
         .background(Color.lociMuted, in: Circle())
         .accessibilityHidden(true)
       Text(limit.title).font(.lociTitle(22)).foregroundStyle(Color.lociInk).multilineTextAlignment(.center)

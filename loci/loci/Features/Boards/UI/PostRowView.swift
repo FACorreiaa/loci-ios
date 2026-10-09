@@ -8,20 +8,20 @@ struct VoteButtons: View {
   let onVote: (Int32) -> Void
 
   var body: some View {
-    VStack(spacing: 2) {
+    VStack(spacing: 0) {
       arrow(1, symbol: "arrowshape.up")
       Text("\(score)").font(.lociCoord(12)).monospacedDigit().foregroundStyle(myVote != 0 ? Color.lociForest : Color.lociMutedInk)
       arrow(-1, symbol: "arrowshape.down")
-    }.frame(width: 36).accessibilityElement(children: .contain)
+    }.frame(width: LociTheme.minTapTarget).accessibilityElement(children: .contain)
   }
 
   private func arrow(_ value: Int32, symbol: String) -> some View {
     Button {
       onVote(value)
     } label: {
-      Image(systemName: myVote == value ? "\(symbol).fill" : symbol).font(.system(size: 16, weight: .semibold)).foregroundStyle(
+      Image(systemName: myVote == value ? "\(symbol).fill" : symbol).font(.callout.weight(.semibold)).foregroundStyle(
         myVote == value ? Color.lociForest : Color.lociMutedInk
-      ).frame(width: 32, height: 28).contentShape(Rectangle())
+      ).frame(minWidth: LociTheme.minTapTarget, minHeight: LociTheme.minTapTarget).contentShape(.rect)
     }.buttonStyle(.plain).accessibilityLabel(value == 1 ? "Upvote" : "Downvote").accessibilityAddTraits(myVote == value ? .isSelected : [])
   }
 }
@@ -34,7 +34,7 @@ struct PostByline: View {
   var body: some View {
     HStack(spacing: 6) {
       if showBoard, post.hasBoard {
-        Text(post.board.name).font(.lociCaption(11)).padding(.horizontal, 6).padding(.vertical, 2).overlay(Capsule().stroke(Color.lociBorder))
+        Text(post.board.name).font(.lociCaption(11)).padding(.horizontal, 6).padding(.vertical, 2).overlay { Capsule().stroke(Color.lociBorder) }
       }
       if post.hasAuthor {
         UserAvatar(user: post.author, size: 18)
@@ -48,16 +48,16 @@ struct PostByline: View {
 
 /// One line of a feed: arrows, then title, domain and byline opening the post.
 /// The arrows sit outside the link so a vote never opens the post.
-struct PostRowView<Destination: View>: View {
+struct PostRowView: View {
   let post: Loci_Boards_V1_Post
   var showBoard = false
+  let route: AppRoute
   let onVote: (Int32) -> Void
-  @ViewBuilder let destination: () -> Destination
 
   var body: some View {
     HStack(alignment: .top, spacing: 10) {
       VoteButtons(score: post.score, myVote: post.myVote, onVote: onVote)
-      NavigationLink(destination: destination) {
+      NavigationLink(value: route) {
         VStack(alignment: .leading, spacing: 6) {
           HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text(post.title).font(.lociHeadline(16)).foregroundStyle(Color.lociInk).multilineTextAlignment(.leading)

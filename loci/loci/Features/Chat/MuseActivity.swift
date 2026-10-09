@@ -57,7 +57,8 @@ nonisolated struct MuseActivity: Equatable, Sendable {
     }
     switch flash {
     case .celebrating(let places):
-      return MuseActivity(mood: .celebrating, status: places == 1 ? "found 1 place" : places > 1 ? "found \(places) places" : "is done")
+      guard places > 0 else { return MuseActivity(mood: .celebrating, status: "is done") }
+      return MuseActivity(mood: .celebrating, status: String(AttributedString(localized: "found ^[\(places) place](inflect: true)").characters))
     case .snag:
       return MuseActivity(mood: .idle, status: "hit a snag")
     case nil:

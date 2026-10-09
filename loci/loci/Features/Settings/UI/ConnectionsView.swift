@@ -37,36 +37,41 @@ struct McpKeysSection: View {
 
   @State private var keys: [Loci_Apikey_ApiKey] = []
   @State private var isCreating = false
-  @State private var issued: Loci_Apikey_CreateApiKeyResponse?
   @State private var revoking: Loci_Apikey_ApiKey?
+  @State private var isConfirmingRevoke = false
   @State private var error: String?
 
   var body: some View {
     Section {
       ForEach(keys.filter { !$0.hasRevokedAt }, id: \.id) { key in
-        NavigationLink {
-          SetupInstructionsView(clientKind: key.clientKind)
-        } label: {
+        NavigationLink(value: SettingsRoute.setupInstructions(clientKind: key.clientKind)) {
           VStack(alignment: .leading, spacing: 2) {
             Text(key.name)
             Text("\(Self.label(for: key.clientKind)) · \(key.keyPrefix)… · \(key.scopes.joined(separator: ", "))")
               .font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
           }
         }
-        .swipeActions { Button("Revoke", role: .destructive) { revoking = key } }
+        .swipeActions {
+          Button("Revoke", role: .destructive) {
+            revoking = key
+            isConfirmingRevoke = true
+          }
+        }
       }
       Button("Connect an agent", systemImage: "plus") { isCreating = true }
     } header: {
       Text("Agents")
     }
-    .sheet(isPresented: $isCreating) { CreateKeySheet { issued = $0; Task { await load() } } }
-    .sheet(item: Binding(get: { issued.map(IssuedKey.init) }, set: { if $0 == nil { issued = nil } })) { IssuedKeyView(issued: $0.response) }
+    // The issued key is shown inside the create sheet, so no second sheet has
+    // to present while the first one is still dismissing.
+    .sheet(isPresented: $isCreating) { CreateKeySheet { _ in Task { await load() } } }
     .confirmationDialog(
       "\(Self.label(for: revoking?.clientKind ?? "other")) stops working with this key.",
-      isPresented: Binding(get: { revoking != nil }, set: { if !$0 { revoking = nil } }),
-      titleVisibility: .visible
-    ) {
-      Button("Revoke key", role: .destructive) { if let key = revoking { Task { await revoke(key.id) } } }
+      isPresented: $isConfirmingRevoke,
+      titleVisibility: .visible,
+      presenting: revoking
+    ) { key in
+      Button("Revoke key", role: .destructive) { Task { await revoke(key.id) } }
     }
     .errorAlert($error)
     .task { await load() }
@@ -88,12 +93,6 @@ struct McpKeysSection: View {
   }
 }
 
-/// Wraps a create response so it can drive `.sheet(item:)`.
-struct IssuedKey: Identifiable {
-  let response: Loci_Apikey_CreateApiKeyResponse
-  var id: String { response.apiKey.id }
-}
-
 struct CreateKeySheet: View {
   /// web: lib/api/api-keys.ts API_KEY_SCOPES
   static let scopes: [KeyScope] = [
@@ -110,8 +109,18 @@ struct CreateKeySheet: View {
   @State private var scopes: Set<String> = ["read"]
   @State private var isSaving = false
   @State private var error: String?
+  /// Set once the key exists; the sheet then shows it in place of the form.
+  @State private var issued: Loci_Apikey_CreateApiKeyResponse?
 
   var body: some View {
+    if let issued {
+      IssuedKeyView(issued: issued)
+    } else {
+      form
+    }
+  }
+
+  private var form: some View {
     NavigationStack {
       Form {
         Picker("Agent", selection: $clientKind) { ForEach(McpKeysSection.clientKinds, id: \.value) { Text($0.label).tag($0.value) } }
@@ -152,7 +161,7 @@ struct CreateKeySheet: View {
     request.scopes = Self.scopes.map(\.value).filter(scopes.contains)
     do {
       let response = try await rpc("Could not create the key.", request) { await SettingsClients.apiKeys.createApiKey(request: $0, headers: [:]) }
-      dismiss()
+      issued = response
       onIssued(response)
     } catch { self.error = error.userMessage }
   }

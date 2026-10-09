@@ -57,10 +57,12 @@ enum WalkMapLayer {
 struct RecenterButton: View {
   let action: () -> Void
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   var body: some View {
     Button("Recenter", systemImage: "location.north.line.fill", action: action)
       .lociProminentButton()
       .padding(.top, 8)
-      .transition(.move(edge: .top).combined(with: .opacity))
+      .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
   }
 }

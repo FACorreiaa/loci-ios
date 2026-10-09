@@ -1,24 +1,31 @@
-import Combine
 import LociConnectProto
+import Observation
 import SwiftUI
 
-@MainActor public final class LoginViewModel: ObservableObject {
-  @Published public var email = ""
-  @Published public var password = ""
-  @Published public var username = ""
-  @Published public var confirmPassword = ""
-  @Published public var isSignup = false
+/// A sign-in that is waiting on a second factor; drives the MFA sheet.
+public struct PendingMFA: Identifiable {
+  public let token: String
+  public var id: String { token }
+}
 
-  @Published public var isLoading = false
-  @Published public var errorMessage: String?
-  @Published public var successMessage: String?
+@MainActor @Observable public final class LoginViewModel {
+  public var email = ""
+  public var password = ""
+  public var username = ""
+  public var confirmPassword = ""
+  public var isSignup = false
 
-  @Published public var showForgotPassword = false
-  @Published public var showMFAModal = false
-  @Published public var pendingMFAToken: String?
+  public var isLoading = false
+  public var errorMessage: String?
+  public var successMessage: String?
+
+  public var showForgotPassword = false
+  public var pendingMFA: PendingMFA?
+  /// Shown inside the MFA sheet; `errorMessage` would sit behind it on the login screen.
+  public var mfaErrorMessage: String?
 
   private let authService: AuthService
-  public var onAuthenticated: () -> Void
+  @ObservationIgnored public var onAuthenticated: () -> Void
 
   public init(authService: AuthService? = nil, onAuthenticated: @escaping () -> Void = {}) {
     self.authService = authService ?? .shared
@@ -46,8 +53,8 @@ import SwiftUI
       do {
         let response = try await authService.login(email: email.trimmingCharacters(in: .whitespaces), password: password)
         if response.mfaRequired {
-          self.pendingMFAToken = response.mfaToken
-          self.showMFAModal = true
+          self.mfaErrorMessage = nil
+          self.pendingMFA = PendingMFA(token: response.mfaToken)
           self.isLoading = false
         } else {
           self.isLoading = false
@@ -105,20 +112,25 @@ import SwiftUI
   }
 
   public func handleMFASubmit(code: String, recoveryCode: String?) {
-    guard let token = pendingMFAToken else { return }
+    guard let token = pendingMFA?.token else { return }
+    mfaErrorMessage = nil
     isLoading = true
     Task {
       do {
         _ = try await authService.verifyMFA(mfaToken: token, code: code, recoveryCode: recoveryCode)
-        self.showMFAModal = false
-        self.pendingMFAToken = nil
+        self.pendingMFA = nil
         self.isLoading = false
         self.onAuthenticated()
       } catch {
         self.isLoading = false
-        self.errorMessage = error.localizedDescription
+        self.mfaErrorMessage = error.localizedDescription
       }
     }
+  }
+
+  public func cancelMFA() {
+    pendingMFA = nil
+    mfaErrorMessage = nil
   }
 
   public func performGoogleSignIn() { performNativeSignIn { try await GoogleAuthService.shared.signInWithGoogle() } }

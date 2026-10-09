@@ -61,7 +61,7 @@ public nonisolated extension TripDayAttributes.ContentState {
   var nextText: String? {
     guard let nextName else { return nil }
     guard let meters = nextDistanceMeters else { return "Next: \(nextName)" }
-    let distance = meters >= 1000 ? String(format: "%.1f km", meters / 1000) : "\(Int(meters.rounded())) m"
+    let distance = meters >= 1000 ? (meters / 1000).formatted(.number.precision(.fractionLength(1))) + " km" : "\(Int(meters.rounded())) m"
     return "Next: \(nextName) · \(distance)"
   }
 

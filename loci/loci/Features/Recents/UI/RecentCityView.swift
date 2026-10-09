@@ -30,7 +30,7 @@ struct RecentCityView: View {
     }
     .listStyle(.insetGrouped)
     .scrollContentBackground(.hidden)
-    .background(Color.lociPaper.ignoresSafeArea())
+    .background { Color.lociPaper.ignoresSafeArea() }
     .overlay {
       if tab == .interactions, city.interactions.isEmpty {
         ContentUnavailableView("No interactions", systemImage: "bubble.left", description: Text("Nothing asked about \(city.name) yet."))

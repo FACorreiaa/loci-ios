@@ -33,7 +33,7 @@ struct TodayControls: View {
     VStack(alignment: .leading, spacing: 6) {
       HStack(spacing: 8) {
         if controller.isRunning, controller.running?.dayId == day.id {
-          if showsOpen { NavigationLink(value: trip.id) { Label("Open today", systemImage: "arrow.right.circle") } }
+          if showsOpen { NavigationLink(value: AppRoute.trip(id: trip.id)) { Label("Open today", systemImage: "arrow.right.circle") } }
           Button("Next", systemImage: "forward.end") { Task { await controller.advance() } }
           Button("Done", systemImage: "checkmark") { Task { await controller.end() } }
         } else {
@@ -45,6 +45,8 @@ struct TodayControls: View {
       if !controller.liveActivitiesEnabled {
         Text("Turn on Live Activities for Loci in Settings to follow the day from the Lock Screen.")
           .font(.lociCaption(11)).foregroundStyle(Color.lociMutedInk)
+      } else if !controller.isRunning, let startError = controller.startError {
+        Text(startError).font(.lociCaption(11)).foregroundStyle(Color.lociDestructive)
       }
     }
   }

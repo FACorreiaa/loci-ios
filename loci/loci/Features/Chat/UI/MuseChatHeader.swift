@@ -22,12 +22,16 @@ struct MuseChatHeader: View {
   var body: some View {
     ZStack(alignment: .top) {
       HStack {
-        Button(leadingLabel, systemImage: leadingSystemImage, action: onLeading)
-          .labelStyle(.iconOnly)
-          .font(.body.weight(.semibold))
-          .frame(width: LociTheme.Muse.headerButtonSize, height: LociTheme.Muse.headerButtonSize)
-          .background(Color.musePill, in: Circle())
-          .contentShape(.rect.inset(by: -2))
+        Button(action: onLeading) {
+          // A 40pt circle drawn inside the 44pt touch area.
+          Label(leadingLabel, systemImage: leadingSystemImage)
+            .labelStyle(.iconOnly)
+            .font(.body.weight(.semibold))
+            .frame(width: LociTheme.Muse.headerButtonSize, height: LociTheme.Muse.headerButtonSize)
+            .background(Color.musePill, in: Circle())
+            .frame(width: LociTheme.minTapTarget, height: LociTheme.minTapTarget)
+            .contentShape(.rect)
+        }
         Spacer()
         Button("New chat", action: onNewChat).buttonStyle(MusePillButtonStyle())
       }
@@ -172,7 +176,9 @@ struct MusePillButtonStyle: ButtonStyle {
       .padding(.horizontal, 16)
       .frame(minHeight: LociTheme.Muse.headerButtonSize)
       .background(Color.musePill, in: Capsule())
-      .contentShape(Capsule())
+      // The capsule stays 40pt; the touch area is the 44pt minimum.
+      .frame(minHeight: LociTheme.minTapTarget)
+      .contentShape(.rect)
       .opacity(configuration.isPressed ? 0.6 : isEnabled ? 1 : 0.5)
   }
 }

@@ -22,7 +22,7 @@ private struct InteractivePop: UIViewRepresentable {
       super.didMoveToWindow()
       enable()
       // SwiftUI finishes the push after the view joins the window; check again once it has.
-      DispatchQueue.main.async { [weak self] in self?.enable() }
+      Task { @MainActor [weak self] in self?.enable() }
     }
 
     func enable() {

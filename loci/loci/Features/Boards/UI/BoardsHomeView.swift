@@ -6,7 +6,7 @@ import SwiftUI
 struct BoardsHomeView: View {
   static let symbol = "bubble.left.and.text.bubble.right"
 
-  @State var store: BoardsFeedStore
+  @State private var store: BoardsFeedStore
   @State private var creatingBoard = false
 
   init(store: BoardsFeedStore = BoardsFeedStore()) { _store = State(initialValue: store) }
@@ -21,11 +21,9 @@ struct BoardsHomeView: View {
     }.background(Color.lociPaper.ignoresSafeArea()).navigationTitle("Boards").navigationBarTitleDisplayMode(.inline).toolbar {
       if store.isAdmin {
         ToolbarItem(placement: .topBarTrailing) {
-          NavigationLink {
-            SanctionsView(service: store.service)
-          } label: {
-            Image(systemName: "checkmark.shield")
-          }.accessibilityLabel("Moderation")
+          NavigationLink(value: AppRoute.sanctions(RouteRef(store))) {
+            Label("Moderation", systemImage: "checkmark.shield").labelStyle(.iconOnly)
+          }
         }
       }
       if store.canWrite { ToolbarItem(placement: .topBarTrailing) { Button("New board", systemImage: "plus") { creatingBoard = true } } }
@@ -44,30 +42,30 @@ struct BoardsHomeView: View {
 
   @ViewBuilder private var directory: some View {
     if !store.boards.isEmpty {
-      ScrollView(.horizontal, showsIndicators: false) {
+      ScrollView(.horizontal) {
         HStack(spacing: 8) {
           ForEach(store.boards, id: \.id) { board in
-            NavigationLink {
-              BoardView(store: BoardsFeedStore(slug: board.slug, service: store.service))
-            } label: {
+            NavigationLink(value: AppRoute.board(slug: board.slug, from: RouteRef(store))) {
               VStack(alignment: .leading, spacing: 2) {
                 Text(board.name).font(.lociHeadline(15)).foregroundStyle(Color.lociInk)
-                Text("\(board.postCount) \(board.postCount == 1 ? "post" : "posts")").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+                Text("^[\(Int(board.postCount)) post](inflect: true)").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
               }.lociCard(padding: 12)
             }.buttonStyle(.plain)
           }
         }
-      }
+      }.scrollIndicators(.hidden)
     }
   }
 }
 
 /// One board (web: /boards/:slug).
 struct BoardView: View {
-  @State var store: BoardsFeedStore
+  @State private var store: BoardsFeedStore
   @State private var composing = false
   @State private var confirmDelete = false
   @Environment(\.dismiss) private var dismiss
+
+  init(store: BoardsFeedStore) { _store = State(initialValue: store) }
 
   var body: some View {
     ScrollView {

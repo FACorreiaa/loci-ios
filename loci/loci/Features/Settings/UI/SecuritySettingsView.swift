@@ -9,8 +9,8 @@ struct SecuritySettingsView: View {
   var body: some View {
     List {
       Section {
-        NavigationLink("Change password") { ChangePasswordView() }
-        NavigationLink("Change email") { ChangeEmailView() }
+        NavigationLink("Change password", value: SettingsRoute.changePassword)
+        NavigationLink("Change email", value: SettingsRoute.changeEmail)
       }
       TwoFactorSection()
       SignedInDevicesSection()
@@ -62,6 +62,8 @@ struct ChangePasswordView: View {
 struct TwoFactorSection: View {
   @State private var status: Loci_Auth_GetMFAStatusResponse?
   @State private var enrollment: Loci_Auth_BeginMFAEnrollmentResponse?
+  /// Drawn once per enrollment, not on every body pass.
+  @State private var qrImage: UIImage?
   @State private var code = ""
   @State private var recoveryCodes: [String] = []
   @State private var error: String?
@@ -78,8 +80,10 @@ struct TwoFactorSection: View {
             Button("Turn off two-factor", role: .destructive) { Task { await disable() } }.disabled(code.count < 6)
           }
         } else if let enrollment {
-          if let qr = QRCode.image(for: enrollment.provisioningUri) {
-            Image(uiImage: qr).interpolation(.none).resizable().scaledToFit().frame(maxWidth: 200).frame(maxWidth: .infinity)
+          if let qrImage {
+            Image(uiImage: qrImage).interpolation(.none).resizable().scaledToFit().frame(maxWidth: 200).frame(maxWidth: .infinity)
+              .accessibilityLabel("QR code for your authenticator app")
+              .accessibilityHint("Scan it with an authenticator app, or use the setup key below.")
           }
           LabeledContent("Setup key") { Text(enrollment.secret).font(.lociCoord(12)).textSelection(.enabled) }
           if let url = URL(string: enrollment.provisioningUri) { Link("Open in authenticator app", destination: url) }
@@ -114,7 +118,9 @@ struct TwoFactorSection: View {
 
   private func begin() async {
     do {
-      enrollment = try await rpc("Could not start setup.") { await SettingsClients.auth.beginMfaenrollment(request: .init(), headers: [:]) }
+      let response = try await rpc("Could not start setup.") { await SettingsClients.auth.beginMfaenrollment(request: .init(), headers: [:]) }
+      qrImage = QRCode.image(for: response.provisioningUri)
+      enrollment = response
     } catch { self.error = error.userMessage }
   }
 
@@ -127,6 +133,7 @@ struct TwoFactorSection: View {
       }
       recoveryCodes = response.recoveryCodes
       enrollment = nil
+      qrImage = nil
       code = ""
       await load()
     } catch { self.error = error.userMessage }

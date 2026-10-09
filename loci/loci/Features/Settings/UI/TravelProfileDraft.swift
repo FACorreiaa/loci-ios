@@ -18,6 +18,14 @@ struct TravelProfileDraft: Identifiable, Equatable {
   static let timeFlexibility = ["strict_schedule", "loose_schedule", "completely_flexible"]
   static let seasons = ["spring", "summer", "fall", "winter"]
 
+  // MARK: Editor bounds. Server values outside them are clamped on load, since
+  // a Stepper range built from an inverted min/max traps.
+  static let radiusRange = 1.0...100.0
+  static let budgetRange = 1...5
+  static let starRange = 1.0...5.0
+  static let pricePerNightRange = 0.0...5000.0
+  static let pricePerPersonRange = 0.0...1000.0
+
   var id: String?
 
   // Basics
@@ -133,6 +141,27 @@ struct TravelProfileDraft: Identifiable, Equatable {
       seasons = Set(plan.preferredSeasons)
       avoidPeakSeason = plan.avoidPeakSeason
     }
+    clampToBounds()
+  }
+
+  /// Pulls every numeric field into its editor bounds and keeps each min at or
+  /// below its max.
+  private mutating func clampToBounds() {
+    searchRadiusKm = Self.clamp(searchRadiusKm, to: Self.radiusRange)
+    budgetLevel = Self.clamp(budgetLevel, to: Self.budgetRange)
+    (starMin, starMax) = Self.clampPair(starMin, starMax, to: Self.starRange)
+    (pricePerNightMin, pricePerNightMax) = Self.clampPair(pricePerNightMin, pricePerNightMax, to: Self.pricePerNightRange)
+    (pricePerPersonMin, pricePerPersonMax) = Self.clampPair(pricePerPersonMin, pricePerPersonMax, to: Self.pricePerPersonRange)
+  }
+
+  private static func clamp<T: Comparable>(_ value: T, to range: ClosedRange<T>) -> T {
+    min(max(value, range.lowerBound), range.upperBound)
+  }
+
+  private static func clampPair(_ low: Double, _ high: Double, to range: ClosedRange<Double>) -> (Double, Double) {
+    let a = clamp(low.isFinite ? low : range.lowerBound, to: range)
+    let b = clamp(high.isFinite ? high : range.upperBound, to: range)
+    return (min(a, b), max(a, b))
   }
 
   // MARK: - Requests

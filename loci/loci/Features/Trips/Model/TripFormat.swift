@@ -6,7 +6,7 @@ import SwiftProtobuf
 nonisolated enum TripFormat {
   /// "Route · 3 days" above the hero title (web: TripHero).
   static func heroEyebrow(dayCount: Int) -> String {
-    "Route · \(dayCount) day\(dayCount == 1 ? "" : "s")"
+    String(AttributedString(localized: "Route · ^[\(dayCount) day](inflect: true)").characters)
   }
 
   // MARK: - Dates

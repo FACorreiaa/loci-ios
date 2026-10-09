@@ -29,9 +29,10 @@ struct MyProgressView: View {
       }
     }
     .settingsStyle("Your progress")
+    .errorAlert($store.error)
     .refreshable { await store.load() }
-    .task { await store.load() }
-    .onChange(of: feedback.revision) { Task { await store.load() } }
+    // Reloads after an award; a newer award cancels the older reload.
+    .task(id: feedback.revision) { await store.load() }
     .onAppear { Analytics.screen("Progress") }
   }
 
@@ -71,13 +72,13 @@ struct LevelCard: View {
       }
       ProgressView(value: progress.levelFraction).tint(.lociCoral)
       HStack {
-        Text("\(progress.totalPoints.formatted()) points")
+        Text("^[\(progress.totalPoints) point](inflect: true)")
         Spacer()
         Text("\(progress.pointsToNextLevel.formatted()) to level \(progress.level + 1)")
       }
       .font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
       if progress.longestStreak > progress.currentStreak {
-        Text("Longest streak: \(progress.longestStreak) days").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+        Text("Longest streak: ^[\(progress.longestStreak) day](inflect: true)").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
       }
     }
     .padding(.vertical, 6)
@@ -89,7 +90,7 @@ struct StreakBadge: View {
   let days: Int
 
   var body: some View {
-    Label(days == 1 ? "1 day" : "\(days) days", systemImage: days > 0 ? "flame.fill" : "flame")
+    Label("^[\(days) day](inflect: true)", systemImage: days > 0 ? "flame.fill" : "flame")
       .font(.lociHeadline(15))
       .foregroundStyle(days > 0 ? Color.lociCoral : Color.lociMutedInk)
       .accessibilityLabel(days > 0 ? "\(days)-day streak" : "No streak")
@@ -127,13 +128,14 @@ struct TodayChecklistRows: View {
 
 struct BadgeGrid: View {
   let badges: [Loci_Gamification_Badge]
+  @ScaledMetric(relativeTo: .title) private var symbolSize = 26.0
 
   var body: some View {
     LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 12)], spacing: 12) {
       ForEach(badges, id: \.id) { badge in
         VStack(spacing: 6) {
           Image(systemName: badge.hasAwardedAt ? "rosette" : "lock")
-            .font(.system(size: 26))
+            .font(.system(size: symbolSize))
             .foregroundStyle(badge.hasAwardedAt ? Color.lociCoral : Color.lociMutedInk)
           Text(badge.title).font(.lociCaption(13)).foregroundStyle(Color.lociInk).multilineTextAlignment(.center)
           Text(badge.description_p).font(.lociCaption(11)).foregroundStyle(Color.lociMutedInk).multilineTextAlignment(.center).lineLimit(3)
@@ -181,20 +183,22 @@ struct PointsToastOverlay: View {
   var body: some View {
     VStack {
       if let toast = feedback.current {
-        HStack(spacing: 8) {
-          if toast.points > 0 {
-            Text("+\(toast.points)").font(.lociHeadline(15)).foregroundStyle(Color.lociPaper)
-          } else {
-            Image(systemName: "rosette").foregroundStyle(Color.lociPaper)
+        Button { feedback.dismiss() } label: {
+          HStack(spacing: 8) {
+            if toast.points > 0 {
+              Text("+\(toast.points)").font(.lociHeadline(15)).foregroundStyle(Color.lociPaper)
+            } else {
+              Image(systemName: "rosette").foregroundStyle(Color.lociPaper)
+            }
+            Text(toast.label).font(.lociCaption(14)).foregroundStyle(Color.lociPaper).lineLimit(1)
           }
-          Text(toast.label).font(.lociCaption(14)).foregroundStyle(Color.lociPaper).lineLimit(1)
+          .padding(.horizontal, 16).padding(.vertical, 10)
+          .background(Color.lociForestFill, in: Capsule())
         }
-        .padding(.horizontal, 16).padding(.vertical, 10)
-        .background(Color.lociForestFill, in: Capsule())
+        .buttonStyle(.plain)
         .shadow(radius: 6, y: 2)
-        .onTapGesture { feedback.dismiss() }
         .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
-        .accessibilityAddTraits(.isStaticText)
+        .accessibilityHint("Dismisses")
       }
       Spacer()
     }

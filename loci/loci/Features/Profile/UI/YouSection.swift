@@ -63,9 +63,7 @@ struct YouSection: View {
     Section("You") {
       PlanChip(entitlements: plan)
       ForEach(YouDestination.allCases) { destination in
-        NavigationLink {
-          destination.screen
-        } label: {
+        NavigationLink(value: AppRoute.you(destination)) {
           Label(destination.title, systemImage: destination.systemImage)
         }
       }

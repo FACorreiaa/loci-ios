@@ -24,6 +24,8 @@ import SwiftUI
 
   let service: BoardsService
   private let myIDProvider: @MainActor () -> String?
+  /// The latest sort/window reload; a newer one cancels it so pages can't land out of order.
+  @ObservationIgnored private var reloadTask: Task<Void, Never>?
 
   init(
     slug: String = "",
@@ -50,6 +52,7 @@ import SwiftUI
     async let boardResult = slug.isEmpty ? nil : try? service.board(slug: slug)
     do {
       let page = try await service.posts(board: slug, sort: sort, window: window, cursor: "")
+      try Task.checkCancellation()
       posts = page.posts
       nextCursor = page.nextCursor
       phase = .loaded
@@ -102,10 +105,13 @@ import SwiftUI
   }
 
   func delete(_ post: Loci_Boards_V1_Post) async {
-    do {
-      try await service.deletePost(id: post.id)
-      posts.removeAll { $0.id == post.id }
-    } catch { self.error = error.userMessage }
+    do { try await removePost(post) } catch { self.error = error.userMessage }
+  }
+
+  /// Deletes on the server and drops the row; the caller reports a failure.
+  func removePost(_ post: Loci_Boards_V1_Post) async throws {
+    try await service.deletePost(id: post.id)
+    posts.removeAll { $0.id == post.id }
   }
 
   /// Admin: closes this board. True when it is gone.
@@ -122,8 +128,11 @@ import SwiftUI
   func reload(sort: Loci_Boards_V1_PostSort? = nil, window: Loci_Boards_V1_TopWindow? = nil) async {
     if let sort { self.sort = sort }
     if let window { self.window = window }
+    reloadTask?.cancel()
     posts = []
-    await load()
+    let task = Task { await load() }
+    reloadTask = task
+    await task.value
   }
 }
 
@@ -131,7 +140,11 @@ import SwiftUI
 @MainActor @Observable final class BoardPostStore {
   let postID: String
   private(set) var post: Loci_Boards_V1_Post?
-  private(set) var comments: [Loci_Boards_V1_Comment] = []
+  private(set) var comments: [Loci_Boards_V1_Comment] = [] {
+    didSet { rows = BoardsModel.flatten(BoardsModel.commentTree(comments)) }
+  }
+  /// The thread in reading order with each comment's depth, rebuilt only when the comments change.
+  private(set) var rows: [(comment: Loci_Boards_V1_Comment, depth: Int)] = []
   private(set) var failed: String?
   var error: String?
   let feed: BoardsFeedStore
@@ -140,8 +153,6 @@ import SwiftUI
     self.postID = postID
     self.feed = feed
   }
-
-  var rows: [(comment: Loci_Boards_V1_Comment, depth: Int)] { BoardsModel.flatten(BoardsModel.commentTree(comments)) }
 
   func load() async {
     do {
@@ -195,10 +206,15 @@ import SwiftUI
     } catch { self.error = error.userMessage }
   }
 
-  /// True when the post is gone.
+  /// True when the post is gone. A failure is reported here, on the post's own screen.
   func deletePost() async -> Bool {
     guard let post else { return false }
-    await feed.delete(post)
-    return feed.error == nil
+    do {
+      try await feed.removePost(post)
+      return true
+    } catch {
+      self.error = error.userMessage
+      return false
+    }
   }
 }

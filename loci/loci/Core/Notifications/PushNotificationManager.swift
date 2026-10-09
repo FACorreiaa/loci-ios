@@ -1,16 +1,16 @@
-import Combine
 import Foundation
+import Observation
 import UIKit
 import UserNotifications
 
-@MainActor public final class PushNotificationManager: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
+@MainActor @Observable public final class PushNotificationManager: NSObject, UNUserNotificationCenterDelegate {
   public static let shared = PushNotificationManager()
 
-  private let tokenStorageKey = "loci_apns_device_token"
+  @ObservationIgnored private let tokenStorageKey = "loci_apns_device_token"
 
-  @Published public private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
-  @Published public private(set) var deviceToken: String?
-  @Published public private(set) var lastNotificationPayload: [AnyHashable: Any]?
+  public private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
+  public private(set) var deviceToken: String?
+  public private(set) var lastNotificationPayload: [AnyHashable: Any]?
 
   public override init() {
     super.init()

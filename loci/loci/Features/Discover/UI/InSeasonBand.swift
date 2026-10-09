@@ -7,16 +7,19 @@ import SwiftUI
 /// until the person sends it.
 ///
 /// Motion: one slow linear loop, driven by `TimelineView` so it can be paused
-/// (touch, off-screen) and resumed from where it is. With Reduce Motion, or
-/// too few chips to fill a row, it is a plain horizontal scroll instead.
+/// (touch, off-screen) and resumed from where it is. With Reduce Motion,
+/// VoiceOver, or too few chips to fill a row, it is a plain horizontal scroll
+/// instead.
 struct InSeasonBand: View {
   /// Where a tapped chip's prompt goes.
   @Binding var seed: String
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
   @State private var trending: [InSeasonTrending]?
   @State private var isPaused = false
   @State private var isVisible = false
+  @State private var taps = 0
 
   private var items: [InSeasonItem] {
     InSeason.items(picks: SeasonalPicks.picks(forMonth: Calendar.current.component(.month, from: Date())), trending: trending)
@@ -27,10 +30,11 @@ struct InSeasonBand: View {
     if !items.isEmpty {
       VStack(alignment: .leading, spacing: 8) {
         Text("In season · \(InSeason.monthLabel())").lociCoordStyle(10)
-        if reduceMotion || !InSeason.needsMarquee(count: items.count) {
-          ScrollView(.horizontal, showsIndicators: false) {
+        if reduceMotion || voiceOver || !InSeason.needsMarquee(count: items.count) {
+          ScrollView(.horizontal) {
             HStack(spacing: 8) { ForEach(items) { chip($0) } }.padding(.vertical, 4).padding(.horizontal, LociTheme.defaultPadding)
           }
+          .scrollIndicators(.hidden)
           .padding(.horizontal, -LociTheme.defaultPadding)
         } else {
           Marquee(loopDuration: InSeason.loopDuration(count: items.count), spacing: 8, isPaused: isPaused || !isVisible) {
@@ -58,13 +62,14 @@ struct InSeasonBand: View {
       }
       .accessibilityElement(children: .contain)
       .accessibilityLabel("In season")
+      .sensoryFeedback(.impact(weight: .light), trigger: taps)
       .task { await loadTrending() }
     }
   }
 
   private func chip(_ item: InSeasonItem) -> some View {
     Button {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      taps += 1
       seed = item.prompt
     } label: {
       HStack(spacing: 6) {
@@ -141,7 +146,8 @@ struct Marquee<Content: View>: View {
         TimelineView(.animation(paused: isPaused)) { context in
           HStack(spacing: spacing) {
             copy
-            copy
+            // The second copy only closes the loop visually; VoiceOver reads the first.
+            copy.accessibilityHidden(true)
           }
           .fixedSize()
           .offset(x: copyWidth > 0 ? -((copyWidth + spacing) * progress(at: context.date)) : 0)
@@ -163,11 +169,7 @@ struct Marquee<Content: View>: View {
   private var copy: some View {
     HStack(spacing: spacing) { content() }
       .fixedSize()
-      .background(
-        GeometryReader { proxy in
-          Color.clear.onAppear { copyWidth = proxy.size.width }.onChange(of: proxy.size.width) { _, width in copyWidth = width }
-        }
-      )
+      .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { copyWidth = $0 }
   }
 
   /// Fraction of one loop completed, read from the clock: nothing is written

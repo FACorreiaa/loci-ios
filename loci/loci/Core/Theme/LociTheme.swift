@@ -152,9 +152,9 @@ public extension View {
   func lociCard(padding: CGFloat = LociTheme.cardPadding) -> some View {
     self.padding(padding).background(Color.lociCard)
       .clipShape(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
-      .overlay(
+      .overlay {
         RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder, lineWidth: LociTheme.borderWidth)
-      )
+      }
   }
 
   /// Space Mono label styling: uppercase with tracking.

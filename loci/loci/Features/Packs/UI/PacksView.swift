@@ -49,12 +49,14 @@ import SwiftUI
 struct PacksView: View {
   static let symbol = "shippingbox"
 
-  @State var store: PacksStore
+  @State private var store: PacksStore
   @State private var showAllMonths = false
   private let currentMonth: Int
 
-  init(store: PacksStore = PacksStore(), now: Date = Date(), calendar: Calendar = .current) {
-    _store = State(initialValue: store)
+  /// `store` is an autoclosure so a parent's re-render does not build a store
+  /// that `State` would throw away; only the first one is ever made.
+  init(store: @autoclosure @escaping () -> PacksStore = PacksStore(), now: Date = Date(), calendar: Calendar = .current) {
+    _store = State(wrappedValue: store())
     currentMonth = calendar.component(.month, from: now)
   }
 
@@ -67,7 +69,7 @@ struct PacksView: View {
         filters
         content
       }.padding(LociTheme.defaultPadding)
-    }.background(Color.lociPaper.ignoresSafeArea()).navigationTitle("City Packs").navigationBarTitleDisplayMode(.inline).refreshable {
+    }.background { Color.lociPaper.ignoresSafeArea() }.navigationTitle("City Packs").navigationBarTitleDisplayMode(.inline).refreshable {
       await store.load()
     }.task(id: store.filters) { await store.load() }.errorAlert($store.error).onAppear { Analytics.screen("packs") }
   }
@@ -95,17 +97,13 @@ struct PacksView: View {
           FilterChip(label: PackMonths.name(month), isOn: store.filters.month == month) { store.toggle(month: month) }
         }
         if !showAllMonths {
-          Button("All months") { showAllMonths = true }.font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk).underline().frame(
-            minHeight: LociTheme.minTapTarget
-          )
+          Button { showAllMonths = true } label: { TextLink(title: "All months") }
         }
       }
       HStack(spacing: 12) {
         FilterChip(label: "Free only", isOn: store.filters.onlyFree) { store.filters.onlyFree.toggle() }
         if store.filters.isActive {
-          Button("Clear filters") { store.clearFilters() }.font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk).underline().frame(
-            minHeight: LociTheme.minTapTarget
-          )
+          Button { store.clearFilters() } label: { TextLink(title: "Clear filters") }
         }
         Spacer(minLength: 0)
       }
@@ -146,9 +144,7 @@ struct PacksView: View {
     case .loaded:
       LazyVGrid(columns: columns, spacing: 12) {
         ForEach(store.packs) { pack in
-          NavigationLink {
-            PackDetailView(slug: pack.slug)
-          } label: {
+          NavigationLink(value: AppRoute.pack(slug: pack.slug)) {
             PackCard(pack: pack)
           }.buttonStyle(.plain)
         }
@@ -166,8 +162,19 @@ private struct FilterRow<Content: View>: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
       Text(title).lociCoordStyle(10)
-      ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 8) { content }.padding(.vertical, 2) }.scrollClipDisabled()
+      ScrollView(.horizontal) { HStack(spacing: 8) { content }.padding(.vertical, 2) }.scrollIndicators(.hidden).scrollClipDisabled()
     }
+  }
+}
+
+/// An underlined text action, with the 44pt minimum as its touch area.
+private struct TextLink: View {
+  let title: String
+
+  var body: some View {
+    Text(title).font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk).underline().frame(minHeight: LociTheme.minTapTarget).contentShape(
+      .rect
+    )
   }
 }
 

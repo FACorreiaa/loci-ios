@@ -21,7 +21,7 @@ struct SharedTripView: View {
         }
         if trip.hasOwner {
           Section {
-            NavigationLink { UserProfileView(username: trip.owner.username) } label: {
+            NavigationLink(value: AppRoute.user(username: trip.owner.username)) {
               PersonRow(user: trip.owner, subtitle: "Shared · \(TripVisibility(trip.visibility).label)") { EmptyView() }
             }
             .disabled(trip.owner.username.isEmpty)
@@ -98,9 +98,7 @@ struct FriendTripRow: View {
   var showsOwner = true
 
   var body: some View {
-    NavigationLink {
-      SharedTripView(source: trip.shareCode.isEmpty ? .tripID(trip.id) : .code(trip.shareCode))
-    } label: {
+    NavigationLink(value: AppRoute.sharedTrip(trip.shareCode.isEmpty ? .tripID(trip.id) : .code(trip.shareCode))) {
       HStack(spacing: 12) {
         if showsOwner, trip.hasOwner { UserAvatar(user: trip.owner, size: 32) }
         VStack(alignment: .leading, spacing: 3) {
@@ -111,10 +109,10 @@ struct FriendTripRow: View {
     }
   }
 
-  private var summary: String {
+  private var summary: AttributedString {
     let stops = trip.days.reduce(0) { $0 + $1.stops.count }
     let owner = showsOwner && trip.hasOwner ? "\(trip.owner.shownName) · " : ""
     let city = trip.cityName.isEmpty ? "" : "\(trip.cityName) · "
-    return "\(owner)\(city)\(trip.days.count) day\(trip.days.count == 1 ? "" : "s") · \(stops) stop\(stops == 1 ? "" : "s")"
+    return AttributedString(owner + city) + AttributedString(localized: "^[\(trip.days.count) day](inflect: true) · ^[\(stops) stop](inflect: true)")
   }
 }

@@ -5,14 +5,16 @@ struct WalkStopList: View {
   let walk: StopWalk
   let onPick: (Int) -> Void
 
+  @ScaledMetric(relativeTo: .subheadline) private var numberWidth = 24
+
   var body: some View {
     NavigationStack {
-      List(Array(walk.stops.enumerated()), id: \.element.id) { i, stop in
+      List(walk.stops.enumerated(), id: \.element.id) { i, stop in
         Button {
           onPick(i)
         } label: {
           HStack(spacing: 12) {
-            Text("\(i + 1)").font(.lociHeadline(14)).frame(width: 24)
+            Text("\(i + 1)").font(.lociHeadline(14)).frame(minWidth: numberWidth)
             Text(stop.name).foregroundStyle(Color.lociInk).strikethrough(walk.skipped.contains(i))
             Spacer()
             Text(status(i)).lociCoordStyle(10)

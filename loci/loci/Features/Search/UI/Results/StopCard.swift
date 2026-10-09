@@ -15,6 +15,15 @@ struct StopCard: View {
 
   /// At accessibility sizes the photo sits above the text, which gets the full width and more lines.
   private var isLarge: Bool { typeSize.isAccessibilitySize }
+  private var category: String { stop.category.isEmpty ? destination.title : stop.category }
+
+  /// Everything the card shows, read in one go: the label replaces the children.
+  private var accessibilitySummary: String {
+    var parts = ["\(index). \(stop.name)", category]
+    if stop.rating > 0 { parts.append(String(localized: "Rated \(stop.rating.formatted(.number.precision(.fractionLength(1))))")) }
+    if let meta = StopMeta.line(for: stop, destination: destination) { parts.append(meta) }
+    return parts.joined(separator: ", ")
+  }
 
   var body: some View {
     Button(action: onSelect) {
@@ -22,7 +31,7 @@ struct StopCard: View {
         PlaceImage(stop: stop, index: index, color: color)
         VStack(alignment: .leading, spacing: 4) {
           HStack(alignment: .firstTextBaseline) {
-            Label(stop.category.isEmpty ? destination.title : stop.category, systemImage: PlaceSymbol.name(for: stop.category))
+            Label(category, systemImage: PlaceSymbol.name(for: stop.category))
               .lociCoordStyle(10).lineLimit(isLarge ? 2 : 1)
             Spacer(minLength: 4)
             if stop.rating > 0 { RatingChip(rating: stop.rating) }
@@ -38,13 +47,13 @@ struct StopCard: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .lociCard(padding: 10)
-      .overlay(
+      .overlay {
         RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous)
           .stroke(isSelected ? Color.lociForest : .clear, lineWidth: 2)
-      )
+      }
     }
     .buttonStyle(.plain)
-    .accessibilityLabel("\(index). \(stop.name)")
+    .accessibilityLabel(accessibilitySummary)
     .accessibilityHint("Shows details")
   }
 }
@@ -57,6 +66,9 @@ struct PlaceImage: View {
   let color: Color
   var size: CGFloat = 88
 
+  /// The index stamp grows with its number (lociCoord scales relative to caption2).
+  @ScaledMetric(relativeTo: .caption2) private var stamp: CGFloat = 22
+
   var body: some View {
     ZStack(alignment: .topLeading) {
       picture
@@ -64,7 +76,7 @@ struct PlaceImage: View {
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
       Text("\(index)")
         .font(.lociCoord(11)).foregroundStyle(LociTheme.stampInk)
-        .frame(width: 22, height: 22)
+        .frame(width: stamp, height: stamp)
         .background(color, in: Circle())
         .padding(6)
         .accessibilityHidden(true)
@@ -151,10 +163,16 @@ nonisolated enum StopMeta {
       if !stop.category.isEmpty { parts.append(stop.category) }
       if let price = price(stop) { parts.append(price) }
     case .itinerary:
-      if stop.distance > 0 { parts.append(String(format: "%.1f km", stop.distance)) }
+      if stop.distance > 0 { parts.append(distance(stop.distance)) }
       if let price = price(stop) { parts.append(price) }
     }
     return parts.isEmpty ? nil : parts.joined(separator: " · ")
+  }
+
+  /// "1.2 km", with the locale's decimal separator.
+  static func distance(_ kilometers: Double, locale: Locale = .autoupdatingCurrent) -> String {
+    Measurement(value: kilometers, unit: UnitLength.kilometers)
+      .formatted(.measurement(width: .abbreviated, usage: .asProvided, numberFormatStyle: .number.precision(.fractionLength(1))).locale(locale))
   }
 
   static func price(_ stop: Loci_Poi_POIDetailedInfo) -> String? {
@@ -165,7 +183,10 @@ nonisolated enum StopMeta {
   /// Today's entry of an `opening_hours` map keyed by weekday name, in any case.
   static func todaysHours(_ hours: [String: String], now: Date = Date(), calendar: Calendar = .current) -> String? {
     guard !hours.isEmpty else { return nil }
-    let weekday = calendar.weekdaySymbols[calendar.component(.weekday, from: now) - 1].lowercased()
+    // The server's keys are English; the phone's locale would name the day in its own language.
+    var english = calendar
+    english.locale = Locale(identifier: "en_US_POSIX")
+    let weekday = english.weekdaySymbols[english.component(.weekday, from: now) - 1].lowercased()
     let short = String(weekday.prefix(3))
     if let match = hours.first(where: { $0.key.lowercased() == weekday || $0.key.lowercased() == short })?.value, !match.isEmpty {
       return "Today \(match)"

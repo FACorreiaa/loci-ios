@@ -3,15 +3,33 @@ import SwiftUI
 /// The first-run questionnaire (web: routes/trip-setup.tsx): budget, pace,
 /// getting around, interests. Four screens, one profile, Skip on every one.
 /// `onFinish` runs after a successful save or a skip, never after a failed save.
+///
+/// Owns its store. A caller may pass one in (previews); otherwise the view
+/// makes its own on first appearance, not on every init, since the parent's
+/// body re-creates this struct often.
 struct TripSetupView: View {
-  @State private var store: TripSetupStore
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @State private var store: TripSetupStore?
   let onFinish: () -> Void
 
-  init(store: TripSetupStore = TripSetupStore(), onFinish: @escaping () -> Void) {
+  init(store: TripSetupStore? = nil, onFinish: @escaping () -> Void) {
     _store = State(initialValue: store)
     self.onFinish = onFinish
   }
+
+  var body: some View {
+    if let store {
+      TripSetupScreen(store: store, onFinish: onFinish)
+    } else {
+      Color.lociPaper.ignoresSafeArea()
+        .onAppear { store = TripSetupStore() }
+    }
+  }
+}
+
+private struct TripSetupScreen: View {
+  let store: TripSetupStore
+  let onFinish: () -> Void
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   var body: some View {
     VStack(alignment: .leading, spacing: 20) {
@@ -113,10 +131,10 @@ struct TripSetupView: View {
             selected ? Color.lociSage.opacity(0.45) : Color.lociCard,
             in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous)
           )
-          .overlay(
+          .overlay {
             RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous)
               .strokeBorder(selected ? Color.lociForest : Color.lociBorder, lineWidth: selected ? 2 : 1)
-          )
+          }
           .contentShape(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -156,7 +174,7 @@ struct TripSetupView: View {
               .padding(.horizontal, 16)
               .frame(minHeight: LociTheme.minTapTarget)
               .background(on ? Color.lociForest : Color.lociCard, in: Capsule())
-              .overlay(Capsule().strokeBorder(on ? Color.clear : Color.lociBorder))
+              .overlay { Capsule().strokeBorder(on ? Color.clear : Color.lociBorder) }
               .contentShape(Capsule())
           }
           .buttonStyle(.plain)
@@ -184,7 +202,9 @@ struct TripSetupView: View {
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color.lociDestructive.opacity(0.1), in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
-    .overlay(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).strokeBorder(Color.lociDestructive.opacity(0.4)))
+    .overlay {
+      RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).strokeBorder(Color.lociDestructive.opacity(0.4))
+    }
     .accessibilityElement(children: .contain)
   }
 

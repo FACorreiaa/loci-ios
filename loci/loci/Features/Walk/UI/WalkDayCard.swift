@@ -35,7 +35,7 @@ struct WalkDayCard: View {
         done
       }
       if withoutLocation > 0, walk.phase != .done {
-        Text(withoutLocation == 1 ? "1 stop has no location and is skipped" : "\(withoutLocation) stops have no location and are skipped")
+        Text("Skipping ^[\(withoutLocation) stop](inflect: true) with no location")
           .font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
       }
     }
@@ -98,7 +98,8 @@ struct WalkDayCard: View {
   private var done: some View {
     let summary = walk.summary
     let tally = [
-      "\(summary.visited) \(summary.visited == 1 ? "stop" : "stops")" + (summary.skipped > 0 ? " (\(summary.skipped) skipped)" : ""),
+      String(AttributedString(localized: "^[\(summary.visited) stop](inflect: true)").characters)
+        + (summary.skipped > 0 ? " (\(summary.skipped) skipped)" : ""),
       NearbyWalkAttributes.ContentState.format(meters: summary.meters),
       walk.tracker.deniedByUser ? nil : walk.tracker.stepsText,
     ]

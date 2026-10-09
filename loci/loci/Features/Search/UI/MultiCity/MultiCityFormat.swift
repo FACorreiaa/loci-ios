@@ -2,14 +2,15 @@ import Foundation
 import LociConnectProto
 
 /// The strings web renders for a multi-city trip (loci-client multi-city-view.ts),
-/// so both apps read alike.
+/// in the same shape, with the time and distance in the phone's locale.
 nonisolated enum MultiCityFormat {
-  /// "Train · ≈3h14 · 274 km" — an estimate, and it says so.
-  static func leg(_ leg: Loci_Trip_TripLeg) -> String {
+  /// "Train · ≈3h 14m · 274 km" — an estimate, and it says so.
+  static func leg(_ leg: Loci_Trip_TripLeg, locale: Locale = .autoupdatingCurrent) -> String {
     let mode = ["drive": "Drive", "train": "Train", "bus": "Bus", "flight": "Flight"][leg.mode] ?? "Travel"
-    let mins = Int(leg.durationMins)
-    let time = mins < 60 ? "\(mins) min" : "\(mins / 60)h" + String(format: "%02d", mins % 60)
-    return "\(mode) · ≈\(time) · \(Int(leg.distanceKm.rounded())) km"
+    let time = Duration.seconds(Int(leg.durationMins) * 60).formatted(.units(allowed: [.hours, .minutes], width: .narrow).locale(locale))
+    let distance = Measurement(value: leg.distanceKm, unit: UnitLength.kilometers)
+      .formatted(.measurement(width: .abbreviated, usage: .asProvided, numberFormatStyle: .number.precision(.fractionLength(0))).locale(locale))
+    return "\(mode) · ≈\(time) · \(distance)"
   }
 
   /// "Lisbon · 2n"
