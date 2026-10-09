@@ -25,7 +25,7 @@ public protocol AuthSessionManaging: Sendable {
   var currentUsername: String? { get }
 }
 
-public final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable {
+@MainActor public final class AuthSessionManager: AuthSessionManaging {
   public static let shared = AuthSessionManager()
 
   private let secureStore: SecureStringStoring
@@ -74,9 +74,7 @@ public final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable 
       self.currentUsername = username
     }
 
-    await MainActor.run {
-      NotificationCenter.default.post(name: .authSessionDidAuthenticate, object: nil, userInfo: [AuthSessionUserInfo.isNewUser: isNewUser])
-    }
+    NotificationCenter.default.post(name: .authSessionDidAuthenticate, object: nil, userInfo: [AuthSessionUserInfo.isNewUser: isNewUser])
   }
 
   public func logout() async { await invalidateSession() }
@@ -89,6 +87,6 @@ public final class AuthSessionManager: AuthSessionManaging, @unchecked Sendable 
     self.currentUserID = nil
     self.currentUsername = nil
 
-    await MainActor.run { NotificationCenter.default.post(name: .authSessionDidInvalidate, object: nil) }
+    NotificationCenter.default.post(name: .authSessionDidInvalidate, object: nil)
   }
 }

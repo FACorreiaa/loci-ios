@@ -39,7 +39,11 @@ import SwiftUI
 
 /// Settings › Standing tasks: what Loci is keeping an eye on, and a way to stop each one.
 struct StandingTasksView: View {
-  @State var store = StandingTasksStore()
+  @State private var store: StandingTasksStore
+
+  init(store: StandingTasksStore = StandingTasksStore()) {
+    _store = State(initialValue: store)
+  }
 
   var body: some View {
     List {

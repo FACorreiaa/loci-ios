@@ -1,7 +1,7 @@
 import SwiftUI
 
 public struct SignUpView: View {
-  @ObservedObject public var viewModel: LoginViewModel
+  @Bindable public var viewModel: LoginViewModel
 
   public init(viewModel: LoginViewModel) { self.viewModel = viewModel }
 

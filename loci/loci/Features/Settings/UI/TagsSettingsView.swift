@@ -178,7 +178,7 @@ struct NamedItemRow: View {
 
 struct NamedItemEditor: View {
   let title: String
-  @State var draft: NamedItemDraft
+  @State private var draft: NamedItemDraft
   let showsKind: Bool
   let onSave: (NamedItemDraft) async -> Bool
 

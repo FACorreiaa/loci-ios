@@ -1,7 +1,7 @@
 import SwiftUI
 
 public struct SignInView: View {
-  @ObservedObject public var viewModel: LoginViewModel
+  @Bindable public var viewModel: LoginViewModel
 
   public init(viewModel: LoginViewModel) { self.viewModel = viewModel }
 
@@ -29,7 +29,8 @@ public struct SignInView: View {
         Button {
           viewModel.showForgotPassword = true
         } label: {
-          Text("Forgot Password?").font(.caption.weight(.medium)).foregroundColor(.lociCoral)
+          Text("Forgot Password?").font(.caption.weight(.medium)).foregroundStyle(Color.lociCoral)
+            .frame(minHeight: LociTheme.minTapTarget).contentShape(.rect)
         }
       }
 
