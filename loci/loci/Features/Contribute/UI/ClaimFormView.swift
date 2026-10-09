@@ -7,6 +7,7 @@ import SwiftUI
 /// corroborate them.
 struct ClaimFormView: View {
   @State private var store: ClaimFormStore
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   init(store: ClaimFormStore) {
     _store = State(initialValue: store)
@@ -37,18 +38,18 @@ struct ClaimFormView: View {
             if let result = store.result {
               ClaimResultCard(outcome: ClaimOutcome(result.status))
                 .id("result")
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
             }
           }
         }
         .padding(LociTheme.defaultPadding)
-        .animation(.smooth, value: store.result)
+        .animation(reduceMotion ? nil : .smooth, value: store.result)
       }
       .onChange(of: store.result) { _, result in
-        if result != nil { withAnimation(.smooth) { proxy.scrollTo("result", anchor: .bottom) } }
+        if result != nil { withAnimation(reduceMotion ? nil : .smooth) { proxy.scrollTo("result", anchor: .bottom) } }
       }
     }
-    .background(Color.lociPaper.ignoresSafeArea())
+    .background(Color.lociPaper)
     .navigationTitle("Report a fact")
     .navigationBarTitleDisplayMode(.inline)
     .errorAlert($store.error)
@@ -62,7 +63,7 @@ struct ClaimFormView: View {
       FlowLayout(spacing: 8) {
         ForEach(store.task.requestedFields, id: \.self) { field in
           ContributeChip(label: PlaceFactVocabulary.label(field), isOn: store.field == field) {
-            withAnimation(.snappy) { store.select(field) }
+            withAnimation(reduceMotion ? nil : .snappy) { store.select(field) }
           }
         }
       }
@@ -200,7 +201,7 @@ struct ContributeChip: View {
       Text(label)
         .font(.lociCaption(14))
         .padding(.horizontal, 12).padding(.vertical, 8)
-        .frame(minHeight: 36)
+        .frame(minHeight: LociTheme.minTapTarget)
         .background(isOn ? Color.lociForest : Color.lociMuted, in: Capsule())
         .foregroundStyle(isOn ? Color.lociPaper : Color.lociInk)
         .contentShape(Capsule())

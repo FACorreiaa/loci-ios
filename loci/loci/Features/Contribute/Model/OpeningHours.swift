@@ -153,6 +153,17 @@ nonisolated struct OpeningHours: Hashable, Sendable {
   }
 
   /// web: the "Closed" / "Set hours" button. Reopening starts at 09:00–17:00.
+  /// A day's first opening (`start`) or closing time as a picker date
+  /// (`clockDate`); setting it goes through `setTime`.
+  subscript(clock day: HoursDay, start start: Bool) -> Date {
+    get {
+      var first = Self.weekdayInterval
+      if case .open(let intervals) = self[day], let interval = intervals.first { first = interval }
+      return Self.clockDate(start ? first.start : first.end)
+    }
+    set { setTime(day, start: start, to: Self.clockString(newValue)) }
+  }
+
   mutating func toggleClosed(_ day: HoursDay) { self[day] = self[day].isClosed ? .open([Self.weekdayInterval]) : .closed }
 
   // MARK: - Clock

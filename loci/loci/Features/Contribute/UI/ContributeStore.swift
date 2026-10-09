@@ -201,8 +201,9 @@ import LociConnectProto
   }
 }
 
-/// The Add place form (web: AddPlaceForm).
-@MainActor @Observable final class AddPlaceStore {
+/// The Add place form (web: AddPlaceForm). Identifiable by instance, so one
+/// store drives one `.sheet(item:)` presentation.
+@MainActor @Observable final class AddPlaceStore: Identifiable {
   private(set) var draft: PlaceDraft
   private(set) var isSubmitting = false
   private(set) var result: PlaceSubmissionResult?

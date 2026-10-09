@@ -43,7 +43,7 @@ struct ReviewCard: View {
     .padding(14)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color.lociCard, in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
-    .overlay(RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder.opacity(0.6)))
+    .overlay { RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder.opacity(0.6)) }
   }
 
   private var header: some View {
@@ -103,10 +103,9 @@ struct ReviewCard: View {
             if let onEdit { Button("Edit", systemImage: "pencil", action: onEdit) }
             if let onDelete { Button("Delete", systemImage: "trash", role: .destructive, action: onDelete) }
           } label: {
-            Image(systemName: "ellipsis").frame(width: 32, height: 28).contentShape(Rectangle())
+            overflowLabel("Review actions")
           }
           .foregroundStyle(Color.lociMutedInk)
-          .accessibilityLabel("Review actions")
         }
       }
     } else {
@@ -119,9 +118,14 @@ struct ReviewCard: View {
               .background(vote.isLiked ? Color.lociSage : Color.lociMuted, in: Capsule())
               .foregroundStyle(vote.isLiked ? Color.lociForest : Color.lociInk)
               .contentTransition(.numericText())
+              // The capsule stays small; the tap area around it is full size.
+              .frame(minHeight: LociTheme.minTapTarget)
+              .contentShape(.rect)
           }
           .buttonStyle(.plain)
-          .accessibilityLabel(vote.isLiked ? "Marked helpful, \(vote.count) votes" : "Mark helpful, \(vote.count) votes")
+          .accessibilityLabel(
+            vote.isLiked ? Text("Marked helpful, ^[\(vote.count) vote](inflect: true)") : Text("Mark helpful, ^[\(vote.count) vote](inflect: true)")
+          )
           .accessibilityAddTraits(vote.isLiked ? .isSelected : [])
         } else if review.helpfulCount >= 1 {
           Label("\(review.helpfulCount) found this helpful", systemImage: "hand.thumbsup").font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk)
@@ -133,13 +137,20 @@ struct ReviewCard: View {
           Menu {
             Button("Report", systemImage: "flag", role: .destructive, action: onReport)
           } label: {
-            Image(systemName: "ellipsis").frame(width: 32, height: 28).contentShape(Rectangle())
+            overflowLabel("More")
           }
           .foregroundStyle(Color.lociMutedInk)
-          .accessibilityLabel("More")
         }
       }
     }
+  }
+
+  /// The overflow menu's "…", with a full-size hit area around the small glyph.
+  private func overflowLabel(_ title: LocalizedStringKey) -> some View {
+    Label(title, systemImage: "ellipsis")
+      .labelStyle(.iconOnly)
+      .frame(minWidth: LociTheme.minTapTarget, minHeight: LociTheme.minTapTarget)
+      .contentShape(.rect)
   }
 }
 
@@ -174,7 +185,13 @@ struct ReviewAvatar: View {
 /// Five stars, filled to the (rounded-to-half) rating.
 struct ReviewStars: View {
   let rating: Double
-  var size: CGFloat = 12
+  /// Scales with Dynamic Type from this size at the default setting.
+  @ScaledMetric private var size: CGFloat
+
+  init(rating: Double, size: CGFloat = 12) {
+    self.rating = rating
+    _size = ScaledMetric(wrappedValue: size, relativeTo: .caption)
+  }
 
   var body: some View {
     HStack(spacing: 1) {

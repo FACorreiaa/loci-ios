@@ -51,12 +51,21 @@ struct LeaderboardView: View {
       }
     }
     .sheet(isPresented: $showsInvite) { InviteSheet() }
+    .errorAlert($store.error)
     .refreshable { await store.load() }
-    .task { await store.load() }
-    .onChange(of: store.period) { Task { await store.reloadBoard() } }
-    .onChange(of: store.metric) { Task { await store.reloadBoard() } }
-    .onChange(of: feedback.revision) { Task { await store.reloadBoard() } }
+    // One task per board: a newer period, metric or award cancels the older
+    // request, so a slow answer can't overwrite a newer one. The first run is
+    // the full load; later ones only re-rank.
+    .task(id: BoardQuery(period: store.period, metric: store.metric, revision: feedback.revision)) {
+      if store.phase == .loading { await store.load() } else { await store.reloadBoard() }
+    }
     .onAppear { Analytics.screen("Leaderboard") }
+  }
+
+  private struct BoardQuery: Equatable {
+    let period: Loci_Gamification_LeaderboardPeriod
+    let metric: Loci_Gamification_LeaderboardMetric
+    let revision: Int
   }
 
   private var inviteSection: some View {
@@ -84,7 +93,7 @@ struct LeaderboardRow: View {
       Text("\(entry.rank)")
         .font(.lociHeadline(entry.rank <= 3 ? 20 : 16))
         .foregroundStyle(entry.rank == 1 ? Color.lociCoral : Color.lociInk)
-        .frame(width: 28)
+        .frame(minWidth: 28)
       UserAvatar(user: entry.user, size: 36)
       VStack(alignment: .leading, spacing: 2) {
         Text(entry.isMe ? "You" : entry.user.shownName).font(.lociHeadline(16)).foregroundStyle(Color.lociInk).lineLimit(1)

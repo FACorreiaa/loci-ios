@@ -61,6 +61,12 @@ nonisolated struct ReviewForm: Equatable, Sendable {
 
   init(_ review: LociReview) { self.init(rating: review.rating, title: review.title, content: review.content, visitDate: review.visitDate) }
 
+  /// The visit date for a date picker: today until one is picked.
+  var visitDay: Date {
+    get { visitDate ?? Date() }
+    set { visitDate = newValue }
+  }
+
   enum Issue: Equatable, Sendable {
     case noRating, noContent, contentTooShort, contentTooLong, titleTooLong
 

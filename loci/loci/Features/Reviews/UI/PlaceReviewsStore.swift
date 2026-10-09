@@ -281,14 +281,15 @@ nonisolated enum ReviewSubmitResult: Equatable, Sendable {
 
   /// Optimistic, with the row put back on failure.
   func delete(_ review: LociReview) async -> Bool {
-    guard let index = reviews.firstIndex(of: review) else { return false }
-    reviews.remove(at: index)
+    // By id: the caller's copy may predate an edit or a helpful vote.
+    guard let index = reviews.firstIndex(where: { $0.id == review.id }) else { return false }
+    let removed = reviews.remove(at: index)
     total = max(0, total - 1)
     do {
       try await service.delete(reviewID: review.id)
       return true
     } catch {
-      reviews.insert(review, at: min(index, reviews.count))
+      reviews.insert(removed, at: min(index, reviews.count))
       total += 1
       if !error.isCancellation { self.error = error.userMessage }
       return false

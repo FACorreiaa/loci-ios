@@ -57,7 +57,7 @@ struct MyReviewsView: View {
     .listStyle(.plain)
     .scrollContentBackground(.hidden)
     .contentMargins(.horizontal, LociTheme.defaultPadding, for: .scrollContent)
-    .background(Color.lociPaper.ignoresSafeArea())
+    .background(Color.lociPaper)
     .overlay { overlay }
     .navigationTitle("My reviews")
     .navigationDestination(for: LociReview.self) { ReviewedPlaceView(review: $0) }
