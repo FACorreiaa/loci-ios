@@ -211,10 +211,15 @@ private struct PlacesCardView: View {
     let round: Bool
   }
 
+  /// Centres in card-width units; the card is about 178 units tall, and the
+  /// count and headline take the top 70.
   private let spots: [Spot] = [
-    Spot(x: 22, y: 64, r: -12, color: RecapPalette.coralDeep, round: true), Spot(x: 70, y: 60, r: 7, color: RecapPalette.ink, round: false),
-    Spot(x: 54, y: 78, r: -4, color: RecapPalette.coralDeep, round: false), Spot(x: 22, y: 88, r: -9, color: RecapPalette.teal, round: false),
-    Spot(x: 78, y: 90, r: 14, color: RecapPalette.ink, round: true), Spot(x: 46, y: 104, r: 6, color: RecapPalette.teal, round: true),
+    Spot(x: 26, y: 88, r: -12, color: RecapPalette.coralDeep, round: true),
+    Spot(x: 72, y: 86, r: 7, color: RecapPalette.ink, round: false),
+    Spot(x: 52, y: 112, r: -4, color: RecapPalette.coralDeep, round: false),
+    Spot(x: 24, y: 136, r: -9, color: RecapPalette.teal, round: false),
+    Spot(x: 74, y: 136, r: 14, color: RecapPalette.ink, round: true),
+    Spot(x: 48, y: 158, r: 6, color: RecapPalette.teal, round: true),
   ]
 
   var body: some View {
