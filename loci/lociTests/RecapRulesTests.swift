@@ -71,7 +71,7 @@ struct RecapRulesTests {
     #expect(RecapRules.initials(" ") == "?")
   }
 
-  @Test func recapLinksOpenInTheirTabs() {
+  @MainActor @Test func recapLinksOpenInTheirTabs() {
     #expect(AppRouter.tab(for: .tripRecap(tripID: "t")) == .calendar)
     #expect(AppRouter.tab(for: .sharedRecap(code: "c")) == .discover)
   }
