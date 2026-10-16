@@ -9,6 +9,8 @@ struct StopCard: View {
   let color: Color
   let destination: SearchDestination
   var isSelected = false
+  /// "Not for me". Offered only where the page can take the card away.
+  var onDismiss: (() -> Void)?
   var onSelect: () -> Void = {}
 
   @Environment(\.dynamicTypeSize) private var typeSize
@@ -53,8 +55,16 @@ struct StopCard: View {
       }
     }
     .buttonStyle(.plain)
+    .contextMenu {
+      if let onDismiss {
+        Button("Not for me", systemImage: "hand.thumbsdown", action: onDismiss)
+      }
+    }
     .accessibilityLabel(accessibilitySummary)
     .accessibilityHint("Shows details")
+    .accessibilityActions {
+      if let onDismiss { Button("Not for me", action: onDismiss) }
+    }
   }
 }
 
@@ -216,6 +226,9 @@ struct DaySection: View {
   let destination: SearchDestination
   let showsDayLabel: Bool
   @Binding var selectedID: String?
+  /// The "Not for me" action for a stop, where it can be waved away (a list,
+  /// not an itinerary day); nil for a stop that offers none.
+  var dismissAction: ((Loci_Poi_POIDetailedInfo) -> (() -> Void)?)?
   var onOpen: (Loci_Poi_POIDetailedInfo) -> Void
 
   private var color: Color { showsDayLabel ? LociTheme.dayColor(group.number) : LociTheme.listColor }
@@ -237,7 +250,8 @@ struct DaySection: View {
           index: sequence[stop.stableID] ?? 0,
           color: color,
           destination: destination,
-          isSelected: selectedID == stop.stableID
+          isSelected: selectedID == stop.stableID,
+          onDismiss: dismissAction?(stop),
         ) {
           selectedID = stop.stableID
           onOpen(stop)

@@ -19,6 +19,8 @@ import SwiftProtobuf
   private(set) var visits: [Loci_Travelhistory_VisitedPOI] = []
   private(set) var total: Int32 = 0
   private(set) var phase = Phase.idle
+  /// The last failed removal, for the screen to show; cleared by the next try.
+  var error: String?
   private var page: Int32 = 0
 
   private let service: VisitedPlacesService
@@ -54,6 +56,21 @@ import SwiftProtobuf
       if next.pois.isEmpty { total = Int32(visits.count) }
     } catch {
       // Keep what is shown; the next scroll retries.
+    }
+  }
+
+  /// Removes a visit at once and puts it back if the server refuses.
+  func delete(_ id: String) async {
+    guard let index = visits.firstIndex(where: { $0.id == id }) else { return }
+    error = nil
+    let removed = visits.remove(at: index)
+    total = max(total - 1, 0)
+    do {
+      _ = try await service.deleteVisitedPOI(id: id)
+    } catch {
+      visits.insert(removed, at: min(index, visits.count))
+      total += 1
+      self.error = error.userMessage
     }
   }
 
