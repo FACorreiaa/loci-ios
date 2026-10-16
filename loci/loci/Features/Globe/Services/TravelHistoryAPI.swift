@@ -54,19 +54,30 @@ nonisolated enum TravelHistoryAPI {
     request.longitude = poi.longitude
     if !poi.id.isEmpty { request.poiID = poi.id }
     if !poi.name.isEmpty { request.poiName = poi.name }
+    request.source = .manual
     return request
+  }
+
+  /// Removes one place visit and the taste signal it taught.
+  static func deleteVisitedPOI(id: String) async throws -> Bool {
+    var request = Loci_Travelhistory_DeleteVisitedPOIRequest()
+    request.id = id
+    return try await rpc("Could not remove that place.", request) { await client.deleteVisitedPoi(request: $0, headers: [:]) }.deleted
   }
 }
 
 /// Places I've been, behind a protocol so tests run without a session.
 nonisolated protocol VisitedPlacesService: Sendable {
   func visitedPOIs(page: Int32) async throws -> (pois: [Loci_Travelhistory_VisitedPOI], total: Int32)
+  func deleteVisitedPOI(id: String) async throws -> Bool
 }
 
 nonisolated struct ConnectVisitedPlacesService: VisitedPlacesService {
   func visitedPOIs(page: Int32) async throws -> (pois: [Loci_Travelhistory_VisitedPOI], total: Int32) {
     try await TravelHistoryAPI.visitedPOIs(page: page)
   }
+
+  func deleteVisitedPOI(id: String) async throws -> Bool { try await TravelHistoryAPI.deleteVisitedPOI(id: id) }
 }
 
 /// What the globe needs from the server, behind a protocol so the design

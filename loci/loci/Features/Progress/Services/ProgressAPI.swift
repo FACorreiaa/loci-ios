@@ -68,6 +68,7 @@ nonisolated enum ProgressAPI {
     if !visit.poiID.isEmpty { request.poiID = visit.poiID }
     if !visit.poiName.isEmpty { request.poiName = visit.poiName }
     if let tripID = visit.tripID, !tripID.isEmpty { request.tripID = tripID }
+    request.source = .visitEvent
     request.visitedAt = Google_Protobuf_Timestamp(date: location.timestamp)
     var fix = Loci_Travelhistory_DeviceFix()
     fix.latitude = location.coordinate.latitude

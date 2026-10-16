@@ -15,6 +15,11 @@ struct VisitedPlacesView: View {
       .navigationBarTitleDisplayMode(.inline)
       .task { if store.phase == .idle { await store.load() } }
       .refreshable { await store.load() }
+      .alert("Couldn't remove that place", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
+        Button("OK", role: .cancel) {}
+      } message: {
+        Text(store.error ?? "")
+      }
   }
 
   @ViewBuilder private var content: some View {
@@ -44,7 +49,12 @@ struct VisitedPlacesView: View {
     List {
       ForEach(store.grouped) { group in
         Section("\(group.city) · \(group.places.count)") {
-          ForEach(group.places, id: \.id) { VisitedPlaceRow(visit: $0) }
+          ForEach(group.places, id: \.id) { visit in
+            VisitedPlaceRow(visit: visit)
+              .swipeActions {
+                Button("Remove", systemImage: "trash", role: .destructive) { Task { await store.delete(visit.id) } }
+              }
+          }
         }
       }
       if store.canLoadMore {

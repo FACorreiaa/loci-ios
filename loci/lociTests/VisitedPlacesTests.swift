@@ -75,11 +75,41 @@ struct VisitedPlacesTests {
       self.total = total
     }
 
+    var failDeletes = false
+    private(set) var deleted: [String] = []
+
     func visitedPOIs(page: Int32) async throws -> (pois: [Loci_Travelhistory_VisitedPOI], total: Int32) {
       requested.append(page)
       let index = Int(page) - 1
       return (pages.indices.contains(index) ? pages[index] : [], total)
     }
+
+    func deleteVisitedPOI(id: String) async throws -> Bool {
+      if failDeletes { throw APIError.custom("Could not remove it.") }
+      deleted.append(id)
+      return true
+    }
+  }
+
+  @Test func deleteRemovesTheRowAndTellsTheServer() async {
+    let service = Paged(pages: [[Self.visit("A", "Lisbon", day: 1), Self.visit("B", "Lisbon", day: 2)]], total: 2)
+    let store = VisitedPlacesStore(service: service)
+    await store.load()
+    await store.delete("A-id")
+    #expect(store.visits.map(\.poiName) == ["B"])
+    #expect(store.total == 1)
+    #expect(service.deleted == ["A-id"])
+  }
+
+  @Test func deleteRestoresRowOnFailure() async {
+    let service = Paged(pages: [[Self.visit("A", "Lisbon", day: 1)]], total: 1)
+    service.failDeletes = true
+    let store = VisitedPlacesStore(service: service)
+    await store.load()
+    await store.delete("A-id")
+    #expect(store.visits.map(\.poiName) == ["A"])
+    #expect(store.total == 1)
+    #expect(store.error == "Could not remove it.")
   }
 
   @Test func groupsByCityNewestFirst() async {

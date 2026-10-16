@@ -22,6 +22,8 @@ struct ResultsPage: View {
   @State private var showFullMap = false
   @State private var showAllDays = false
   @State private var editingTrip = false
+  /// Places waved away with "Not for me" on this page (stable ids).
+  @State private var dismissed: Set<String> = []
 
   /// The lists derived from the places, built once per body: each is a pass
   /// over every stop, and the page reads them many times.
@@ -35,6 +37,18 @@ struct ResultsPage: View {
   }
 
   private var showsDays: Bool { state.destination == .itinerary }
+
+  /// "Not for me" for places Loci recommended; nil for the rest, so their
+  /// cards offer nothing the server would reject.
+  private func dismissHandler(_ stop: Loci_Poi_POIDetailedInfo) -> (() -> Void)? {
+    guard let outcome = stop.outcome(.dismissed) else { return nil }
+    return {
+      OutcomeAPI.send(outcome)
+      if selectedID == stop.stableID { selectedID = nil }
+      withAnimation(reduceMotion ? LociTheme.reducedFade : LociTheme.defaultSpring) { _ = dismissed.insert(stop.stableID) }
+    }
+  }
+
   private var cityName: String { state.cityData?.city ?? state.cityName ?? "" }
   private var title: String {
     // A gastronomy search's heading is the section's own.
@@ -47,8 +61,9 @@ struct ResultsPage: View {
   private var arrival: AnyTransition { reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity) }
 
   private func derive() -> Derived {
-    let groups = state.dayGroups
-    let extras = state.extras
+    let kept = ResultsDismissal.apply(groups: state.dayGroups, extras: state.extras, dismissed: dismissed, showsDays: showsDays)
+    let groups = kept.groups
+    let extras = kept.extras
     let sequence = DayGrouping.sequence(groups)
     return Derived(
       groups: groups,
@@ -82,6 +97,10 @@ struct ResultsPage: View {
       await side.loadContext(latitude: city.centerLatitude, longitude: city.centerLongitude)
     }
     .sheet(item: $detail) { stop in PlaceDetailSheet(stop: stop, destination: state.destination, cityName: cityName) }
+    .onChange(of: detail?.stableID) { _, opened in
+      guard opened != nil, let stop = detail else { return }
+      OutcomeAPI.send(stop.outcome(.opened))
+    }
     .fullScreenCover(isPresented: $showFullMap) {
       FullMapView(
         data: derived.mapData,
@@ -104,6 +123,7 @@ struct ResultsPage: View {
     let groups = derived.groups
     let visibleGroups = showAllDays ? groups : Array(groups.prefix(DayGrouping.initialDays))
     let hiddenDays = max(groups.count - DayGrouping.initialDays, 0)
+    let dayDismiss: ((Loci_Poi_POIDetailedInfo) -> (() -> Void)?)? = showsDays ? nil : { stop in dismissHandler(stop) }
     if !title.isEmpty || !summary.isEmpty {
       VStack(alignment: .leading, spacing: 4) {
         if !title.isEmpty { Text(title).font(.lociTitle(22)).foregroundStyle(Color.lociInk) }
@@ -123,7 +143,8 @@ struct ResultsPage: View {
         sequence: derived.sequence,
         destination: state.destination,
         showsDayLabel: showsDays,
-        selectedID: $selectedID
+        selectedID: $selectedID,
+        dismissAction: dayDismiss,
       ) { detail = $0 }
         .id(group.number == 1 ? Anchor.days : "results-day-\(group.number)")
     }
@@ -142,7 +163,8 @@ struct ResultsPage: View {
             index: derived.extrasStart + offset,
             color: LociTheme.ungroupedColor,
             destination: state.destination,
-            isSelected: selectedID == stop.stableID
+            isSelected: selectedID == stop.stableID,
+            onDismiss: dismissHandler(stop),
           ) {
             selectedID = stop.stableID
             detail = stop
