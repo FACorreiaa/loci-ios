@@ -22,6 +22,14 @@ nonisolated struct WalkDay: Identifiable, Hashable {
   let stops: [WalkStop]
   let withoutLocation: Int
 
+  /// The saved trip this day belongs to, for days built from a trip
+  /// (`trip:<tripId>:<dayId>`); nil for a day from an itinerary search.
+  var tripID: String? {
+    let parts = id.split(separator: ":", omittingEmptySubsequences: false)
+    guard parts.count == 3, parts[0] == "trip", !parts[1].isEmpty else { return nil }
+    return String(parts[1])
+  }
+
   static func from(trip: Loci_Trip_TripDraft, day: Loci_Trip_TripDay) -> WalkDay {
     var stops: [WalkStop] = []
     for stop in day.stops {

@@ -48,6 +48,8 @@ struct PlaceDetailView: View {
   @State private var addingToList = false
   @State private var addingToTrip = false
   @State private var reporting = false
+  @State private var beenHere = false
+  @State private var recordingVisit = false
   @State private var error: String?
 
   init(
@@ -192,6 +194,13 @@ struct PlaceDetailView: View {
       // A trip stop needs only a name, so any place can go in one.
       Button("Add to trip", systemImage: "calendar.badge.plus") { addingToTrip = true }
       ShareLink(item: share?.text ?? shareText) { Label("Share", systemImage: "square.and.arrow.up") }
+      if TravelHistoryAPI.manualVisitRequest(poi: stop, cityName: visitCity) != nil {
+        Button(beenHere ? "Been here" : "I've been here", systemImage: beenHere ? "checkmark.circle.fill" : "figure.walk") {
+          Task { await recordVisit() }
+        }
+        .disabled(beenHere || recordingVisit)
+        .accessibilityHint(beenHere ? "" : "Adds it to the places you've been")
+      }
       if GoogleMapsRoute.hasCoordinate(stop) {
         Button("Apple Maps", systemImage: "map") { openInAppleMaps() }
       }
@@ -256,6 +265,18 @@ struct PlaceDetailView: View {
         try await ResultsAPI.addFavorite(stop, destination: destination, cityName: cityName)
         saved = true
       }
+    } catch { self.error = error.userMessage }
+  }
+
+  /// The city a manual visit is filed under: the page's city, else the place's own.
+  private var visitCity: String { cityName.isEmpty ? stop.city : cityName }
+
+  private func recordVisit() async {
+    recordingVisit = true
+    defer { recordingVisit = false }
+    do {
+      try await TravelHistoryAPI.recordManualVisit(poi: stop, cityName: visitCity)
+      beenHere = true
     } catch { self.error = error.userMessage }
   }
 
