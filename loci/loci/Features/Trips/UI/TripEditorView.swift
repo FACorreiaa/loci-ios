@@ -73,6 +73,21 @@ struct TripEditorView: View {
               .listRowInsets(EdgeInsets())
               .listRowBackground(Color.clear)
           }
+          if RecapRules.tripHasEnded(trip) {
+            Section {
+              NavigationLink(value: AppRoute.tripRecap(id: tripID)) {
+                Label {
+                  VStack(alignment: .leading, spacing: 2) {
+                    Text("Your trip recap").font(.lociHeadline())
+                    Text("The places, the kilometres and what Loci learned about your taste.")
+                      .font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+                  }
+                } icon: {
+                  Image(systemName: "sparkles").foregroundStyle(Color.lociCoral)
+                }
+              }
+            }
+          }
           if let loaded, loaded.staleSince != nil {
             Section {
               CacheChip(loaded: loaded)

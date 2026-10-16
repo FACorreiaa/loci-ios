@@ -23,6 +23,8 @@ struct AppLinkDestination: View {
     case .resetPassword(let token): ResetPasswordView(token: token)
     case .confirmEmail(let token): ConfirmEmailView(token: token)
     case .shared(let code): SharedContentView(code: code)
+    case .tripRecap(let id): RecapScreen(source: .trip(id: id))
+    case .sharedRecap(let code): RecapScreen(source: .shared(code: code))
     }
   }
 }

@@ -126,6 +126,10 @@ enum DesignPreview: String {
   case leaderboard
   /// Profile › Your progress: level, a 7-day streak, today, badges, points.
   case myProgress
+  /// A finished Lisbon trip's recap, as its owner sees it (Save image / Share link).
+  case recap
+  /// The same recap opened from its share link: cities and counts only.
+  case sharedRecap
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -230,6 +234,8 @@ enum DesignPreview: String {
       }
     case .leaderboard: NavigationStack { LeaderboardView(store: ProgressStore(service: PreviewProgressService())) }
     case .myProgress: NavigationStack { MyProgressView(store: ProgressStore(service: PreviewProgressService())) }
+    case .recap: NavigationStack { RecapScreen(source: .trip(id: "preview"), service: PreviewRecapService()) }
+    case .sharedRecap: NavigationStack { RecapScreen(source: .shared(code: "preview"), service: PreviewRecapService()) }
     case .tripSetup: TripSetupPreview()
     case .compare: NavigationStack { CompareView(preview: .previewPorto, origin: "Porto", candidates: ["Évora", "Beja"]) }
     case .gastronomy: NavigationStack { GastronomyView(store: GastronomyStore(service: PreviewGastronomyService()), city: "Porto") }
