@@ -5,7 +5,7 @@ import SwiftUI
 /// since Phase 2, My reviews since Phase 5, Contribute since Phase 6 and Where
 /// you've been since Phase 7. `ComingSoonView` stays for AppLinkDestination.
 enum YouDestination: String, CaseIterable, Identifiable {
-  case friends, leaderboard, progress, boards, recents, travelHistory, lists, reviews, contribute
+  case friends, leaderboard, progress, boards, recents, travelHistory, visitedPlaces, lists, reviews, contribute
 
   var id: String { rawValue }
 
@@ -17,6 +17,7 @@ enum YouDestination: String, CaseIterable, Identifiable {
     case .boards: "Boards"
     case .recents: "Recents"
     case .travelHistory: "Where you've been"
+    case .visitedPlaces: "Places I've been"
     case .lists: "Lists"
     case .reviews: "My reviews"
     case .contribute: "Contribute"
@@ -31,6 +32,7 @@ enum YouDestination: String, CaseIterable, Identifiable {
     case .boards: BoardsHomeView.symbol
     case .recents: "clock.arrow.circlepath"
     case .travelHistory: "globe.europe.africa"
+    case .visitedPlaces: "figure.walk"
     case .lists: "list.bullet.rectangle"
     case .reviews: "star.bubble"
     case .contribute: "checkmark.seal"
@@ -48,6 +50,7 @@ enum YouDestination: String, CaseIterable, Identifiable {
     case .reviews: MyReviewsView()
     case .contribute: ContributeView()
     case .travelHistory: GlobeView()
+    case .visitedPlaces: VisitedPlacesView()
     }
   }
 }

@@ -184,7 +184,8 @@ import UserNotifications
         poiName: reached.stop.name,
         cityName: running.cityName,
         latitude: place.latitude,
-        longitude: place.longitude
+        longitude: place.longitude,
+        tripID: running.tripId,
       )
       ProgressReporter.arrived(visit, location: CLLocationManager().location)
     }

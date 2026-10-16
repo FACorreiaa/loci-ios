@@ -47,7 +47,9 @@ import UserNotifications
     self.navigator = navigator
     self.live = live
     if live {
-      navigator.onArrive = { place, location in ProgressReporter.arrived(SpotVisit(place), location: location) }
+      navigator.onArrive = { [weak self] place, location in
+        ProgressReporter.arrived(SpotVisit(place, tripID: self?.day?.tripID), location: location)
+      }
     }
   }
 

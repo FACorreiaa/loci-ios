@@ -114,6 +114,11 @@ struct GlobeView: View {
             Label(isGlobe ? "Flat map" : "Globe", systemImage: isGlobe ? "map" : "globe")
           }.accessibilityHint(isGlobe ? "Shows a flat map" : "Shows the globe")
         }
+        ToolbarItem(placement: .secondaryAction) {
+          NavigationLink(value: AppRoute.you(.visitedPlaces)) {
+            Label("Places I've been", systemImage: "list.bullet")
+          }
+        }
       }.sheet(isPresented: $showSheet) {
         LegsSheet(data: store.data, selectedLegID: selectedLegID) { select($0) }.presentationDetents(
           [Self.peek, .medium, .large],

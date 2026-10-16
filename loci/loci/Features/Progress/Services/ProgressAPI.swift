@@ -54,12 +54,20 @@ nonisolated enum ProgressAPI {
   /// Records a place reached on the spot, with where the phone was, so the
   /// server can score it. Returns the points it earned.
   static func recordVisit(_ visit: SpotVisit, at location: CLLocation) async throws -> Int {
+    let request = visitRequest(visit, at: location)
+    return Int(try await rpc("Could not record the visit.", request) { await history.recordVisit(request: $0, headers: [:]) }.pointsAwarded)
+  }
+
+  /// The RecordVisit request for an arrival on the spot: the place, its trip
+  /// when it has one, and where the phone was, which is what scores it.
+  static func visitRequest(_ visit: SpotVisit, at location: CLLocation) -> Loci_Travelhistory_RecordVisitRequest {
     var request = Loci_Travelhistory_RecordVisitRequest()
     request.cityName = visit.cityName
     request.latitude = visit.latitude
     request.longitude = visit.longitude
     if !visit.poiID.isEmpty { request.poiID = visit.poiID }
     if !visit.poiName.isEmpty { request.poiName = visit.poiName }
+    if let tripID = visit.tripID, !tripID.isEmpty { request.tripID = tripID }
     request.visitedAt = Google_Protobuf_Timestamp(date: location.timestamp)
     var fix = Loci_Travelhistory_DeviceFix()
     fix.latitude = location.coordinate.latitude
@@ -67,7 +75,7 @@ nonisolated enum ProgressAPI {
     fix.accuracyM = max(location.horizontalAccuracy, 0)
     fix.observedAt = Google_Protobuf_Timestamp(date: location.timestamp)
     request.deviceLocation = fix
-    return Int(try await rpc("Could not record the visit.", request) { await history.recordVisit(request: $0, headers: [:]) }.pointsAwarded)
+    return request
   }
 
   // MARK: Being found by friends
@@ -94,10 +102,19 @@ nonisolated struct SpotVisit: Sendable, Equatable {
   var cityName: String
   var latitude: Double
   var longitude: Double
+  /// The saved trip the stop belongs to, so the visit lands in that trip's history.
+  var tripID: String?
 }
 
 extension SpotVisit {
-  init(_ place: Loci_Poi_POIDetailedInfo) {
-    self.init(poiID: place.id, poiName: place.name, cityName: place.city, latitude: place.latitude, longitude: place.longitude)
+  init(_ place: Loci_Poi_POIDetailedInfo, tripID: String? = nil) {
+    self.init(
+      poiID: place.id,
+      poiName: place.name,
+      cityName: place.city,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      tripID: tripID,
+    )
   }
 }
