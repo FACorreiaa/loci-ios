@@ -30,6 +30,7 @@ struct VoteButtons: View {
 struct PostByline: View {
   let post: Loci_Boards_V1_Post
   var showBoard = false
+  private var isAIGenerated: Bool { post.hasAuthor && post.author.username == "loci-editorial" }
 
   var body: some View {
     HStack(spacing: 6) {
@@ -39,6 +40,9 @@ struct PostByline: View {
       if post.hasAuthor {
         UserAvatar(user: post.author, size: 18)
         Text(post.author.shownName)
+      }
+      if isAIGenerated {
+        Label("AI generated", systemImage: "sparkles").accessibilityLabel("AI generated post")
       }
       Text(BoardsModel.age(post.createdAt))
       Label("\(post.commentCount)", systemImage: "bubble.left").labelStyle(.titleAndIcon).accessibilityLabel("\(post.commentCount) comments")
