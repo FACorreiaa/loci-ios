@@ -6,6 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXAggregateTarget section */
+		27251120C651586866B786E8 /* Periphery */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 251120C651586866B786E8E8 /* Build configuration list for PBXAggregateTarget "Periphery" */;
+			buildPhases = (
+				1120C651586866B786E8E81F /* Periphery */,
+			);
+			dependencies = (
+			);
+			name = Periphery;
+			productName = Periphery;
+		};
+/* End PBXAggregateTarget section */
+
 /* Begin PBXBuildFile section */
 		0DC776E2305DBE860029F87E /* LociConnectProto in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776E1305DBE860029F87E /* LociConnectProto */; };
 		0DC776E5305DBE860029F87E /* Connect in Frameworks */ = {isa = PBXBuildFile; productRef = 0DC776E4305DBE860029F87E /* Connect */; };
@@ -273,55 +287,6 @@
 		};
 /* End PBXNativeTarget section */
 
-/* Begin PBXAggregateTarget section */
-		27251120C651586866B786E8 /* Periphery */ = {
-			isa = PBXAggregateTarget;
-			buildConfigurationList = 251120C651586866B786E8E8 /* Build configuration list for PBXAggregateTarget "Periphery" */;
-			buildPhases = (
-				1120C651586866B786E8E81F /* Periphery */,
-			);
-			dependencies = (
-			);
-			name = Periphery;
-			productName = Periphery;
-		};
-/* End PBXAggregateTarget section */
-
-
-
-/* Begin PBXShellScriptBuildPhase section */
-		1120C651586866B786E8E81F /* Periphery */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = Periphery;
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin\"\nROOT=\"${PROJECT_DIR}\"\nif [ ! -f \"${ROOT}/.periphery.yml\" ] && [ -f \"${ROOT}/../.periphery.yml\" ]; then\n  ROOT=\"${ROOT}/..\"\nfi\ncd \"${ROOT}\"\nperiphery scan --format xcode\n";
-		};
-		C651586866B786E8E81F7C95 /* SwiftLint */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = SwiftLint;
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin\"\nROOT=\"${PROJECT_DIR}\"\nif [ ! -f \"${ROOT}/.swiftlint.yml\" ] && [ -f \"${ROOT}/../.swiftlint.yml\" ]; then\n  ROOT=\"${ROOT}/..\"\nfi\ncd \"${ROOT}\"\nif which swiftlint >/dev/null; then\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed\"\nfi\n";
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXProject section */
 		0DC776A1305DBE860029F87E /* Project object */ = {
 			isa = PBXProject;
@@ -404,6 +369,39 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		1120C651586866B786E8E81F /* Periphery */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = Periphery;
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin\"\nROOT=\"${PROJECT_DIR}\"\nif [ ! -f \"${ROOT}/.periphery.yml\" ] && [ -f \"${ROOT}/../.periphery.yml\" ]; then\n  ROOT=\"${ROOT}/..\"\nfi\ncd \"${ROOT}\"\nperiphery scan --format xcode\n";
+		};
+		C651586866B786E8E81F7C95 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin\"\nROOT=\"${PROJECT_DIR}\"\nif [ ! -f \"${ROOT}/.swiftlint.yml\" ] && [ -f \"${ROOT}/../.swiftlint.yml\" ]; then\n  ROOT=\"${ROOT}/..\"\nfi\ncd \"${ROOT}\"\nif which swiftlint >/dev/null; then\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		0DC776A5305DBE860029F87E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -460,6 +458,13 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		0DAF06833078DC8A009259FA /* Beta */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = Periphery;
+			};
+			name = Beta;
+		};
 		0DC776CA305DBE860029F87E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -640,12 +645,12 @@
 				CODE_SIGN_ENTITLEMENTS = loci.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CONNECT_BASE_URL = "http://localhost:8000";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
@@ -692,12 +697,12 @@
 				CODE_SIGN_ENTITLEMENTS = loci.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CONNECT_BASE_URL = "https://api.lociai.fyi";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
@@ -744,13 +749,13 @@
 				CODE_SIGN_ENTITLEMENTS = loci.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CONNECT_BASE_URL = "https://api.lociai.fyi";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 56;
 				DEVELOPMENT_TEAM = 84X9WYBF36;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
@@ -929,6 +934,20 @@
 			};
 			name = Beta;
 		};
+		586866B786E8E81F7C950434 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		66B786E8E81F7C9504346D13 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		A33B1F914FF2A23CC59838B6 /* Beta */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1024,20 +1043,6 @@
 			};
 			name = Debug;
 		};
-		586866B786E8E81F7C950434 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		66B786E8E81F7C9504346D13 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1081,21 +1086,22 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		251120C651586866B786E8E8 /* Build configuration list for PBXAggregateTarget "Periphery" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				586866B786E8E81F7C950434 /* Debug */,
+				66B786E8E81F7C9504346D13 /* Release */,
+				0DAF06833078DC8A009259FA /* Beta */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		6FA0E24C73F28EBB90AE886A /* Build configuration list for PBXNativeTarget "NearbyWalkWidget" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C71D7E24DA96D7E162395FB1 /* Release */,
 				EF6C3B205E414A8E3BAC9244 /* Debug */,
 				A33B1F914FF2A23CC59838B6 /* Beta */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		251120C651586866B786E8E8 /* Build configuration list for PBXAggregateTarget "Periphery" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				586866B786E8E81F7C950434 /* Debug */,
-				66B786E8E81F7C9504346D13 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
