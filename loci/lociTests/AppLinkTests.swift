@@ -25,6 +25,9 @@ struct AppLinkTests {
     ("https://lociai.fyi/share/abc", .shared(code: "abc")),
     ("https://api.lociai.fyi/share/abc", .shared(code: "abc")),
     ("loci://share/abc", .shared(code: "abc")),
+    ("https://lociai.fyi/recap/trip/t9", .tripRecap(tripID: "t9")),
+    ("loci://recap/trip/t9", .tripRecap(tripID: "t9")),
+    ("https://lociai.fyi/r/MpadNH462QzV", .sharedRecap(code: "MpadNH462QzV")),
   ])
   func parsesEveryRoute(_ string: String, _ expected: AppLink) throws {
     #expect(AppLink(url: try #require(URL(string: string))) == expected)
@@ -34,6 +37,9 @@ struct AppLinkTests {
     "loci://lists",
     "loci://lists/",
     "loci://trips/t1/edit",
+    "https://lociai.fyi/recap/year/2026",
+    "https://lociai.fyi/recap/trip",
+    "https://lociai.fyi/r",
     "loci://recents/extra",
     "loci://oauth2redirect/google?code=x",
     "loci://itinerary?sessionId=abc",

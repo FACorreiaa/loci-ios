@@ -9,6 +9,7 @@ enum AppRoute: Hashable {
   case pack(slug: String)
   case list(id: String)
   case trip(id: String)
+  case tripRecap(id: String)
   case recents(RecentsView.Segment)
   case you(YouDestination)
   case user(username: String)
@@ -40,6 +41,7 @@ private struct AppRouteDestination: View {
     case .pack(let slug): PackDetailView(slug: slug)
     case .list(let id): ListDetailView(listID: id)
     case .trip(let id): TripEditorView(tripID: id)
+    case .tripRecap(let id): RecapScreen(source: .trip(id: id))
     case .recents(let segment): RecentsView(segment: segment)
     case .you(let destination): destination.screen
     case .user(let username): UserProfileView(username: username)

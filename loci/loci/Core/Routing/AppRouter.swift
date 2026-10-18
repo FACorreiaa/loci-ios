@@ -127,6 +127,10 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   case confirmEmail(token: String)
   /// `lociai.fyi/share/<code>` or the API host's own `api.lociai.fyi/share/<code>`.
   case shared(code: String)
+  /// `/recap/trip/<id>`: a finished trip's recap, where its push opens.
+  case tripRecap(tripID: String)
+  /// `/r/<code>`: someone's shared recap.
+  case sharedRecap(code: String)
 
   /// `loci://lists/abc` (the host is the route, as in `SessionLink`) or
   /// `https://lociai.fyi/lists/abc`. Anything with a missing id or extra
@@ -153,6 +157,10 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
       return nil
     }
     segments.removeAll { $0.isEmpty }
+    if let recap = Self.recapLink(segments) {
+      self = recap
+      return
+    }
     switch (segments.first?.lowercased(), segments.count) {
     case ("lists", 2): self = .list(id: segments[1])
     case ("packs", 2): self = .pack(slug: segments[1])
@@ -190,6 +198,15 @@ nonisolated extension AppLink {
     if SessionLink.webHosts.contains(host) { return segments }
     guard host == ShareLinks.apiHost, segments.first?.lowercased() == "share" else { return nil }
     return segments
+  }
+
+  /// `/recap/trip/<id>` and `/r/<code>`; nil for anything else.
+  static func recapLink(_ segments: [String]) -> AppLink? {
+    switch (segments.first?.lowercased(), segments.count) {
+    case ("r", 2): .sharedRecap(code: segments[1])
+    case ("recap", 3) where segments[1].lowercased() == "trip": .tripRecap(tripID: segments[2])
+    default: nil
+    }
   }
 
   /// `/auth/reset-password?token=…` and `/auth/confirm-email-change?token=…`; no token, no page.
@@ -249,8 +266,8 @@ nonisolated extension AppLink {
   static func tab(for link: AppLink) -> Tab {
     switch link {
     case .list: .saved
-    case .pack, .shared: .discover
-    case .trip: .calendar
+    case .pack, .shared, .sharedRecap: .discover
+    case .trip, .tripRecap: .calendar
     case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip, .leaderboard, .progress, .resetPassword, .confirmEmail:
       .profile
     }
