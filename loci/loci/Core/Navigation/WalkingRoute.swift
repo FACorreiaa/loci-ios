@@ -1,3 +1,4 @@
+import Algorithms
 import CoreLocation
 import Foundation
 import MapKit
@@ -34,8 +35,8 @@ nonisolated enum WalkingRoute {
       ((c.longitude - point.longitude) * lonScale, (c.latitude - point.latitude) * metersPerDegree)
     }
     var best: Projection?
-    for index in 0..<(coords.count - 1) {
-      let a = local(coords[index]), b = local(coords[index + 1])
+    for (index, (start, end)) in coords.adjacentPairs().enumerated() {
+      let a = local(start), b = local(end)
       let dx = b.x - a.x, dy = b.y - a.y
       let lengthSquared = dx * dx + dy * dy
       // Point is the origin, so the projection of (0 - a) onto ab.
@@ -62,7 +63,7 @@ nonisolated enum WalkingRoute {
   }
 
   static func length(of coords: [CLLocationCoordinate2D]) -> Double {
-    zip(coords, coords.dropFirst()).reduce(0) { $0 + distance($1.0, $1.1) }
+    coords.adjacentPairs().reduce(0) { $0 + distance($1.0, $1.1) }
   }
 
   /// The route's own time, scaled to what is left of it.
