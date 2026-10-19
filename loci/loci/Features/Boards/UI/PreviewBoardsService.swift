@@ -23,6 +23,7 @@ nonisolated struct PreviewBoardsService: BoardsService {
     response.comments = Loci_Boards_V1_Comment.previewThread
     return response
   }
+  func dailyPost() async throws -> Loci_Boards_V1_Post? { Loci_Boards_V1_Post.previewFeed.first { $0.board.slug == BoardsAPI.dailyBoardSlug } }
   func viewer() async throws -> Loci_Boards_V1_GetBoardsViewerResponse {
     var viewer = Loci_Boards_V1_GetBoardsViewerResponse()
     viewer.signedIn = true
@@ -141,7 +142,31 @@ nonisolated extension Loci_Boards_V1_Post {
       score: -1,
       comments: 0
     )
-    return [trams, porto, alfama]
+
+    // Today's destination: the server's AI-written post, also in the
+    // all-boards page, so the preview shows the feed leaving it out.
+    var daily = post(
+      "p-daily",
+      (BoardsAPI.dailyBoardSlug, "Daily destinations"),
+      "Évora: a walled Roman town an hour from Lisbon",
+      by: .preview("u-loci", "Loci Editorial"),
+      hoursAgo: 5,
+      score: 9,
+      comments: 1
+    )
+    daily.body =
+      "A Roman temple in the main square, a chapel lined with bones, and cork-oak plains running to the walls. "
+      + "**Come for lunch and stay the night**: the old town empties out after the day trips leave, "
+      + "and the Alentejo wine bars stay open late."
+    daily.isAiGenerated = true
+    var city = Loci_Boards_V1_Attachment()
+    city.kind = .city
+    city.ref = "evora"
+    city.title = "Évora"
+    city.subtitle = "Alentejo, Portugal"
+    city.city = "Évora"
+    daily.attachment = city
+    return [trams, porto, alfama, daily]
   }
 }
 

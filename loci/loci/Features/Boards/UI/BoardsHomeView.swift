@@ -16,6 +16,7 @@ struct BoardsHomeView: View {
       VStack(alignment: .leading, spacing: 20) {
         header
         directory
+        if let daily = store.dailyPost { DailyPostCard(post: daily, route: .boardPost(id: daily.id, feed: RouteRef(store))) }
         BoardsFeedSection(store: store, emptyText: "Nothing posted yet. Open a board and start the first thread.")
       }.padding(LociTheme.defaultPadding)
     }.background(Color.lociPaper.ignoresSafeArea()).navigationTitle("Boards").navigationBarTitleDisplayMode(.inline).toolbar {
