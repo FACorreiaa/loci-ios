@@ -1,3 +1,4 @@
+import Algorithms
 import Foundation
 
 /// A day of the opening-hours week, Monday first (web: DAYS in `lib/place-facts/opening-hours.ts`).
@@ -79,19 +80,11 @@ nonisolated struct OpeningHours: Hashable, Sendable {
 
   /// The canonical string, e.g. `mon-fri 09:00-17:00; sat 10:00-14:00; sun closed`.
   var encoded: String {
-    let days = HoursDay.allCases
-    var groups: [String] = []
-    var runStart = 0
-    for index in 0...days.count {
-      let current = index < days.count ? Self.dayString(self[days[index]]) : nil
-      let running = Self.dayString(self[days[runStart]])
-      if current == running { continue }
-      let lastOfRun = index - 1
-      let daySpec = runStart == lastOfRun ? days[runStart].rawValue : "\(days[runStart].rawValue)-\(days[lastOfRun].rawValue)"
-      groups.append("\(daySpec) \(running)")
-      runStart = index
-    }
-    return groups.joined(separator: "; ")
+    HoursDay.allCases.chunked(on: { Self.dayString(self[$0]) }).map { hours, run in
+      guard let first = run.first, let last = run.last else { return "" }
+      let daySpec = run.count == 1 ? first.rawValue : "\(first.rawValue)-\(last.rawValue)"
+      return "\(daySpec) \(hours)"
+    }.joined(separator: "; ")
   }
 
   /// Reads a canonical string back into a week. Nil for anything it does not

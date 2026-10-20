@@ -1,3 +1,4 @@
+import Algorithms
 import Foundation
 
 /// A destination with a reason to go this month. Same table as web's
@@ -160,8 +161,7 @@ nonisolated enum InSeason {
       )
     }
 
-    var seen = Set<String>()
-    return Array((withPlans + without + extra).filter { seen.insert($0.id).inserted }.prefix(max))
+    return Array((withPlans + without + extra).uniqued(on: \.id).prefix(max))
   }
 
   /// One loop of the strip: slow enough to read, longer with more items.

@@ -1,3 +1,4 @@
+import Algorithms
 import Contacts
 import ContactsUI
 import LociConnectProto
@@ -85,10 +86,8 @@ struct ContactMatchView: View {
     }
     do {
       let found = try await SocialAPI.matchContacts(hashes: Array(names.keys))
-      var seen = Set<String>()
-      matches = found.compactMap { hit in
-        guard seen.insert(hit.user.id).inserted else { return nil }
-        return Match(user: hit.user, contactName: names[hit.hash] ?? "", relationship: Relationship(hit.relationship))
+      matches = found.uniqued(on: \.user.id).map { hit in
+        Match(user: hit.user, contactName: names[hit.hash] ?? "", relationship: Relationship(hit.relationship))
       }
     } catch {
       self.error = error.userMessage
