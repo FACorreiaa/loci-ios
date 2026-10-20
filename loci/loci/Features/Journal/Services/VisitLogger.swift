@@ -14,7 +14,6 @@ import UserNotifications
   nonisolated static var isEnabled: Bool { UserDefaults.standard.bool(forKey: enabledKey) }
 
   private let manager = CLLocationManager()
-  private var monitoring = false
   private var today: TodayFirst?
   private var favorites: [VisitCandidate] = []
   private let pending = PendingVisitStore()
@@ -35,30 +34,29 @@ import UserNotifications
     enabled && authorization == .authorizedAlways && today != nil
   }
 
-  /// On launch and on every return to the foreground.
+  nonisolated enum MonitorAction { case start, stop }
+
+  /// What to do with iOS's visit monitoring. iOS keeps it on across launches,
+  /// so stopping never depends on this process having started it.
+  nonisolated static func monitorAction(shouldRun: Bool) -> MonitorAction { shouldRun ? .start : .stop }
+
+  /// On launch, on every return to the foreground, and on every stay iOS
+  /// reports. Starting or stopping twice is harmless.
   func refresh(now: Date = Date()) async {
     let trips = await LocalCache.shared.get(Loci_Trip_ListTripsResponse.self, kind: .trips, id: "all")?.value.trips ?? []
     today = TodayFirst.pick(trips: trips, now: now)
-    guard Self.shouldRun(enabled: Self.isEnabled, authorization: manager.authorizationStatus, today: today), let today else {
-      stop()
+    let run = Self.shouldRun(enabled: Self.isEnabled, authorization: manager.authorizationStatus, today: today)
+    guard Self.monitorAction(shouldRun: run) == .start, let today else {
+      manager.stopMonitoringVisits()
       return
     }
-    if !monitoring {
-      manager.startMonitoringVisits()
-      monitoring = true
-    }
+    manager.startMonitoringVisits()
     var request = Loci_Favorites_V1_GetFavoritesRequest()
     request.limit = 200
     let sent = request
     if let saved = try? await rpc("", sent, { await SavedAPI.favorites.getFavorites(request: $0, headers: [:]) }) {
       favorites = VisitMatch.candidates(favorites: saved.favorites, city: Self.city(today))
     }
-  }
-
-  private func stop() {
-    guard monitoring else { return }
-    manager.stopMonitoringVisits()
-    monitoring = false
   }
 
   private static func city(_ today: TodayFirst) -> String {
@@ -75,8 +73,10 @@ import UserNotifications
   }
 
   private func arrived(at coordinate: CLLocationCoordinate2D, on arrival: Date, accuracy: CLLocationAccuracy) async {
-    // iOS can relaunch the app for a visit; the trip day is read again first.
-    if today == nil { await refresh() }
+    // The trip day is read at the arrival, not remembered: the app may have
+    // stayed suspended past the trip's last day, and iOS can report a stay
+    // late or relaunch the app for it.
+    await refresh(now: arrival)
     guard Self.shouldRun(enabled: Self.isEnabled, authorization: manager.authorizationStatus, today: today), let today else { return }
     let stops = VisitMatch.candidates(stops: today.day.stops, city: Self.city(today))
     guard let place = VisitMatch.nearest(to: coordinate, stops: stops, favorites: favorites) else { return }

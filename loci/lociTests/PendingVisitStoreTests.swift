@@ -140,4 +140,11 @@ struct VisitLoggerGateTests {
     #expect(!VisitLogger.shouldRun(enabled: false, authorization: .authorizedAlways, today: today()))
     #expect(!VisitLogger.shouldRun(enabled: true, authorization: .authorizedWhenInUse, today: today()))
   }
+
+  /// iOS keeps visit monitoring on across launches; a fresh process that
+  /// should not run must still switch it off, whatever it remembers.
+  @Test func stopsMonitoringEvenWhenThisProcessNeverStartedIt() {
+    #expect(VisitLogger.monitorAction(shouldRun: false) == .stop)
+    #expect(VisitLogger.monitorAction(shouldRun: true) == .start)
+  }
 }
