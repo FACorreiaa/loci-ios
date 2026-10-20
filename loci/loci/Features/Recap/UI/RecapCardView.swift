@@ -62,7 +62,8 @@ struct RecapCardView: View {
     case .field(let c): FieldCardView(card: c, appeared: appeared, k: unit)
     case .friends(let c): FriendsCardView(card: c, city: primaryCity, appeared: appeared, k: unit)
     case .outro(let c): OutroCardView(recap: recap, card: c, appeared: appeared, k: unit)
-    case nil: EmptyView()
+    // Never selected: RecapRules.playable skips what this build cannot draw.
+    default: EmptyView()
     }
   }
 }

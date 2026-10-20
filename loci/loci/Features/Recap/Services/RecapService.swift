@@ -56,7 +56,16 @@ nonisolated struct ConnectRecapService: RecapService {
 
 nonisolated enum RecapRules {
   /// Cards this build draws. A newer server may send more; they are skipped.
-  static func playable(_ cards: [Loci_Recap_RecapCard]) -> [Loci_Recap_RecapCard] { cards.filter { $0.card != nil } }
+  /// An allowlist rather than `card != nil`: once the proto gains a card type,
+  /// it decodes as non-nil before any view for it exists.
+  static func playable(_ cards: [Loci_Recap_RecapCard]) -> [Loci_Recap_RecapCard] { cards.filter { isDrawn($0) } }
+
+  static func isDrawn(_ card: Loci_Recap_RecapCard) -> Bool {
+    switch card.card {
+    case .intro, .places, .route, .days, .taste, .highlights, .progress, .field, .friends, .outro: true
+    default: false
+    }
+  }
 
   /// Whether a trip is over, so its recap can be asked for. Mirrors the
   /// server: the end date has passed (or the last dated day, when there is no
