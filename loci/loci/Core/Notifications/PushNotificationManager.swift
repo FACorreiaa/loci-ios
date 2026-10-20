@@ -126,6 +126,19 @@ import UserNotifications
       }
       return
     }
+    if content.categoryIdentifier == NotificationCategory.lociVisit, let visitID = userInfo["visitID"] as? String {
+      // "Were you at X?": Yes or No answers in place; a tap opens the trip,
+      // whose journal asks again.
+      let action = response.actionIdentifier
+      if action == UNNotificationDefaultActionIdentifier, let tripId = userInfo["tripId"] as? String {
+        AppRouter.shared.open(.trip(id: tripId))
+      }
+      Task { @MainActor in
+        await VisitPrompt.handle(actionIdentifier: action, visitID: visitID)
+        completionHandler()
+      }
+      return
+    }
     switch PushRoute.tap(userInfo: userInfo) {
     case .nothing: break
     case .open(let link): AppRouter.shared.open(link)

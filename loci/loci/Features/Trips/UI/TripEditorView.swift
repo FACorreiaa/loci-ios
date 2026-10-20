@@ -73,6 +73,19 @@ struct TripEditorView: View {
               .listRowInsets(EdgeInsets())
               .listRowBackground(Color.clear)
           }
+          Section {
+            NavigationLink(value: AppRoute.tripJournal(id: tripID)) {
+              Label {
+                VStack(alignment: .leading, spacing: 2) {
+                  Text("Journal").font(.lociHeadline())
+                  Text("Your notes and photos, day by day.")
+                    .font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+                }
+              } icon: {
+                Image(systemName: "book").foregroundStyle(Color.lociCoral)
+              }
+            }
+          }
           if RecapRules.tripHasEnded(trip) {
             Section {
               NavigationLink(value: AppRoute.tripRecap(id: tripID)) {

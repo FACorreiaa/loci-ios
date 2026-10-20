@@ -98,7 +98,7 @@
 	<key>NSContactsUsageDescription</key>
 	<string>Loci checks which of your contacts are on Loci so you can add them as friends. Only scrambled fingerprints of numbers and emails leave your iPhone, and nothing is kept for people who aren't on Loci.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Only if you turn on "Saved places nearby": during a trip, Loci lets you know when you pass a saved place that fits your taste, even with the app closed.</string>
+	<string>Only if you turn on "Saved places nearby" or "Log places I visit on trips": during a trip, Loci lets you know when you pass a saved place that fits your taste, or asks whether you were at a place you stopped at, even with the app closed.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Loci uses your location to find places near you and to plan from where you are.</string>
 	<key>NSMicrophoneUsageDescription</key>

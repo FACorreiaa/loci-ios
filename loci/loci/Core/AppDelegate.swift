@@ -9,6 +9,12 @@ public final class AppDelegate: NSObject, UIApplicationDelegate {
     PushNotificationManager.shared.configure()
     SearchSessionController.registerBackgroundTask()
     TripPrefetch.register()
+    // iOS relaunches the app in the background to report a stay. The
+    // location delegate has to exist before any scene does, or the stay is
+    // dropped; with logging off, this switches off monitoring left running.
+    if VisitLogger.isEnabled || launchOptions?[.location] != nil {
+      Task { await VisitLogger.shared.refresh() }
+    }
     return true
   }
 

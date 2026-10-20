@@ -38,6 +38,7 @@ public struct MainTabView: View {
       .task {
         await ProgressReporter.checkInIfNeeded()
         await TasteFences.shared.refresh()
+        await VisitLogger.shared.refresh()
       }
       .onChange(of: scenePhase) { _, phase in
         if phase == .active {
@@ -45,6 +46,7 @@ public struct MainTabView: View {
           Task {
             await ProgressReporter.checkInIfNeeded()
             await TasteFences.shared.refresh()
+            await VisitLogger.shared.refresh()
           }
         }
       }
