@@ -16,6 +16,9 @@ nonisolated enum NotificationCategory {
   /// The local "How was it?" after a visit (RateReminder). Its buttons answer
   /// with a verdict without opening the app.
   static let lociRate = "loci_rate"
+  /// The local "Were you at X?" from opt-in visit logging (VisitPrompt). Yes
+  /// records the visit without opening the app.
+  static let lociVisit = "loci_visit"
 
   /// Everything registered with `setNotificationCategories`. The search-finished
   /// push and the other local notifications carry no category and need none.
@@ -29,7 +32,16 @@ nonisolated enum NotificationCategory {
       intentIdentifiers: [],
       options: []
     )
-    return Set(plain + [rate])
+    let visit = UNNotificationCategory(
+      identifier: lociVisit,
+      actions: [
+        UNNotificationAction(identifier: VisitPrompt.yes, title: "Yes"),
+        UNNotificationAction(identifier: VisitPrompt.no, title: "No", options: .destructive),
+      ],
+      intentIdentifiers: [],
+      options: []
+    )
+    return Set(plain + [rate, visit])
   }
 }
 

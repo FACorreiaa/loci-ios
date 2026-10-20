@@ -42,6 +42,8 @@ nonisolated enum JournalFormat {
 
   private(set) var phase = Phase.loading
   private(set) var journal: Loci_Journal_TripJournal?
+  /// Stays noticed on this trip waiting for "Were you here?".
+  private(set) var pendingVisits: [PendingVisit] = []
   /// Day ids (or `tripKey`) with photos uploading.
   private(set) var uploading: Set<String> = []
   var error: String?
@@ -51,16 +53,27 @@ nonisolated enum JournalFormat {
   let tripID: String
   private let service: any JournalService
   private let uploader: PhotoUploader
+  private let visits: PendingVisitStore
+  private let recorder: any VisitRecorder
 
-  init(tripID: String, service: any JournalService = ConnectJournalService(), session: URLSession = .shared) {
+  init(
+    tripID: String,
+    service: any JournalService = ConnectJournalService(),
+    session: URLSession = .shared,
+    visits: PendingVisitStore = PendingVisitStore(),
+    recorder: any VisitRecorder = ConnectVisitRecorder(),
+  ) {
     self.tripID = tripID
     self.service = service
     uploader = PhotoUploader(service: service, session: session)
+    self.visits = visits
+    self.recorder = recorder
   }
 
   var photosEnabled: Bool { journal?.photosEnabled ?? false }
 
   func load() async {
+    pendingVisits = visits.visits(tripID: tripID)
     do {
       journal = try await service.journal(tripID: tripID)
       phase = .ready
@@ -104,6 +117,21 @@ nonisolated enum JournalFormat {
       error = failed == photos.count ? "Couldn't add those photos." : "\(failed) of \(photos.count) photos didn't upload."
     }
     await load()
+  }
+
+  /// "Yes, I was there": records the visit, then reloads so it shows on its day.
+  func confirmVisit(id: String) async {
+    do {
+      try await visits.confirm(id: id, recorder: recorder)
+      await load()
+    } catch {
+      self.error = error.userMessage
+    }
+  }
+
+  func dismissVisit(id: String) {
+    visits.dismiss(id: id)
+    pendingVisits = visits.visits(tripID: tripID)
   }
 
   func deletePhoto(id: String) async {

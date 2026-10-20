@@ -34,6 +34,7 @@ struct SettingsView: View {
         NavigationLink(value: SettingsRoute.notifications) { Label("Notifications", systemImage: "bell.badge") }
         NewsTickerToggle()
         ReviewPromptToggle()
+        VisitLoggingToggle()
       }
     }
     .listStyle(.insetGrouped)

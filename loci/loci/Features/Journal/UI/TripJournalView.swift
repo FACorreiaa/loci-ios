@@ -51,6 +51,21 @@ struct TripJournalView: View {
 
   private func list(_ journal: Loci_Journal_TripJournal) -> some View {
     List {
+      if !store.pendingVisits.isEmpty {
+        Section("Were you here?") {
+          ForEach(store.pendingVisits) { visit in
+            HStack(spacing: 12) {
+              VStack(alignment: .leading, spacing: 2) {
+                Text(visit.place.name).lineLimit(1)
+                Text(visit.arrival, format: .dateTime.weekday().hour().minute()).font(.caption).foregroundStyle(.secondary)
+              }
+              Spacer(minLength: 8)
+              Button("No") { store.dismissVisit(id: visit.id) }.buttonStyle(.bordered)
+              Button("Yes") { Task { await store.confirmVisit(id: visit.id) } }.buttonStyle(.borderedProminent)
+            }
+          }
+        }
+      }
       ForEach(journal.days, id: \.dayID) { day in
         JournalDaySection(
           day: day,
