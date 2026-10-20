@@ -118,7 +118,8 @@ import UserNotifications
     prompter.enqueue(Self.pending("a", at: clock.now))
     var other = Loci_Ranking_Comparison()
     other.poiID = "b"
-    await RateReminder.handle(actionIdentifier: RankingVerdict.loved.actionIdentifier, poiID: "a", prompter: prompter, service: StubRanking(next: other))
+    let loved = RankingVerdict.loved.actionIdentifier
+    await RateReminder.handle(actionIdentifier: loved, poiID: "a", prompter: prompter, service: StubRanking(next: other))
     #expect(prompter.current?.poiID == "a")
   }
 
@@ -127,7 +128,8 @@ import UserNotifications
     let clock = Clock()
     let prompter = RatePrompter(defaults: Self.defaults(), live: false) { clock.now }
     prompter.enqueue(Self.pending("a", at: clock.now))
-    await RateReminder.handle(actionIdentifier: RankingVerdict.fine.actionIdentifier, poiID: "a", prompter: prompter, service: StubRanking(fails: true))
+    let fine = RankingVerdict.fine.actionIdentifier
+    await RateReminder.handle(actionIdentifier: fine, poiID: "a", prompter: prompter, service: StubRanking(fails: true))
     #expect(prompter.current?.poiID == "a")
   }
 }
