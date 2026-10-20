@@ -8,10 +8,27 @@ nonisolated struct ImportedPlace: Identifiable, Hashable, Sendable {
   let city: String
   let note: String
   let poiID: String?
+  /// The Loci place's own name; it can differ from what the link called it.
+  let poiName: String?
   let address: String?
   let category: String?
 
   var canSave: Bool { poiID != nil }
+
+  /// The Loci place this row saves, when that is not simply the link's name:
+  /// the person should see what they are about to keep.
+  var savedAs: String? {
+    guard canSave, let poiName, !poiName.isEmpty else { return nil }
+    let same = poiName.trimmingCharacters(in: .whitespaces)
+      .compare(name.trimmingCharacters(in: .whitespaces), options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+    return same ? nil : poiName
+  }
+}
+
+/// A list this sheet created, offered in the picker until the lists load it.
+nonisolated struct LinkImportCreatedList: Identifiable, Hashable, Sendable {
+  let id: String
+  let name: String
 }
 
 /// What a link held (web: lib/import/link-import.ts toImportView).
@@ -33,6 +50,7 @@ nonisolated struct LinkImportResult: Equatable, Sendable {
         city: place.cityName,
         note: place.note,
         poiID: place.hasPoiID && !place.poiID.isEmpty ? place.poiID : nil,
+        poiName: place.hasPoiName && !place.poiName.isEmpty ? place.poiName : nil,
         address: place.hasAddress && !place.address.isEmpty ? place.address : nil,
         category: place.hasCategory && !place.category.isEmpty ? place.category : nil,
       )

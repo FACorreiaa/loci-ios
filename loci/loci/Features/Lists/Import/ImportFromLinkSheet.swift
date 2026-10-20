@@ -85,6 +85,9 @@ struct ImportFromLinkSheet: View {
     Section {
       Picker("Save to", selection: $store.target) {
         Text("A new list").tag(LinkImportTarget.new)
+        ForEach(store.createdLists.filter { made in !lists.contains { $0.id == made.id } }) { list in
+          Text(list.name).tag(LinkImportTarget.existing(list.id))
+        }
         ForEach(lists) { list in
           Text(list.name).tag(LinkImportTarget.existing(list.id))
         }
@@ -127,6 +130,9 @@ private struct ImportedPlaceRow: View {
         .accessibilityHidden(true)
       VStack(alignment: .leading, spacing: 2) {
         Text(place.name).font(.body.weight(.medium))
+        if let savedAs = place.savedAs {
+          Text("Saves as \(savedAs)").font(.caption)
+        }
         Text(detail).font(.caption).foregroundStyle(.secondary)
         if !place.note.isEmpty {
           Text("\u{201C}\(place.note)\u{201D}").font(.caption).italic().foregroundStyle(.secondary)

@@ -14,6 +14,7 @@ nonisolated private func response() -> Loci_Place_ImportPlacesResponse {
   a.cityName = "Lisbon"
   a.note = "best nata"
   a.poiID = "p1"
+  a.poiName = "Manteigaria - Fábrica de Pastéis de Nata"
   a.address = "R. do Loreto 2"
   var b = Loci_Place_ImportedPlace()
   b.name = "Ghost Café"
@@ -22,6 +23,7 @@ nonisolated private func response() -> Loci_Place_ImportPlacesResponse {
   c.name = "Aloma"
   c.cityName = "Lisbon"
   c.poiID = "p3"
+  c.poiName = "aloma"
   res.places = [a, b, c]
   return res
 }
@@ -60,6 +62,11 @@ struct LinkImportResultTests {
     #expect(result.places[0].address == "R. do Loreto 2")
     #expect(result.defaultSelection == [result.places[0].id, result.places[2].id])
     #expect(Set(result.places.map(\.id)).count == 3)
+  }
+
+  @Test func showsTheLociPlaceWhenItIsNotTheLinksName() {
+    let places = LinkImportResult(response()).places
+    #expect(places.map(\.savedAs) == ["Manteigaria - Fábrica de Pastéis de Nata", nil, nil])
   }
 
   @Test func listNameComesFromTheTitleThenTheCity() {
@@ -126,6 +133,29 @@ struct LinkImportResultTests {
     await store.save()
     #expect(service.calls.dropFirst() == ["create:Bakeries", "add:L1:p1", "add:L1:p3"])
     #expect(store.outcome == LinkImportOutcome(listID: "L1", added: 2, already: 0, failed: 0))
+  }
+
+  @Test func aListThisSheetMadeIsOfferedAfterwards() async {
+    let service = StubLinkImportService()
+    let store = LinkImportStore(service: service)
+    store.url = "https://vm.tiktok.com/ZMabc/"
+    await store.read()
+    store.listName = "Bakeries"
+    await store.save()
+    #expect(store.target == .existing("L1"))
+    #expect(store.createdLists == [LinkImportCreatedList(id: "L1", name: "Bakeries")])
+  }
+
+  @Test func readingAnotherLinkStartsANewListAgain() async {
+    let service = StubLinkImportService()
+    let store = LinkImportStore(service: service)
+    store.url = "https://vm.tiktok.com/ZMabc/"
+    await store.read()
+    await store.save()
+    store.url = "https://vm.tiktok.com/ZMdef/"
+    await store.read()
+    #expect(store.target == .new)
+    #expect(store.outcome == nil)
   }
 
   @Test func alreadyThereCountsAndAFailureKeepsThePlacePicked() async {

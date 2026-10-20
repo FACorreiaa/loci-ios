@@ -12,6 +12,7 @@ import Observation
   private(set) var result: LinkImportResult?
   private(set) var selection: Set<String> = []
   private(set) var outcome: LinkImportOutcome?
+  private(set) var createdLists: [LinkImportCreatedList] = []
   private(set) var isReading = false
   private(set) var isSaving = false
 
@@ -43,6 +44,7 @@ import Observation
       let found = try await service.importPlaces(url: link, cityHint: cityHint.trimmingCharacters(in: .whitespacesAndNewlines))
       result = found
       selection = found.defaultSelection
+      target = .new
       listName = found.defaultListName
       Analytics.capture(.linkImported, ["source": found.source, "places": found.places.count, "resolved": found.defaultSelection.count])
     } catch {
@@ -63,14 +65,17 @@ import Observation
     case .existing(let id):
       listID = id
     case .new:
-      let name = listName.trimmingCharacters(in: .whitespacesAndNewlines)
+      let typed = listName.trimmingCharacters(in: .whitespacesAndNewlines)
+      let name = typed.isEmpty ? result.defaultListName : typed
       do {
-        listID = try await service.createList(name: name.isEmpty ? result.defaultListName : name)
+        listID = try await service.createList(name: name)
       } catch {
         self.error = Self.message(for: error)
         return
       }
-      // A retry adds to the list just made rather than making another.
+      // A retry adds to the list just made rather than making another, and
+      // the picker must offer it before the lists reload.
+      createdLists.append(LinkImportCreatedList(id: listID, name: name))
       target = .existing(listID)
     }
     var done = LinkImportOutcome(listID: listID)
