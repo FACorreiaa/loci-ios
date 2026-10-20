@@ -52,6 +52,8 @@ enum AnalyticsEvent: String {
   /// An action earned points (`kind`: check_in | visit | trip_day, `points`).
   /// Metric: returning, active travellers.
   case pointsAwarded = "points_awarded"
+  /// Places were read from a shared link (`source`, `places`, `resolved`). Same name as web.
+  case linkImported = "link_imported"
 }
 
 @MainActor enum Analytics {

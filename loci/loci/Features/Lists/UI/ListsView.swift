@@ -74,6 +74,9 @@ private struct ListsChrome: ViewModifier {
           ToolbarItem(placement: .primaryAction) {
             Button("New list", systemImage: "plus") { store.editor = .new }
           }
+          ToolbarItem(placement: .secondaryAction) {
+            Button("Import from a link", systemImage: "link") { store.isImporting = true }
+          }
         }
       }
       .navigationDestination(for: LociList.self) { list in
@@ -83,6 +86,9 @@ private struct ListsChrome: ViewModifier {
         ListFormSheet(editor: editor) { form in await store.save(form, editing: editor.list) }
       }
       .sheet(item: $store.limit) { EntitlementSheet(limit: $0) }
+      .sheet(isPresented: $store.isImporting, onDismiss: { Task { await store.load() } }) {
+        ImportFromLinkSheet(lists: store.lists.filter { !$0.isItinerary })
+      }
       .confirmationDialog(
         "Delete \u{201C}\(store.pendingDelete?.name ?? "")\u{201D}?",
         isPresented: Binding(get: { store.pendingDelete != nil }, set: { if !$0 { store.pendingDelete = nil } }),

@@ -18,6 +18,8 @@ import SwiftUI
   var editor: ListEditor?
   /// The list waiting on the delete confirmation.
   var pendingDelete: LociList?
+  /// The "Import from a link" sheet is up.
+  var isImporting = false
   var tab = ListsTab.all
 
   var visible: [LociList] { ListFilter.apply(lists, tab: tab) }
