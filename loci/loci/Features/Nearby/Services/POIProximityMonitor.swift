@@ -33,7 +33,9 @@ import UserNotifications
   private var notified: Set<String> = []
 
   /// Fence the `maxConditions` places nearest to `origin`.
+  /// The taste fences step aside first: a walk or a trip day needs the room.
   func arm(places: [Loci_Poi_POIDetailedInfo], from origin: CLLocationCoordinate2D?) async {
+    await TasteFences.shared.disarm()
     if monitor == nil { monitor = await CLMonitor(name) }
     guard let monitor else { return }
     let chosen = Self.select(places: places, from: origin)
@@ -50,6 +52,7 @@ import UserNotifications
       )
       await monitor.add(condition, identifier: poi.stableID, assuming: .unsatisfied)
     }
+    TasteFences.budget.used[name] = chosen.count
 
     if eventsTask == nil {
       eventsTask = Task { [weak self] in
@@ -67,6 +70,7 @@ import UserNotifications
     eventsTask?.cancel()
     eventsTask = nil
     notified = []
+    TasteFences.budget.used[name] = 0
     guard let monitor else { return }
     for identifier in await monitor.identifiers { await monitor.remove(identifier) }
   }
