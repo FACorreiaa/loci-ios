@@ -11,8 +11,32 @@ Every plan is checked against live conditions: the forecast for your dates, publ
 WALK YOUR DAY, STOP BY STOP
 Start a day and Loci walks it with you: the route to the next stop, a 3D map, and Look Around so you know what you are looking for before you get there.
 
+A COMPANION ON THE DAY
+On a trip day Loci opens on today: the city, the day and your next stop. Turn on "Saved places nearby" and it tells you when you pass a saved place that fits your taste. Ask Siri "Plan a day in Loci" or "What's near me that I'd like in Loci".
+
+IT LEARNS WHAT YOU LIKE
+Mark the places you've been, tell Loci "Not for me", and say how a place was. Each place shows how well it matches you and why, and your favourites become top-10 lists.
+
+KEEP A TRIP JOURNAL
+Notes and photos for every day, with your stops ticked off as you visit them. Logging the places you visit is optional and stays off until you turn it on.
+
+RELIVE THE TRIP
+When you're home, play the trip back as a story, then save it as an image or share the link.
+
+SAVE PLACES FROM ANY LINK
+Paste a TikTok, YouTube, Google Maps or blog link. Loci finds the places in it and saves them to a list.
+
+PLAN THE WHOLE TRIP
+Set your dates, pick a hotel in each city, and save flight searches with the trip. Ask the planner when you're stuck.
+
 COMPARE CITIES BEFORE YOU BOOK
 Torn between two places for the weekend? Put them side by side — weather and how far each one is — and Loci picks one and tells you why.
+
+EXPLORE WITH FRIENDS
+Invite friends with a link that doesn't expire, find the ones already on Loci from your contacts, and keep a streak going on the weekly leaderboard.
+
+TODAY'S DESTINATION
+Every day Boards opens with a city that's in season right now. It's written by AI and labelled that way.
 
 KEEP EVERY TRIP IN ONE PLACE
 Save itineraries, hotels, restaurants and places into lists, and open the same plan on your phone or on the web.
