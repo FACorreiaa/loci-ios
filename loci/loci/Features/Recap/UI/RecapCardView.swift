@@ -31,7 +31,7 @@ extension Loci_Recap_RecapCard {
   /// Drawn on a light ground: the player's progress bars go dark on it.
   var isLight: Bool {
     switch card {
-    case .places, .days, .taste, .highlights, .field, .friends: true
+    case .places, .days, .taste, .highlights, .field, .friends, .yearMap, .topCity, .tasteShift, .contributions, .percentile: true
     default: false
     }
   }
@@ -58,26 +58,28 @@ struct RecapCardView: View {
     case .days(let c): DaysCardView(card: c, appeared: appeared, k: unit)
     case .taste(let c): TasteCardView(card: c, city: primaryCity, appeared: appeared, k: unit)
     case .highlights(let c): HighlightsCardView(card: c, appeared: appeared, k: unit)
-    case .progress(let c): ProgressCardView(card: c, appeared: appeared, k: unit)
+    case .progress(let c): ProgressCardView(card: c, yearly: recap.kind == .year, appeared: appeared, k: unit)
     case .field(let c): FieldCardView(card: c, appeared: appeared, k: unit)
     case .friends(let c): FriendsCardView(card: c, city: primaryCity, appeared: appeared, k: unit)
     case .outro(let c): OutroCardView(recap: recap, card: c, appeared: appeared, k: unit)
+    case .yearMap, .tripsTimeline, .topCity, .tasteShift, .streak, .contributions, .percentile:
+      YearCardView(card: card, appeared: appeared, k: unit)
     // Never selected: RecapRules.playable skips what this build cannot draw.
     default: EmptyView()
     }
   }
 }
 
-// MARK: - Shared pieces
+// MARK: - Shared pieces (also used by YearCardView)
 
-private struct Kicker: View {
+struct Kicker: View {
   let text: String
   let k: RecapUnit
   var body: some View { Text(text.uppercased()).font(k.mono(2.8)).tracking(1.4) }
 }
 
 /// Rises into place, `delay` seconds after the card appears.
-private struct Rise: ViewModifier {
+struct Rise: ViewModifier {
   let appeared: Bool
   var delay: Double = 0
 
@@ -87,7 +89,7 @@ private struct Rise: ViewModifier {
 }
 
 /// Lands like a rubber stamp.
-private struct Thud: ViewModifier {
+struct Thud: ViewModifier {
   let appeared: Bool
   var delay: Double = 0
 
@@ -99,13 +101,13 @@ private struct Thud: ViewModifier {
   }
 }
 
-private extension View {
+extension View {
   func rise(_ appeared: Bool, _ delay: Double = 0) -> some View { modifier(Rise(appeared: appeared, delay: delay)) }
   func thud(_ appeared: Bool, _ delay: Double = 0) -> some View { modifier(Thud(appeared: appeared, delay: delay)) }
 }
 
 /// A number that counts up when the card appears.
-private struct CountUp: View, Animatable {
+struct CountUp: View, Animatable {
   var value: Double
   var animatableData: Double {
     get { value }
@@ -130,7 +132,7 @@ private struct Barcode: View {
   }
 }
 
-private struct CenteredColumn<Content: View>: View {
+struct CenteredColumn<Content: View>: View {
   let k: RecapUnit
   @ViewBuilder var content: Content
   var body: some View {
@@ -481,6 +483,8 @@ private struct HighlightsCardView: View {
 
 private struct ProgressCardView: View {
   let card: Loci_Recap_ProgressCard
+  /// On a year in review the points are the year's, not a trip's.
+  var yearly = false
   let appeared: Bool
   let k: RecapUnit
 
@@ -488,7 +492,7 @@ private struct ProgressCardView: View {
     ZStack {
       RecapPalette.night
       CenteredColumn(k: k) {
-        Kicker(text: "Points on this trip", k: k).opacity(0.7)
+        Kicker(text: yearly ? "Points this year" : "Points on this trip", k: k).opacity(0.7)
         CountUp(value: appeared ? Double(card.points) : 0).animation(.easeOut(duration: 1.1), value: appeared).font(k.display(24, .black))
           .foregroundStyle(RecapPalette.coral)
         Text(card.headline).font(k.body(4.1))
@@ -575,7 +579,7 @@ private struct OutroCardView: View {
     ZStack {
       RecapPalette.night
       CenteredColumn(k: k) {
-        Kicker(text: "\(recap.title) · \(recap.periodLabel)", k: k).opacity(0.7)
+        Kicker(text: recap.kind == .year ? recap.title : "\(recap.title) · \(recap.periodLabel)", k: k).opacity(0.7)
         Text(card.headline).font(k.display(10, .semibold))
         if !card.summaryLine.isEmpty { Kicker(text: card.summaryLine, k: k).foregroundStyle(RecapPalette.coral) }
       }.foregroundStyle(RecapPalette.cream).rise(appeared)
