@@ -64,6 +64,12 @@ nonisolated enum ListsAPI {
     _ = try await listRPC("Could not add it to the list.", request) { await client.addListItem(request: $0, headers: [:]) }
   }
 
+  /// web: useSaveImported. Already in the list throws `APIError.conflict`.
+  static func addPlace(userId: String, listId: String, poiID: String) async throws {
+    let request = ListPayload.addPlace(userId: userId, listId: listId, poiID: poiID)
+    _ = try await listRPC("Could not add it to the list.", request) { await client.addListItem(request: $0, headers: [:]) }
+  }
+
   /// web: useRemoveFromListMutation.
   /// UpdateListItem: the entry as the server now holds it (its place kept).
   static func updateItem(userId: String, listId: String, entry: ListEntry, edit: ListItemEdit) async throws -> ListEntry {

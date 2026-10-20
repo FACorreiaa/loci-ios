@@ -111,6 +111,16 @@ nonisolated enum ListPayload {
     return request
   }
 
+  /// A place known only by its Loci id (a link import), as a POI row.
+  static func addPlace(userId: String, listId: String, poiID: String) -> Loci_List_AddListItemRequest {
+    var request = Loci_List_AddListItemRequest()
+    request.userID = userId
+    request.listID = listId
+    request.itemID = poiID
+    request.contentType = .poi
+    return request
+  }
+
   /// UpdateListItem{userId, listId, itemId, contentType + only the fields
   /// that changed}. Nil when nothing changed or the edit cannot be expressed
   /// (a cleared note or day: the proto has no presence).
