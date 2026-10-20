@@ -115,6 +115,17 @@ import UserNotifications
       completionHandler()
       return
     }
+    if content.categoryIdentifier == NotificationCategory.lociRate, let poiID = userInfo["poiID"] as? String {
+      // "How was it?": a verdict button answers; a tap brings the card up.
+      // The handler is only called back once the verdict is saved: a
+      // background launch from a killed app may be suspended right after.
+      let action = response.actionIdentifier
+      Task { @MainActor in
+        await RateReminder.handle(actionIdentifier: action, poiID: poiID)
+        completionHandler()
+      }
+      return
+    }
     switch PushRoute.tap(userInfo: userInfo) {
     case .nothing: break
     case .open(let link): AppRouter.shared.open(link)

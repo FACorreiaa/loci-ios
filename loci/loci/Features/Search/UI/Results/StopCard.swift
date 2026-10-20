@@ -14,6 +14,7 @@ struct StopCard: View {
   var onSelect: () -> Void = {}
 
   @Environment(\.dynamicTypeSize) private var typeSize
+  @State private var showingMatch = false
 
   /// At accessibility sizes the photo sits above the text, which gets the full width and more lines.
   private var isLarge: Bool { typeSize.isAccessibilitySize }
@@ -23,6 +24,7 @@ struct StopCard: View {
   private var accessibilitySummary: String {
     var parts = ["\(index). \(stop.name)", category]
     if stop.rating > 0 { parts.append(String(localized: "Rated \(stop.rating.formatted(.number.precision(.fractionLength(1))))")) }
+    if stop.showsMatchOnCard, let match = stop.matchLabel { parts.append(match) }
     if let meta = StopMeta.line(for: stop, destination: destination) { parts.append(meta) }
     return parts.joined(separator: ", ")
   }
@@ -36,6 +38,7 @@ struct StopCard: View {
             Label(category, systemImage: PlaceSymbol.name(for: stop.category))
               .lociCoordStyle(10).lineLimit(isLarge ? 2 : 1)
             Spacer(minLength: 4)
+            if stop.showsMatchOnCard { MatchChip(place: stop) }
             if stop.rating > 0 { RatingChip(rating: stop.rating) }
           }
           Text(stop.name).font(.lociHeadline(16)).foregroundStyle(Color.lociInk).lineLimit(isLarge ? 4 : 2).multilineTextAlignment(.leading)
@@ -63,8 +66,10 @@ struct StopCard: View {
     .accessibilityLabel(accessibilitySummary)
     .accessibilityHint("Shows details")
     .accessibilityActions {
+      if stop.showsMatchOnCard { Button("Why it fits you") { showingMatch = true } }
       if let onDismiss { Button("Not for me", action: onDismiss) }
     }
+    .sheet(isPresented: $showingMatch) { MatchReasonsSheet(place: stop) }
   }
 }
 

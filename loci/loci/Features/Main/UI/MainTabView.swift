@@ -32,10 +32,15 @@ public struct MainTabView: View {
       }
       // "+10 · Visited Pantheon" when something earns points.
       .overlay(alignment: .top) { PointsToastOverlay() }
+      // "How was it?" for a place visited a while ago, or just left.
+      .overlay(alignment: .bottom) { RatePromptOverlay() }
       // The day's check-in: signed in and in front, once per local day.
       .task { await ProgressReporter.checkInIfNeeded() }
       .onChange(of: scenePhase) { _, phase in
-        if phase == .active { Task { await ProgressReporter.checkInIfNeeded() } }
+        if phase == .active {
+          RatePrompter.shared.refresh()
+          Task { await ProgressReporter.checkInIfNeeded() }
+        }
       }
   }
 }
