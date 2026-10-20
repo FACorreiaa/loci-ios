@@ -54,7 +54,7 @@ struct TasteFencesTests {
 
   /// CLMonitor keeps a walk's conditions across launches, so the count it
   /// holds must survive the process too.
-  @Test func budgetSurvivesRelaunch() {
+  @MainActor @Test func budgetSurvivesRelaunch() {
     let saved = UserDefaults.standard.object(forKey: TasteFences.budgetKey)
     defer { UserDefaults.standard.set(saved, forKey: TasteFences.budgetKey) }
     TasteFences.budget = FenceBudget(used: [POIProximityMonitor.nearbyWalkName: 12])

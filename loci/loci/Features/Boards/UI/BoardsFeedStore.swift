@@ -14,6 +14,9 @@ import SwiftUI
   private(set) var board: Loci_Boards_V1_Board?
   private(set) var boards: [Loci_Boards_V1_Board] = []
   private(set) var posts: [Loci_Boards_V1_Post] = []
+  /// Today's AI-written destination, shown above the all-boards feed and left
+  /// out of `posts`. Nil on a board's own feed, when it is stale, or when it failed.
+  private(set) var dailyPost: Loci_Boards_V1_Post?
   private(set) var viewer = Loci_Boards_V1_GetBoardsViewerResponse()
   private(set) var phase = Phase.idle
   private(set) var nextCursor = ""
@@ -50,10 +53,13 @@ import SwiftUI
     async let viewerResult = try? service.viewer()
     async let boardsResult = slug.isEmpty ? try? service.boards() : nil
     async let boardResult = slug.isEmpty ? nil : try? service.board(slug: slug)
+    async let dailyResult = slug.isEmpty ? try? service.dailyPost() : nil
     do {
       let page = try await service.posts(board: slug, sort: sort, window: window, cursor: "")
+      let daily = await dailyResult
       try Task.checkCancellation()
-      posts = page.posts
+      dailyPost = daily.flatMap { BoardsModel.isFreshDaily($0) ? $0 : nil }
+      posts = BoardsModel.removing(id: dailyPost?.id, from: page.posts)
       nextCursor = page.nextCursor
       phase = .loaded
     } catch {
@@ -76,7 +82,7 @@ import SwiftUI
     do {
       let page = try await service.posts(board: slug, sort: sort, window: window, cursor: nextCursor)
       let seen = Set(posts.map(\.id))
-      posts += page.posts.filter { !seen.contains($0.id) }
+      posts += BoardsModel.removing(id: dailyPost?.id, from: page.posts.filter { !seen.contains($0.id) })
       nextCursor = page.nextCursor
     } catch { self.error = error.userMessage }
   }
@@ -112,6 +118,7 @@ import SwiftUI
   func removePost(_ post: Loci_Boards_V1_Post) async throws {
     try await service.deletePost(id: post.id)
     posts.removeAll { $0.id == post.id }
+    if dailyPost?.id == post.id { dailyPost = nil }
   }
 
   /// Admin: closes this board. True when it is gone.

@@ -1,3 +1,4 @@
+import Algorithms
 import CoreLocation
 import Foundation
 import LociConnectProto
@@ -77,16 +78,13 @@ import UserNotifications
 
   /// Nearest first, without repeats, capped at what CLMonitor allows.
   nonisolated static func select(places: [Loci_Poi_POIDetailedInfo], from origin: CLLocationCoordinate2D?) -> [Loci_Poi_POIDetailedInfo] {
-    var seen = Set<String>()
-    let unique = places.filter { $0.hasLatitude && $0.hasLongitude && seen.insert($0.stableID).inserted }
+    let unique = places.filter { $0.hasLatitude && $0.hasLongitude }.uniqued(on: \.stableID)
     guard let origin else { return Array(unique.prefix(maxConditions)) }
     let here = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
-    return Array(
-      unique.sorted {
-        CLLocation(latitude: $0.latitude, longitude: $0.longitude).distance(from: here)
-          < CLLocation(latitude: $1.latitude, longitude: $1.longitude).distance(from: here)
-      }.prefix(maxConditions)
-    )
+    return unique.min(count: maxConditions) {
+      CLLocation(latitude: $0.latitude, longitude: $0.longitude).distance(from: here)
+        < CLLocation(latitude: $1.latitude, longitude: $1.longitude).distance(from: here)
+    }
   }
 
   private func arrived(at identifier: String) async {

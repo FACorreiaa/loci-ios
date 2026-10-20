@@ -1,3 +1,4 @@
+import Algorithms
 import Foundation
 import LociConnectProto
 
@@ -25,7 +26,8 @@ nonisolated struct GastronomyFilter: Equatable, Sendable {
     let matching = gastronomy.dishes.filter { dish in
       (categories.isEmpty || categories.contains(dish.displayCategory)) && tags.isSubset(of: Set(dish.tags))
     }
-    return matching.filter(\.isSignature) + matching.filter { !$0.isSignature }
+    let (others, signature) = matching.partitioned(by: \.isSignature)
+    return signature + others
   }
 }
 

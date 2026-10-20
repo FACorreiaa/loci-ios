@@ -1,3 +1,4 @@
+import Algorithms
 import Foundation
 import LociConnectProto
 import Synchronization
@@ -22,12 +23,10 @@ nonisolated enum TripChecklist {
   ) -> [Loci_Trip_PackingSuggestion] {
     let taken = Set(items.filter { $0.kind == .packing }.map { key($0.text) })
     let gone = Set(dismissed.map(key))
-    var seen = Set<String>()
     return suggestions.filter { suggestion in
       let k = key(suggestion.text)
-      guard !k.isEmpty, !taken.contains(k), !gone.contains(k) else { return false }
-      return seen.insert(k).inserted
-    }
+      return !k.isEmpty && !taken.contains(k) && !gone.contains(k)
+    }.uniqued { key($0.text) }
   }
 
   /// One kind's items in display order: position, then text as a stable tiebreak.
