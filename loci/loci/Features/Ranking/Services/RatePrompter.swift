@@ -135,16 +135,31 @@ nonisolated enum RateReminder {
     UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier(poiID)])
   }
 
-  /// A notification answered: a verdict button records it straight away (the
-  /// comparisons wait for the app); a plain tap brings the card up.
-  @MainActor static func handle(actionIdentifier: String, poiID: String) {
-    let prompter = RatePrompter.shared
+  /// A notification answered: a verdict button records it straight away; a
+  /// plain tap brings the card up. The place leaves the queue only once the
+  /// server has it placed. When comparisons remain (they can't be asked on the
+  /// lock screen), or the call fails, it stays due, and the card asks again
+  /// when the app opens; the same verdict resumes where it stopped.
+  @MainActor static func handle(
+    actionIdentifier: String,
+    poiID: String,
+    prompter: RatePrompter = .shared,
+    service: any RankingService = ConnectRankingService()
+  ) async {
     guard let rating = prompter.pending(poiID: poiID) else { return }
     guard let verdict = RankingVerdict(actionIdentifier: actionIdentifier) else {
       prompter.markDue(poiID: poiID)
       return
     }
-    prompter.resolve(poiID: poiID)
-    Task { _ = try? await ConnectRankingService().rate(rating, verdict: verdict) }
+    do {
+      let step = try await service.rate(rating, verdict: verdict)
+      if step.next == nil {
+        prompter.resolve(poiID: poiID)
+      } else {
+        prompter.markDue(poiID: poiID)
+      }
+    } catch {
+      prompter.markDue(poiID: poiID)
+    }
   }
 }

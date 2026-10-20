@@ -83,7 +83,11 @@ struct PlaceDetailView: View {
           }
         }
         if let asking {
-          HowWasItCard(pending: asking) { self.asking = nil }
+          HowWasItCard(pending: asking) {
+            // Answered here, so the walk's queued "How was it?" is done too.
+            RatePrompter.shared.resolve(poiID: asking.poiID)
+            self.asking = nil
+          }
         }
         stats
         if let lookAround {

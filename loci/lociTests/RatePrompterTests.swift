@@ -82,4 +82,52 @@ import UserNotifications
     #expect(prompter.queue.count == 1)
     #expect(prompter.current == nil)
   }
+
+  private struct StubRanking: RankingService {
+    var next: Loci_Ranking_Comparison?
+    var fails = false
+
+    func rate(_ pending: PendingRating, verdict: RankingVerdict) async throws -> RankingStep {
+      if fails { throw URLError(.notConnectedToInternet) }
+      var place = Loci_Ranking_RankedPlace()
+      place.poiID = pending.poiID
+      return RankingStep(place: place, next: next)
+    }
+
+    func compare(poiID: String, otherID: String, better: Bool) async throws -> RankingStep {
+      RankingStep(place: Loci_Ranking_RankedPlace(), next: nil)
+    }
+
+    func mine(city: String) async throws -> [Loci_Ranking_RankedPlace] { [] }
+    func user(id: String, city: String) async throws -> [Loci_Ranking_RankedPlace] { [] }
+  }
+
+  @Test func notificationVerdictResolvesWhenPlaced() async {
+    let clock = Clock()
+    let prompter = RatePrompter(defaults: Self.defaults(), live: false) { clock.now }
+    prompter.enqueue(Self.pending("a", at: clock.now))
+    await RateReminder.handle(actionIdentifier: RankingVerdict.loved.actionIdentifier, poiID: "a", prompter: prompter, service: StubRanking())
+    #expect(prompter.queue.isEmpty)
+  }
+
+  /// Comparisons can't be asked on the lock screen: the place stays queued and
+  /// due, so the card picks them up when the app opens.
+  @Test func notificationVerdictKeepsEntryWhenComparisonsRemain() async {
+    let clock = Clock()
+    let prompter = RatePrompter(defaults: Self.defaults(), live: false) { clock.now }
+    prompter.enqueue(Self.pending("a", at: clock.now))
+    var other = Loci_Ranking_Comparison()
+    other.poiID = "b"
+    await RateReminder.handle(actionIdentifier: RankingVerdict.loved.actionIdentifier, poiID: "a", prompter: prompter, service: StubRanking(next: other))
+    #expect(prompter.current?.poiID == "a")
+  }
+
+  /// Offline, or suspended mid-call: the answer is not lost.
+  @Test func notificationVerdictFailureKeepsEntry() async {
+    let clock = Clock()
+    let prompter = RatePrompter(defaults: Self.defaults(), live: false) { clock.now }
+    prompter.enqueue(Self.pending("a", at: clock.now))
+    await RateReminder.handle(actionIdentifier: RankingVerdict.fine.actionIdentifier, poiID: "a", prompter: prompter, service: StubRanking(fails: true))
+    #expect(prompter.current?.poiID == "a")
+  }
 }
