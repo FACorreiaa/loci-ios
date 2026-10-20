@@ -74,5 +74,36 @@ struct RecapRulesTests {
   @MainActor @Test func recapLinksOpenInTheirTabs() {
     #expect(AppRouter.tab(for: .tripRecap(tripID: "t")) == .calendar)
     #expect(AppRouter.tab(for: .sharedRecap(code: "c")) == .discover)
+    #expect(AppRouter.tab(for: .yearRecap(year: 2026)) == .profile)
+  }
+
+  @Test func drawsEveryYearCard() {
+    let year: [Loci_Recap_RecapCard.OneOf_Card] = [
+      .yearMap(.init()), .tripsTimeline(.init()), .topCity(.init()), .tasteShift(.init()), .streak(.init()), .contributions(.init()),
+      .percentile(.init()),
+    ]
+    let cards = year.enumerated().map { i, body in
+      var c = Loci_Recap_RecapCard()
+      c.id = "y\(i)"
+      c.card = body
+      return c
+    }
+    #expect(RecapRules.playable(cards).count == year.count)
+    #expect(Loci_Recap_Recap.previewYear.cards.allSatisfy(RecapRules.isDrawn))
+  }
+
+  @Test func reviewYearIsLastYearOnlyInJanuary() {
+    let jan = calendar.date(from: DateComponents(year: 2027, month: 1, day: 20)) ?? .distantPast
+    let dec = calendar.date(from: DateComponents(year: 2026, month: 12, day: 1)) ?? .distantPast
+    #expect(RecapRules.reviewYear(now: jan, calendar: calendar) == 2026)
+    #expect(RecapRules.reviewYear(now: dec, calendar: calendar) == 2026)
+    #expect(RecapRules.reviewYear(now: now, calendar: calendar) == 2026)
+  }
+
+  @Test func recapYearAcceptsOnlyWhatTheServerDoes() {
+    #expect(AppLink.recapYear("2026") == 2026)
+    #expect(AppLink.recapYear("2023") == nil)
+    #expect(AppLink.recapYear("２０２６") == nil)
+    #expect(AppLink.recapYear("-202") == nil)
   }
 }

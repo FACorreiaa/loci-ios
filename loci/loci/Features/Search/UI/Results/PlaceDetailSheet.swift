@@ -49,6 +49,8 @@ struct PlaceDetailView: View {
   @State private var addingToTrip = false
   @State private var reporting = false
   @State private var beenHere = false
+  /// "How was it?", asked right after "I've been here".
+  @State private var asking: PendingRating?
   @State private var recordingVisit = false
   @State private var error: String?
 
@@ -75,7 +77,17 @@ struct PlaceDetailView: View {
           Label(stop.category.isEmpty ? destination.title : stop.category, systemImage: PlaceSymbol.name(for: stop.category)).lociCoordStyle(10)
           Text(stop.name).font(.lociTitle(22)).foregroundStyle(Color.lociInk)
           if !stop.address.isEmpty { Text(stop.address).font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk) }
-          GroundedBadge(stop: stop)
+          HStack(spacing: 6) {
+            GroundedBadge(stop: stop)
+            MatchChip(place: stop)
+          }
+        }
+        if let asking {
+          HowWasItCard(pending: asking) {
+            // Answered here, so the walk's queued "How was it?" is done too.
+            RatePrompter.shared.resolve(poiID: asking.poiID)
+            self.asking = nil
+          }
         }
         stats
         if let lookAround {
@@ -277,6 +289,10 @@ struct PlaceDetailView: View {
     do {
       try await TravelHistoryAPI.recordManualVisit(poi: stop, cityName: visitCity)
       beenHere = true
+      if UUID(uuidString: stop.id) != nil {
+        let now = Date()
+        asking = PendingRating(poiID: stop.id, name: stop.name, cityName: visitCity, category: stop.category, arrivedAt: now, dueAt: now)
+      }
     } catch { self.error = error.userMessage }
   }
 
