@@ -76,8 +76,18 @@ struct DiscoverView: View {
     }
   }
 
-  /// A `/packs/:slug` link pushes the pack over Discover.
-  private func openPending() { if let link = router.takeLink(for: .discover) { linked = link } }
+  /// A `/packs/:slug` link pushes the pack over Discover; "Plan a day in …"
+  /// from Siri fills the composer on Discover's root.
+  private func openPending() {
+    guard let link = router.takeLink(for: .discover) else { return }
+    if case let .plan(prompt) = link {
+      linked = nil
+      path = NavigationPath()
+      composerSeed = prompt
+    } else {
+      linked = link
+    }
+  }
 
   // MARK: - Sections
 
