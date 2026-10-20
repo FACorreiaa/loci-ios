@@ -28,6 +28,8 @@ struct AppLinkTests {
     ("https://lociai.fyi/recap/trip/t9", .tripRecap(tripID: "t9")),
     ("loci://recap/trip/t9", .tripRecap(tripID: "t9")),
     ("https://lociai.fyi/r/MpadNH462QzV", .sharedRecap(code: "MpadNH462QzV")),
+    ("https://lociai.fyi/recap/year/2026", .yearRecap(year: 2026)),
+    ("loci://recap/year/2026", .yearRecap(year: 2026)),
   ])
   func parsesEveryRoute(_ string: String, _ expected: AppLink) throws {
     #expect(AppLink(url: try #require(URL(string: string))) == expected)
@@ -37,7 +39,10 @@ struct AppLinkTests {
     "loci://lists",
     "loci://lists/",
     "loci://trips/t1/edit",
-    "https://lociai.fyi/recap/year/2026",
+    "https://lociai.fyi/recap/year/abc",
+    "https://lociai.fyi/recap/year/1999",
+    "https://lociai.fyi/recap/year/20261",
+    "https://lociai.fyi/recap/year",
     "https://lociai.fyi/recap/trip",
     "https://lociai.fyi/r",
     "loci://recents/extra",
