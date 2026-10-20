@@ -1,3 +1,4 @@
+import Algorithms
 import Foundation
 import LociConnectProto
 
@@ -135,10 +136,7 @@ nonisolated struct SearchState: Equatable, Sendable {
   /// Every place from every event, without repeats: what web's /nearme shows
   /// (general POIs, restaurants, hotels and activities together).
   var allPlaces: [Loci_Poi_POIDetailedInfo] {
-    var seenKeys = Set<String>()
-    return (itineraryPlaces + hotels + restaurants + activities).filter { poi in
-      seenKeys.insert(poi.stableID).inserted
-    }
+    (itineraryPlaces + hotels + restaurants + activities).uniqued(on: \.stableID)
   }
 }
 

@@ -1,3 +1,4 @@
+import Algorithms
 import CoreLocation
 import Foundation
 import LociConnectProto
@@ -34,8 +35,8 @@ nonisolated enum DayGrouping {
   static func groups(_ stops: [Loci_Poi_POIDetailedInfo]) -> [DayGroup] {
     let sorted = ordered(stops)
     guard sorted.contains(where: \.hasDay) else {
-      return stride(from: 0, to: sorted.count, by: stopsPerDay).enumerated().map { index, start in
-        DayGroup(number: index + 1, stops: Array(sorted[start..<min(start + stopsPerDay, sorted.count)]))
+      return sorted.chunks(ofCount: stopsPerDay).enumerated().map { index, chunk in
+        DayGroup(number: index + 1, stops: Array(chunk))
       }
     }
     var byDay: [Int: [Loci_Poi_POIDetailedInfo]] = [:]
@@ -51,8 +52,7 @@ nonisolated enum DayGrouping {
   /// Top-level places that are not in the itinerary: web's "More to explore".
   static func extras(all: [Loci_Poi_POIDetailedInfo], itinerary: [Loci_Poi_POIDetailedInfo]) -> [Loci_Poi_POIDetailedInfo] {
     let inItinerary = Set(itinerary.map(\.stableID))
-    var seen = Set<String>()
-    return all.filter { !inItinerary.contains($0.stableID) && seen.insert($0.stableID).inserted }
+    return all.filter { !inItinerary.contains($0.stableID) }.uniqued(on: \.stableID)
   }
 
   /// The running index of every stop, across days, 1-based (web's `seq`).

@@ -78,7 +78,7 @@ struct PostDetailView: View {
   }
 
   /// User text, so inline markdown, never a localization key.
-  private static func bodyText(_ body: String) -> AttributedString {
+  static func bodyText(_ body: String) -> AttributedString {
     (try? AttributedString(markdown: body, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(body)
   }
 

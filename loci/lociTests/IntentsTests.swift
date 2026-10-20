@@ -18,7 +18,7 @@ struct IntentsTests {
     #expect(AppLink(url: IntentRoute.url(for: .nearbyFits)) == .nearby)
   }
 
-  @Test func intentLinksOpenOnDiscover() {
+  @MainActor @Test func intentLinksOpenOnDiscover() {
     #expect(AppRouter.tab(for: .plan(prompt: "x")) == .discover)
     #expect(AppRouter.tab(for: .nearby) == .discover)
   }

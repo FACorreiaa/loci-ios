@@ -1,3 +1,4 @@
+import Algorithms
 import Foundation
 
 /// The taste vocabulary a City Pack can be cut for (web: lib/bundles/themes.ts).
@@ -56,20 +57,10 @@ nonisolated enum PackMonths {
   /// end (Nov, Dec, Jan, Feb) reads as one range, "Nov–Feb", not two.
   static func label(_ months: [Int]) -> String {
     let sorted = Set(months).filter { (1...12).contains($0) }.sorted()
-    guard let first = sorted.first else { return "Any time" }
+    guard !sorted.isEmpty else { return "Any time" }
     if sorted.count == 12 { return "All year" }
 
-    var runs: [[Int]] = []
-    var run = [first]
-    for month in sorted.dropFirst() {
-      if let last = run.last, month == last + 1 {
-        run.append(month)
-      } else {
-        runs.append(run)
-        run = [month]
-      }
-    }
-    runs.append(run)
+    var runs = sorted.chunked { $1 == $0 + 1 }.map { Array($0) }
 
     // December is adjacent to January: join the last run onto the first.
     if runs.count > 1, sorted.contains(1), sorted.contains(12) {
