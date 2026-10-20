@@ -62,6 +62,10 @@ nonisolated enum ProgressReporter {
   /// visit the phone was actually at.
   static func arrived(_ visit: SpotVisit, location: CLLocation?) {
     guard let location, !visit.cityName.isEmpty else { return }
+    Task { @MainActor in
+      // Asked later: on arrival the traveller has only just got there.
+      RatePrompter.shared.enqueueArrival(poiID: visit.poiID, name: visit.poiName, cityName: visit.cityName, category: "")
+    }
     Task {
       do {
         let points = try await ProgressAPI.recordVisit(visit, at: location)

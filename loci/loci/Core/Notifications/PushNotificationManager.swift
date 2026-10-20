@@ -115,6 +115,13 @@ import UserNotifications
       completionHandler()
       return
     }
+    if content.categoryIdentifier == NotificationCategory.lociRate, let poiID = userInfo["poiID"] as? String {
+      // "How was it?": a verdict button answers; a tap brings the card up.
+      let action = response.actionIdentifier
+      Task { @MainActor in RateReminder.handle(actionIdentifier: action, poiID: poiID) }
+      completionHandler()
+      return
+    }
     switch PushRoute.tap(userInfo: userInfo) {
     case .nothing: break
     case .open(let link): AppRouter.shared.open(link)

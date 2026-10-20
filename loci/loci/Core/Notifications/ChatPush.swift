@@ -13,11 +13,23 @@ nonisolated enum NotificationCategory {
   /// Badges and a friend passing you on the week's leaderboard (server
   /// `push.ProgressCategory`). Taps open the payload's `url`.
   static let lociProgress = "loci_progress"
+  /// The local "How was it?" after a visit (RateReminder). Its buttons answer
+  /// with a verdict without opening the app.
+  static let lociRate = "loci_rate"
 
   /// Everything registered with `setNotificationCategories`. The search-finished
-  /// push and the local notifications carry no category and need none.
+  /// push and the other local notifications carry no category and need none.
   static var all: Set<UNNotificationCategory> {
-    Set([lociChat, lociSocial, lociProgress].map { UNNotificationCategory(identifier: $0, actions: [], intentIdentifiers: [], options: []) })
+    let plain = [lociChat, lociSocial, lociProgress].map {
+      UNNotificationCategory(identifier: $0, actions: [], intentIdentifiers: [], options: [])
+    }
+    let rate = UNNotificationCategory(
+      identifier: lociRate,
+      actions: RankingVerdict.allCases.map { UNNotificationAction(identifier: $0.actionIdentifier, title: $0.label) },
+      intentIdentifiers: [],
+      options: []
+    )
+    return Set(plain + [rate])
   }
 }
 

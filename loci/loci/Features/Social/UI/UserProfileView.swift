@@ -10,6 +10,7 @@ struct UserProfileView: View {
   @State private var profile: Loci_Social_GetPublicProfileResponse?
   @State private var relationship = Relationship.unknown
   @State private var trips: [Loci_Trip_TripDraft] = []
+  @State private var rankings = RankingListStore()
   @State private var failure: String?
   @State private var confirmBlock = false
   @State private var error: String?
@@ -37,6 +38,13 @@ struct UserProfileView: View {
           ForEach(trips, id: \.id) { FriendTripRow(trip: $0, showsOwner: false) }
         }
         .listRowBackground(Color.lociCard)
+
+        if seesRankings {
+          ForEach(RankingGroups.byCity(rankings.places), id: \.city) { group in
+            RankedListSection(title: "Their top places · \(group.city)", places: group.places)
+          }
+          .listRowBackground(Color.lociCard)
+        }
       } else if let failure {
         ContentUnavailableView(failure, systemImage: "person.crop.circle.badge.questionmark").listRowBackground(Color.clear)
       } else {
@@ -71,6 +79,9 @@ struct UserProfileView: View {
     let relationship: Relationship
   }
 
+  /// Rankings are friends-only on the server too; asking as a stranger is a 403.
+  private var seesRankings: Bool { relationship == .friends || relationship == .isSelf }
+
   private var emptyTrips: String {
     relationship == .friends || relationship == .isSelf ? "No shared trips yet." : "No public trips. Friends see the trips shared with friends."
   }
@@ -97,6 +108,7 @@ struct UserProfileView: View {
   private func loadTrips() async {
     guard let id = profile?.user.id else { return }
     trips = (try? await SocialAPI.userTrips(userID: id)) ?? []
+    if seesRankings { await rankings.loadUser(id: id) } else { rankings.clear() }
   }
 
   private func block() {

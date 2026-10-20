@@ -11,6 +11,7 @@ struct RecentCityView: View {
   let city: RecentCity
   var now = Date()
   @State private var tab = Tab.overview
+  @State private var rankings = RankingListStore()
 
   var body: some View {
     List {
@@ -39,6 +40,7 @@ struct RecentCityView: View {
     .navigationTitle(city.name)
     .navigationBarTitleDisplayMode(.large)
     .onAppear { Analytics.screen("recents_city") }
+    .task(id: city.name) { await rankings.loadMine(city: city.name) }
   }
 
   @ViewBuilder private var overview: some View {
@@ -60,6 +62,9 @@ struct RecentCityView: View {
         LabeledContent("Country", value: city.country).listRowBackground(Color.lociCard)
       }
     }
+
+    RankedListSection(title: "Your \(city.name) top 10", places: Array(rankings.places.prefix(RankingGroups.topN)))
+      .listRowBackground(Color.lociCard)
 
     if !city.interactions.isEmpty {
       interactions(Array(city.interactions.prefix(3)), title: "Latest")

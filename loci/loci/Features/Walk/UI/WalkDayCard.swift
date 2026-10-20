@@ -1,3 +1,4 @@
+import LociConnectProto
 import SwiftUI
 
 /// The card under the map: where you're walking to, where you are, or the
@@ -82,7 +83,11 @@ struct WalkDayCard: View {
       if let next = walk.upcoming {
         Text("Next: \(walk.stops[next].name)\(nextTime)").lociCoordStyle(10).lineLimit(2)
         HStack {
-          Button("Walk to next", systemImage: "figure.walk") { Task { await walk.walkToNext() } }
+          Button("Walk to next", systemImage: "figure.walk") {
+            // Leaving is when to ask how the stop was.
+            if walk.stops.indices.contains(walk.index) { RatePrompter.shared.markDue(poiID: walk.stops[walk.index].poi.id) }
+            Task { await walk.walkToNext() }
+          }
             .buttonStyle(.borderedProminent).tint(.lociForest)
             .disabled(walk.navigator.leg == nil)
           Button("Skip") { Task { await walk.skip() } }.buttonStyle(.bordered)
