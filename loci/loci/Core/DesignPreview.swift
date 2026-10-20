@@ -130,6 +130,10 @@ enum DesignPreview: String {
   case recap
   /// The same recap opened from its share link: cities and counts only.
   case sharedRecap
+  /// A 2026 year in review, as its owner sees it.
+  case yearRecap
+  /// The same year opened from its share link.
+  case sharedYearRecap
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -233,9 +237,11 @@ enum DesignPreview: String {
           .appRouteDestinations()
       }
     case .leaderboard: NavigationStack { LeaderboardView(store: ProgressStore(service: PreviewProgressService())) }
-    case .myProgress: NavigationStack { MyProgressView(store: ProgressStore(service: PreviewProgressService())) }
+    case .myProgress: NavigationStack { MyProgressView(store: ProgressStore(service: PreviewProgressService()), recaps: PreviewRecapService()) }
     case .recap: NavigationStack { RecapScreen(source: .trip(id: "preview"), service: PreviewRecapService()) }
     case .sharedRecap: NavigationStack { RecapScreen(source: .shared(code: "preview"), service: PreviewRecapService()) }
+    case .yearRecap: NavigationStack { RecapScreen(source: .year(2026), service: PreviewRecapService()) }
+    case .sharedYearRecap: NavigationStack { RecapScreen(source: .shared(code: "preview"), service: PreviewRecapService(sharesYear: true)) }
     case .tripSetup: TripSetupPreview()
     case .compare: NavigationStack { CompareView(preview: .previewPorto, origin: "Porto", candidates: ["Évora", "Beja"]) }
     case .gastronomy: NavigationStack { GastronomyView(store: GastronomyStore(service: PreviewGastronomyService()), city: "Porto") }

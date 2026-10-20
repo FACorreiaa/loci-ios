@@ -129,6 +129,8 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   case shared(code: String)
   /// `/recap/trip/<id>`: a finished trip's recap, where its push opens.
   case tripRecap(tripID: String)
+  /// `/recap/year/<year>`: the year in review, where its push opens.
+  case yearRecap(year: Int)
   /// `/r/<code>`: someone's shared recap.
   case sharedRecap(code: String)
 
@@ -200,13 +202,20 @@ nonisolated extension AppLink {
     return segments
   }
 
-  /// `/recap/trip/<id>` and `/r/<code>`; nil for anything else.
+  /// `/recap/trip/<id>`, `/recap/year/<year>` and `/r/<code>`; nil for anything else.
   static func recapLink(_ segments: [String]) -> AppLink? {
     switch (segments.first?.lowercased(), segments.count) {
     case ("r", 2): .sharedRecap(code: segments[1])
     case ("recap", 3) where segments[1].lowercased() == "trip": .tripRecap(tripID: segments[2])
+    case ("recap", 3) where segments[1].lowercased() == "year": recapYear(segments[2]).map { .yearRecap(year: $0) }
     default: nil
     }
+  }
+
+  /// A four-digit year the server accepts (2024–2100), else nil.
+  static func recapYear(_ text: String) -> Int? {
+    guard text.count == 4, text.allSatisfy(\.isASCII), let year = Int(text), (2024...2100).contains(year) else { return nil }
+    return year
   }
 
   /// `/auth/reset-password?token=…` and `/auth/confirm-email-change?token=…`; no token, no page.
@@ -268,7 +277,8 @@ nonisolated extension AppLink {
     case .list: .saved
     case .pack, .shared, .sharedRecap: .discover
     case .trip, .tripRecap: .calendar
-    case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip, .leaderboard, .progress, .resetPassword, .confirmEmail:
+    case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip, .leaderboard, .progress, .resetPassword, .confirmEmail,
+      .yearRecap:
       .profile
     }
   }

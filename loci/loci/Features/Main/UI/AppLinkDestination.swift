@@ -24,6 +24,7 @@ struct AppLinkDestination: View {
     case .confirmEmail(let token): ConfirmEmailView(token: token)
     case .shared(let code): SharedContentView(code: code)
     case .tripRecap(let id): RecapScreen(source: .trip(id: id))
+    case .yearRecap(let year): RecapScreen(source: .year(year))
     case .sharedRecap(let code): RecapScreen(source: .shared(code: code))
     }
   }

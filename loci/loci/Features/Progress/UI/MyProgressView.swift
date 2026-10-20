@@ -6,14 +6,25 @@ import SwiftUI
 /// from (web: /friends?tab=progress).
 struct MyProgressView: View {
   @State private var store: ProgressStore
+  /// The year in review, once the server says it is ready.
+  @State private var readyYear: Int?
   private let feedback = PointsFeedback.shared
+  private let recaps: any RecapService
 
-  init(store: ProgressStore = ProgressStore()) {
+  init(store: ProgressStore = ProgressStore(), recaps: any RecapService = ConnectRecapService()) {
     _store = State(initialValue: store)
+    self.recaps = recaps
   }
 
   var body: some View {
     List {
+      if let readyYear {
+        Section {
+          NavigationLink(value: AppRoute.yearRecap(year: readyYear)) {
+            Label("Your \(String(readyYear)) in Loci", systemImage: "sparkles").font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
+          }
+        }.listRowBackground(Color.lociCard)
+      }
       switch store.phase {
       case .loading:
         Section { ProgressView() }.listRowBackground(Color.lociCard)
@@ -34,6 +45,14 @@ struct MyProgressView: View {
     // Reloads after an award; a newer award cancels the older reload.
     .task(id: feedback.revision) { await store.load() }
     .onAppear { Analytics.screen("Progress") }
+    .task { await loadYear() }
+  }
+
+  /// One call: the row shows only when the year's recap is ready to play.
+  private func loadYear() async {
+    let year = RecapRules.reviewYear()
+    guard let recap = try? await recaps.yearInReview(year: year), recap.status == .ready, !RecapRules.playable(recap.cards).isEmpty else { return }
+    readyYear = year
   }
 
   @ViewBuilder private var historySection: some View {
