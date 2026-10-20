@@ -1,8 +1,20 @@
-Invite friends from your profile
-• A new Invite row in Profile opens your phone's share sheet (Messages, WhatsApp, Messenger or whatever you use) with a ready-made message and your link.
-• Your invite link no longer expires, so a link you sent weeks ago still works.
-• An empty Friends list now has an Invite button.
-• If someone opens your link before they have an account, Loci remembers who invited them all the way through sign-up, with email, Apple or Google.
+A companion for every trip day
+• On a trip day, Loci opens on today: the city, the day and your next stop.
+• Optional: hear about saved places nearby that fit your taste.
+• Siri: "Plan a day in Loci" and "What's near me that I'd like in Loci".
 
-Find friends from your contacts
-• Works when you've shared only some of your contacts with Loci: add more people right from Find friends, without changing your settings.
+Trip journal
+• Notes and photos for each day, with stops ticked off as you visit them.
+• Visit logging is optional and off until you turn it on.
+• Play a finished trip back as a story, and share it as an image or a link.
+
+Your taste
+• Mark places you've been, say "Not for me", and tell Loci how a place was.
+• See how well a place matches you and why, and keep top-10 lists.
+• Import places into a list from a TikTok, YouTube, Google Maps or blog link.
+
+Plan and share
+• Trip Plan: dates, a hotel per city, flight searches, and Ask the planner.
+• Invite friends from Profile with a link that doesn't expire; find friends from your contacts.
+• Leaderboard, progress and streaks.
+• Today's destination: a daily city pick at the top of Boards, labelled as AI generated.
