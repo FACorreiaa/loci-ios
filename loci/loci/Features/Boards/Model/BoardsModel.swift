@@ -76,6 +76,18 @@ nonisolated enum BoardsModel {
     if hours < 24 { return "\(hours)h" }
     return "\(hours / 24)d"
   }
+
+  /// The daily post is one per UTC day; past 36 hours the server has missed a
+  /// day and yesterday's would read as today's, so it is not shown.
+  static func isFreshDaily(_ post: Loci_Boards_V1_Post, now: Date = .now) -> Bool {
+    now.timeIntervalSince(post.createdAt.date) < 36 * 3600
+  }
+
+  /// The feed without the post already shown above it.
+  static func removing(id: String?, from posts: [Loci_Boards_V1_Post]) -> [Loci_Boards_V1_Post] {
+    guard let id else { return posts }
+    return posts.filter { $0.id != id }
+  }
 }
 
 extension Loci_Boards_V1_Sanction {

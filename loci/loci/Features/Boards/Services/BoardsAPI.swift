@@ -9,6 +9,8 @@ import SwiftProtobuf
 /// server is the only gate on writes and on the admin actions.
 nonisolated enum BoardsAPI {
   private static let client = Loci_Boards_V1_BoardsServiceClient(client: ConnectTransport.shared.protocolClient)
+  /// The board the server publishes one AI-written destination post into per UTC day.
+  static let dailyBoardSlug = "daily-destinations"
 
   static func boards() async throws -> [Loci_Boards_V1_Board] {
     var request = Loci_Boards_V1_ListBoardsRequest()
@@ -22,7 +24,7 @@ nonisolated enum BoardsAPI {
     return try await rpc("Could not load this board.", request) { await client.getBoard(request: $0, headers: [:]) }.board
   }
 
-  static func posts(board: String, sort: Loci_Boards_V1_PostSort, window: Loci_Boards_V1_TopWindow, cursor: String) async throws
+  static func posts(board: String, sort: Loci_Boards_V1_PostSort, window: Loci_Boards_V1_TopWindow, cursor: String, pageSize: Int32 = 30) async throws
     -> Loci_Boards_V1_ListPostsResponse
   {
     var request = Loci_Boards_V1_ListPostsRequest()
@@ -30,8 +32,13 @@ nonisolated enum BoardsAPI {
     request.sort = sort
     request.window = window
     request.cursor = cursor
-    request.pageSize = 30
+    request.pageSize = pageSize
     return try await rpc("Could not load posts.", request) { await client.listPosts(request: $0, headers: [:]) }
+  }
+
+  /// The newest post on the daily-destinations board, or nil when it is empty.
+  static func dailyPost() async throws -> Loci_Boards_V1_Post? {
+    try await posts(board: dailyBoardSlug, sort: .new, window: .all, cursor: "", pageSize: 1).posts.first
   }
 
   static func post(id: String) async throws -> Loci_Boards_V1_GetPostResponse {
@@ -119,6 +126,7 @@ nonisolated protocol BoardsService: Sendable {
   func posts(board: String, sort: Loci_Boards_V1_PostSort, window: Loci_Boards_V1_TopWindow, cursor: String) async throws
     -> Loci_Boards_V1_ListPostsResponse
   func post(id: String) async throws -> Loci_Boards_V1_GetPostResponse
+  func dailyPost() async throws -> Loci_Boards_V1_Post?
   func viewer() async throws -> Loci_Boards_V1_GetBoardsViewerResponse
   func createBoard(slug: String, name: String, description: String) async throws -> Loci_Boards_V1_Board
   func createPost(_ request: Loci_Boards_V1_CreatePostRequest) async throws -> Loci_Boards_V1_Post
@@ -139,6 +147,7 @@ nonisolated struct ConnectBoardsService: BoardsService {
     -> Loci_Boards_V1_ListPostsResponse
   { try await BoardsAPI.posts(board: board, sort: sort, window: window, cursor: cursor) }
   func post(id: String) async throws -> Loci_Boards_V1_GetPostResponse { try await BoardsAPI.post(id: id) }
+  func dailyPost() async throws -> Loci_Boards_V1_Post? { try await BoardsAPI.dailyPost() }
   func viewer() async throws -> Loci_Boards_V1_GetBoardsViewerResponse { try await BoardsAPI.viewer() }
   func createBoard(slug: String, name: String, description: String) async throws -> Loci_Boards_V1_Board {
     try await BoardsAPI.createBoard(slug: slug, name: name, description: description)

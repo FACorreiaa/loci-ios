@@ -1,11 +1,12 @@
 import Foundation
 import LociConnectProto
+import SwiftProtobuf
 import Testing
 
 @testable import loci
 
 /// The boards rules shared with web (lib/api/boards.ts): votes, board
-/// addresses, links, comment threading and what Saved can attach.
+/// addresses, links, comment threading, what Saved can attach and the daily post.
 struct BoardsModelTests {
   @Test func votingFlipsAndClears() {
     #expect(BoardsModel.applyVote(score: 0, myVote: 0, pressed: 1) == (1, 1))
@@ -53,5 +54,29 @@ struct BoardsModelTests {
     var named = poi
     named.itemID = "Café Santiago"
     #expect(!BoardsModel.attachable(named))
+  }
+
+  @Test func dailyPostIsFreshFor36Hours() {
+    let now = Date(timeIntervalSince1970: 1_800_000_000)
+    var post = Loci_Boards_V1_Post()
+    post.createdAt = Google_Protobuf_Timestamp(date: now.addingTimeInterval(-5 * 3600))
+    #expect(BoardsModel.isFreshDaily(post, now: now))
+
+    post.createdAt = Google_Protobuf_Timestamp(date: now.addingTimeInterval(-37 * 3600))
+    #expect(!BoardsModel.isFreshDaily(post, now: now))
+
+    #expect(!BoardsModel.isFreshDaily(Loci_Boards_V1_Post(), now: now))
+  }
+
+  @Test func feedLeavesOutTheDailyPost() {
+    func post(_ id: String) -> Loci_Boards_V1_Post {
+      var p = Loci_Boards_V1_Post()
+      p.id = id
+      return p
+    }
+    let page = [post("a"), post("daily"), post("b")]
+    #expect(BoardsModel.removing(id: "daily", from: page).map(\.id) == ["a", "b"])
+    #expect(BoardsModel.removing(id: nil, from: page).map(\.id) == ["a", "daily", "b"])
+    #expect(BoardsModel.removing(id: "gone", from: page).map(\.id) == ["a", "daily", "b"])
   }
 }
