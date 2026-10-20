@@ -42,14 +42,25 @@ nonisolated struct FenceBudget {
   nonisolated static let name = "lociTasteFences"
   nonisolated static let radiusMeters: CLLocationDistance = 150
   nonisolated static let enabledKey = "loci_nearby_fits"
-  /// Shared with POIProximityMonitor, which records what it holds.
-  static var budget = FenceBudget()
+  nonisolated static let budgetKey = "loci_fence_budget"
+
+  /// Conditions held per monitor, shared with POIProximityMonitor. Kept in
+  /// UserDefaults because CLMonitor keeps its conditions across launches, so
+  /// a fresh process must still know what a walk left registered.
+  static var budget: FenceBudget {
+    get { FenceBudget(used: UserDefaults.standard.dictionary(forKey: budgetKey) as? [String: Int] ?? [:]) }
+    set { UserDefaults.standard.set(newValue.used, forKey: budgetKey) }
+  }
 
   nonisolated static var isEnabled: Bool { UserDefaults.standard.bool(forKey: enabledKey) }
 
   private var monitor: CLMonitor?
+  private var opening: Task<CLMonitor, Never>?
   private var eventsTask: Task<Void, Never>?
   private var fenced: [String: Loci_Favorites_V1_FavoriteItem] = [:]
+  /// Bumped by every refresh and disarm; a refresh that resumes after a newer
+  /// one (or after the switch went off) does nothing.
+  private var generation = 0
   private let limiter = NudgeLimiter()
 
   /// The account setting, mirrored on the device; off clears the fences.
@@ -58,10 +69,14 @@ nonisolated struct FenceBudget {
     Task { await on ? shared.refresh() : shared.disarm() }
   }
 
+  private static var mayFence: Bool { isEnabled && CLLocationManager().authorizationStatus == .authorizedAlways }
+
   /// On launch and on every return to the foreground: fence today's fits, or
   /// clear the fences when there is no trip day, no permission or no room.
   func refresh(now: Date = Date()) async {
-    guard Self.isEnabled, CLLocationManager().authorizationStatus == .authorizedAlways else {
+    generation += 1
+    let mine = generation
+    guard Self.mayFence else {
       await disarm()
       return
     }
@@ -74,17 +89,33 @@ nonisolated struct FenceBudget {
     var request = Loci_Favorites_V1_GetFavoritesRequest()
     request.limit = 200
     let sent = request
-    guard let saved = try? await rpc("", sent) { await SavedAPI.favorites.getFavorites(request: $0, headers: [:]) } else { return }
+    let response = try? await rpc("", sent) { await SavedAPI.favorites.getFavorites(request: $0, headers: [:]) }
+    guard let saved = response, mine == generation, Self.mayFence else { return }
     await arm(TasteFencePlan.pick(saved.favorites, city: city, budget: Self.budget.available(for: Self.name)))
   }
 
+  /// Clears the fences, including ones an earlier launch left registered.
   func disarm() async {
+    generation += 1
     eventsTask?.cancel()
     eventsTask = nil
     fenced = [:]
     Self.budget.used[Self.name] = 0
-    guard let monitor else { return }
+    let monitor = await openMonitor()
     for identifier in await monitor.identifiers { await monitor.remove(identifier) }
+  }
+
+  /// One CLMonitor per name for the life of the process, even when two
+  /// callers ask at once.
+  private func openMonitor() async -> CLMonitor {
+    if let monitor { return monitor }
+    if let opening { return await opening.value }
+    let task = Task { await CLMonitor(Self.name) }
+    opening = task
+    let opened = await task.value
+    monitor = opened
+    opening = nil
+    return opened
   }
 
   private func arm(_ places: [Loci_Favorites_V1_FavoriteItem]) async {
@@ -92,8 +123,7 @@ nonisolated struct FenceBudget {
       await disarm()
       return
     }
-    if monitor == nil { monitor = await CLMonitor(Self.name) }
-    guard let monitor else { return }
+    let monitor = await openMonitor()
     let wanted = Set(places.map(\.itemID))
     for identifier in await monitor.identifiers where !wanted.contains(identifier) { await monitor.remove(identifier) }
     for place in places {
@@ -117,7 +147,7 @@ nonisolated struct FenceBudget {
   }
 
   private func arrived(at identifier: String) async {
-    guard let place = fenced[identifier], limiter.allow(poiID: identifier) else { return }
+    guard Self.mayFence, let place = fenced[identifier], limiter.allow(poiID: identifier) else { return }
     let content = UNMutableNotificationContent()
     content.title = "You're near \(place.itemName)"
     content.body = "\(Int((place.tasteMatch.score * 100).rounded()))% your match — one of your saved places."

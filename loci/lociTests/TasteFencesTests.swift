@@ -52,6 +52,16 @@ struct TasteFencesTests {
     #expect(budget.available(for: TasteFences.name) == 0)
   }
 
+  /// CLMonitor keeps a walk's conditions across launches, so the count it
+  /// holds must survive the process too.
+  @Test func budgetSurvivesRelaunch() {
+    let saved = UserDefaults.standard.object(forKey: TasteFences.budgetKey)
+    defer { UserDefaults.standard.set(saved, forKey: TasteFences.budgetKey) }
+    TasteFences.budget = FenceBudget(used: [POIProximityMonitor.nearbyWalkName: 12])
+    let reread = FenceBudget(used: UserDefaults.standard.dictionary(forKey: TasteFences.budgetKey) as? [String: Int] ?? [:])
+    #expect(reread.available(for: TasteFences.name) == 8)
+  }
+
   private func limiter() throws -> NudgeLimiter {
     let suite = "taste-fences-\(UUID().uuidString)"
     var utc = Calendar(identifier: .gregorian)
