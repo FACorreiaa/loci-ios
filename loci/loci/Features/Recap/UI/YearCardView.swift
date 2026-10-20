@@ -53,6 +53,11 @@ private struct Headcount: View {
   }
 }
 
+/// A stat caption that reads right for one: "1 Trip", "3 Trips".
+private func unit(_ n: Int32, _ one: String, _ many: String) -> String {
+  n == 1 ? one : many
+}
+
 /// Number over caption, for the rows of stats under a card.
 private struct Stat: View {
   let value: String
@@ -347,11 +352,11 @@ private struct TopCityCardView: View {
         postcard.rotationEffect(.degrees(appeared ? -3 : 10)).offset(y: appeared ? 0 : 30 * k.u).opacity(appeared ? 1 : 0)
           .animation(.spring(response: 0.8, dampingFraction: 0.75), value: appeared)
         HStack(spacing: 0) {
-          Stat(value: Int(card.days).formatted(), caption: "Days", k: k)
+          Stat(value: Int(card.days).formatted(), caption: unit(card.days, "Day", "Days"), k: k)
           DashedRule(vertical: true).frame(height: 12 * k.u)
-          Stat(value: Int(card.placesCount).formatted(), caption: "Places", k: k)
+          Stat(value: Int(card.placesCount).formatted(), caption: unit(card.placesCount, "Place", "Places"), k: k)
           DashedRule(vertical: true).frame(height: 12 * k.u)
-          Stat(value: Int(card.tripsCount).formatted(), caption: "Trips", k: k)
+          Stat(value: Int(card.tripsCount).formatted(), caption: unit(card.tripsCount, "Trip", "Trips"), k: k)
         }.padding(.top, 4 * k.u).rise(appeared, 0.9)
         if !card.headline.isEmpty { Headline(text: card.headline, k: k).rise(appeared, 1.2) }
       }.foregroundStyle(RecapPalette.ink).padding(.horizontal, 7 * k.u).padding(.top, 18 * k.u).frame(maxHeight: .infinity, alignment: .top)
@@ -462,7 +467,7 @@ private struct StreakCardView: View {
 
   private var stats: some View {
     HStack(spacing: 0) {
-      Stat(value: Int(max(card.activeDays, 0)).formatted(), caption: "Active days", k: k)
+      Stat(value: Int(max(card.activeDays, 0)).formatted(), caption: unit(card.activeDays, "Active day", "Active days"), k: k)
       if (1...12).contains(card.bestMonth) {
         DashedRule(vertical: true).frame(height: 12 * k.u)
         Stat(value: monthName(Int(card.bestMonth), short: true), caption: "Best month", k: k)
@@ -479,7 +484,12 @@ private struct ContributionsCardView: View {
   let k: RecapUnit
 
   private var tiles: [(Int32, String)] {
-    [(card.reviewsCount, "Reviews"), (card.listsCount, "Lists"), (card.postsCount, "Posts"), (card.submissionsCount, "Places added")]
+    [
+      (card.reviewsCount, unit(card.reviewsCount, "Review", "Reviews")),
+      (card.listsCount, unit(card.listsCount, "List", "Lists")),
+      (card.postsCount, unit(card.postsCount, "Post", "Posts")),
+      (card.submissionsCount, unit(card.submissionsCount, "Place added", "Places added")),
+    ]
   }
 
   var body: some View {
