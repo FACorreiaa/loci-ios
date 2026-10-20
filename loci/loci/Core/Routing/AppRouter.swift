@@ -133,6 +133,10 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   case yearRecap(year: Int)
   /// `/r/<code>`: someone's shared recap.
   case sharedRecap(code: String)
+  /// `loci://plan?q=…` (Siri, Shortcuts): Discover's composer, filled in.
+  case plan(prompt: String)
+  /// `loci://nearby`: Near me.
+  case nearby
 
   /// `loci://lists/abc` (the host is the route, as in `SessionLink`) or
   /// `https://lociai.fyi/lists/abc`. Anything with a missing id or extra
@@ -159,8 +163,8 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
       return nil
     }
     segments.removeAll { $0.isEmpty }
-    if let recap = Self.recapLink(segments) {
-      self = recap
+    if let link = Self.appOnlyLink(segments, url: url) ?? Self.recapLink(segments) {
+      self = link
       return
     }
     switch (segments.first?.lowercased(), segments.count) {
@@ -200,6 +204,19 @@ nonisolated extension AppLink {
     if SessionLink.webHosts.contains(host) { return segments }
     guard host == ShareLinks.apiHost, segments.first?.lowercased() == "share" else { return nil }
     return segments
+  }
+
+  /// Links only the app answers, from its intents; the web has no such page.
+  static func appOnlyLink(_ segments: [String], url: URL) -> AppLink? {
+    guard url.scheme?.lowercased() == "loci" else { return nil }
+    switch (segments.first?.lowercased(), segments.count) {
+    case ("plan", 1):
+      let prompt = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "q" }?.value?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+      return .plan(prompt: prompt ?? "")
+    case ("nearby", 1): return .nearby
+    default: return nil
+    }
   }
 
   /// `/recap/trip/<id>`, `/recap/year/<year>` and `/r/<code>`; nil for anything else.
@@ -275,7 +292,7 @@ nonisolated extension AppLink {
   static func tab(for link: AppLink) -> Tab {
     switch link {
     case .list: .saved
-    case .pack, .shared, .sharedRecap: .discover
+    case .pack, .shared, .sharedRecap, .plan, .nearby: .discover
     case .trip, .tripRecap: .calendar
     case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip, .leaderboard, .progress, .resetPassword, .confirmEmail,
       .yearRecap:

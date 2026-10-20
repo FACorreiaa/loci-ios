@@ -26,6 +26,9 @@ struct AppLinkDestination: View {
     case .tripRecap(let id): RecapScreen(source: .trip(id: id))
     case .yearRecap(let year): RecapScreen(source: .year(year))
     case .sharedRecap(let code): RecapScreen(source: .shared(code: code))
+    case .nearby: NearbyView()
+    // Discover fills its composer instead of pushing a page.
+    case .plan: EmptyView()
     }
   }
 }

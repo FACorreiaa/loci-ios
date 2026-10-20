@@ -35,11 +35,17 @@ public struct MainTabView: View {
       // "How was it?" for a place visited a while ago, or just left.
       .overlay(alignment: .bottom) { RatePromptOverlay() }
       // The day's check-in: signed in and in front, once per local day.
-      .task { await ProgressReporter.checkInIfNeeded() }
+      .task {
+        await ProgressReporter.checkInIfNeeded()
+        await TasteFences.shared.refresh()
+      }
       .onChange(of: scenePhase) { _, phase in
         if phase == .active {
           RatePrompter.shared.refresh()
-          Task { await ProgressReporter.checkInIfNeeded() }
+          Task {
+            await ProgressReporter.checkInIfNeeded()
+            await TasteFences.shared.refresh()
+          }
         }
       }
   }

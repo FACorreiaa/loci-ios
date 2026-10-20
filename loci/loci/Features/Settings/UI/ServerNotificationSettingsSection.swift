@@ -20,6 +20,7 @@ struct ServerNotificationSettingsSection: View {
         Toggle("Friends", isOn: binding(\.friendActivity))
         Toggle("Badges and leaderboard", isOn: binding(\.progressUpdates))
         Toggle("Streak reminder", isOn: binding(\.streakReminders))
+        Toggle("Saved places nearby on a trip", isOn: binding(\.nearbyFits))
         Toggle("Show me on friends' leaderboards", isOn: binding(\.leaderboardVisible))
       } else {
         ProgressView()
@@ -30,7 +31,9 @@ struct ServerNotificationSettingsSection: View {
       Text(
         """
         Saved to your account, so they apply on the web too. Search finished is the push you get when a search you left running ends; \
-        Friends, when someone sends or accepts a friend request. The streak reminder comes at 7pm on a day you haven't opened Loci yet.
+        Friends, when someone sends or accepts a friend request. The streak reminder comes at 7pm on a day you haven't opened Loci yet. \
+        Saved places nearby tells you, at most twice a day, when you pass a saved place that fits your taste on a trip day; \
+        it needs location access set to Always.
         """
       )
     }
@@ -43,6 +46,7 @@ struct ServerNotificationSettingsSection: View {
         }
         settings = loaded
         StreakReminder.setEnabled(loaded.streakReminders)
+        TasteFences.setEnabled(loaded.nearbyFits)
       } catch { self.error = error.userMessage }
     }
   }
@@ -73,6 +77,7 @@ struct ServerNotificationSettingsSection: View {
     request.leaderboardVisible = updated.leaderboardVisible
     request.streakReminders = updated.streakReminders
     request.progressUpdates = updated.progressUpdates
+    request.nearbyFits = updated.nearbyFits
     do {
       let saved = try await rpc("Could not save.", request) {
         await SettingsClients.user.updateNotificationSettings(request: $0, headers: [:])
@@ -80,6 +85,8 @@ struct ServerNotificationSettingsSection: View {
       guard generation == saveGeneration else { return }
       settings = saved
       StreakReminder.setEnabled(saved.streakReminders)
+      TasteFences.setEnabled(saved.nearbyFits)
+      if saved.nearbyFits, !previous.nearbyFits { LocationUpgrade.requestAlways() }
     } catch {
       guard generation == saveGeneration else { return }
       settings = previous

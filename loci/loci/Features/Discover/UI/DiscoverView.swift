@@ -28,15 +28,23 @@ struct DiscoverView: View {
   @State private var loadFailed = false
   @State private var here = HereBriefModel()
   @State private var linked: AppLink?
+  /// A trip covering today puts the day first, ahead of the prompt box.
+  @State private var today: TodayFirst?
   private let router = AppRouter.shared
 
   var body: some View {
     NavigationStack(path: $path) {
       ScrollView {
         VStack(alignment: .leading, spacing: 24) {
-          hero
-          if page?.recentDiscoveries.isEmpty ?? loadFailed { examplesSection }
-          HereBriefSection(model: here)
+          if let today {
+            TodayFirstSection(today: today)
+            HereBriefSection(model: here)
+            hero
+          } else {
+            hero
+            if page?.recentDiscoveries.isEmpty ?? loadFailed { examplesSection }
+            HereBriefSection(model: here)
+          }
           InSeasonBand(seed: $composerSeed)
           quickCategoriesSection
           if let page {
@@ -56,8 +64,10 @@ struct DiscoverView: View {
         async let brief: Void = here.load()
         await load()
         await brief
+        await loadToday()
       }.task {
         async let brief: Void = here.load()
+        await loadToday()
         if page == nil { await load() }
         await brief
       }.errorAlert($error).navigationDestination(item: $linked) { AppLinkDestination(link: $0) }.onAppear(perform: openPending).onChange(
@@ -66,8 +76,18 @@ struct DiscoverView: View {
     }
   }
 
-  /// A `/packs/:slug` link pushes the pack over Discover.
-  private func openPending() { if let link = router.takeLink(for: .discover) { linked = link } }
+  /// A `/packs/:slug` link pushes the pack over Discover; "Plan a day in …"
+  /// from Siri fills the composer on Discover's root.
+  private func openPending() {
+    guard let link = router.takeLink(for: .discover) else { return }
+    if case let .plan(prompt) = link {
+      linked = nil
+      path = NavigationPath()
+      composerSeed = prompt
+    } else {
+      linked = link
+    }
+  }
 
   // MARK: - Sections
 
@@ -238,6 +258,12 @@ struct DiscoverView: View {
         }
       }
     }
+  }
+
+  /// From the cached trips list, so a trip day still leads with no signal.
+  private func loadToday() async {
+    let trips = await LocalCache.shared.get(Loci_Trip_ListTripsResponse.self, kind: .trips, id: "all")?.value.trips ?? []
+    today = TodayFirst.pick(trips: trips)
   }
 
   private func load() async {
