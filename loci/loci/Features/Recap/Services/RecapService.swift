@@ -2,11 +2,13 @@ import Foundation
 import LociConnectProto
 import SwiftProtobuf
 
-/// RecapService (loci.recap): a finished trip told as story cards. Web:
+/// RecapService (loci.recap): a finished trip, or a year, told as story cards. Web:
 /// lib/api/recap.ts. The cards stay as the generated messages; the player
 /// switches on `card.card`.
 protocol RecapService: Sendable {
   func tripRecap(tripID: String, refresh: Bool) async throws -> Loci_Recap_Recap
+  /// The year in review; INELIGIBLE (with a reason) before it unlocks on 1 December.
+  func yearInReview(year: Int) async throws -> Loci_Recap_Recap
   func sharedRecap(code: String) async throws -> Loci_Recap_Recap
   /// Mints (or returns) the public link. Sharing freezes the recap.
   func share(recapID: String) async throws -> URL
@@ -23,6 +25,12 @@ nonisolated struct ConnectRecapService: RecapService {
     request.tripID = tripID
     request.refresh = refresh
     return try await rpc("Could not load your recap.", request) { await Self.client.getTripRecap(request: $0, headers: [:]) }.recap
+  }
+
+  func yearInReview(year: Int) async throws -> Loci_Recap_Recap {
+    var request = Loci_Recap_GetYearInReviewRequest()
+    request.year = Int32(year)
+    return try await rpc("Could not load your year.", request) { await Self.client.getYearInReview(request: $0, headers: [:]) }.recap
   }
 
   func sharedRecap(code: String) async throws -> Loci_Recap_Recap {
@@ -63,8 +71,18 @@ nonisolated enum RecapRules {
   static func isDrawn(_ card: Loci_Recap_RecapCard) -> Bool {
     switch card.card {
     case .intro, .places, .route, .days, .taste, .highlights, .progress, .field, .friends, .outro: true
+    case .yearMap, .tripsTimeline, .topCity, .tasteShift, .streak, .contributions, .percentile: true
     default: false
     }
+  }
+
+  /// The year whose review to look for: last year in January, while the
+  /// server still shows it off, otherwise this one (locked until December,
+  /// so the row simply does not appear before then).
+  static func reviewYear(now: Date = .now, calendar: Calendar = .current) -> Int {
+    let parts = calendar.dateComponents([.year, .month], from: now)
+    let year = parts.year ?? 2026
+    return parts.month == 1 ? year - 1 : year
   }
 
   /// Whether a trip is over, so its recap can be asked for. Mirrors the
