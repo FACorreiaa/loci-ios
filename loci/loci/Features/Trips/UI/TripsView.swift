@@ -29,6 +29,9 @@ public struct TripsView: View {
               if trip.hasUpdatedAt { Text(trip.updatedAt.date, style: .date) }
             }
             .lociCoordStyle(10)
+            if trip.hasOwner {
+              Text("Planning with \(trip.owner.shownName)").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+            }
           }
         }
       }
@@ -50,6 +53,7 @@ public struct TripsView: View {
     var request = Loci_Trip_ListTripsRequest()
     request.pagination.page = 1
     request.pagination.pageSize = 50
+    request.includeMember = true
     let sent = request
     loaded = await cacheThrough(Loci_Trip_ListTripsResponse.self, kind: .trips, id: "all", onCached: { trips = $0.value.trips }) {
       try await rpc("Could not load your trips.", sent) { await TripAPI.client.listTrips(request: $0, headers: [:]) }

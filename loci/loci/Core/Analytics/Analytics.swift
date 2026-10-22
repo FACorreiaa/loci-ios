@@ -49,6 +49,8 @@ enum AnalyticsEvent: String {
   case tripCopied = "trip_copied"
   /// A friendship started (`via`: request | invite | contacts | profile).
   case friendAdded = "friend_added"
+  /// A trip invite link was opened (`signed_in`). Joins are counted server-side. Same name as web.
+  case tripInviteOpened = "trip_invite_opened"
   /// The caller followed someone (`state`: following | requested, `friends`, `back`). Same name as web.
   case follow
   /// The caller cheered a feed item (`kind`). Same name as web.
