@@ -33,6 +33,7 @@ struct TripEditorView: View {
   /// The day being walked stop by stop (pushed as WalkDayView).
   @State private var walkingDay: WalkDay?
   @State private var planning = false
+  @Environment(\.dismiss) private var dismiss
 
   /// Design previews pass a trip and a checklist and never touch the network.
   private let isOffline: Bool
@@ -73,16 +74,21 @@ struct TripEditorView: View {
               .listRowInsets(EdgeInsets())
               .listRowBackground(Color.clear)
           }
-          Section {
-            NavigationLink(value: AppRoute.tripJournal(id: tripID)) {
-              Label {
-                VStack(alignment: .leading, spacing: 2) {
-                  Text("Journal").font(.lociHeadline())
-                  Text("Your notes and photos, day by day.")
-                    .font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+          if !isOffline {
+            TripMembersSection(trip: trip, isOwner: isOwner) { dismiss() }
+          }
+          if isOwner {
+            Section {
+              NavigationLink(value: AppRoute.tripJournal(id: tripID)) {
+                Label {
+                  VStack(alignment: .leading, spacing: 2) {
+                    Text("Journal").font(.lociHeadline())
+                    Text("Your notes and photos, day by day.")
+                      .font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+                  }
+                } icon: {
+                  Image(systemName: "book").foregroundStyle(Color.lociCoral)
                 }
-              } icon: {
-                Image(systemName: "book").foregroundStyle(Color.lociCoral)
               }
             }
           }
@@ -121,7 +127,8 @@ struct TripEditorView: View {
           ForEach(trip.days, id: \.id) { day in daySection(day, trip: trip) }
           if !trip.legs.isEmpty { legsSection(trip.legs) }
           TripExportSection(trip: trip, isPro: side.isPro)
-          TripChecklistsSection(store: checklist)
+          // Packing and expenses are the owner's own lists.
+          if isOwner { TripChecklistsSection(store: checklist) }
         }
       } else {
         ProgressView()
@@ -132,7 +139,7 @@ struct TripEditorView: View {
     .onChange(of: canEdit) { _, ok in if !ok { isEditing = false } }
     .toolbar {
       ToolbarItem(placement: .primaryAction) { Button(isEditing ? "Done" : "Edit") { isEditing.toggle() }.disabled(!canEdit) }
-      if let trip, !isOffline {
+      if let trip, !isOffline, isOwner {
         ToolbarItem(placement: .secondaryAction) { TripShareMenu(trip: trip).id(trip.id) }
       }
       if canEdit, !isOffline {
@@ -260,9 +267,10 @@ struct TripEditorView: View {
   private func load() async {
     guard !isOffline else { return }
     async let plan: Void = side.loadPlan()
-    async let lists: Void = checklist.load()
     await reload()
-    _ = await (plan, lists)
+    // A member's GetTripChecklist is NotFound; only the owner has lists.
+    if isOwner { await checklist.load() }
+    _ = await plan
   }
 
   /// GetTrip through the cache; also what the conflict alert's Reload runs.
@@ -277,12 +285,17 @@ struct TripEditorView: View {
   }
 
   /// Edits need the server; a copy the server has not confirmed is read-only.
+  /// A member reads the trip; changes stay with its owner.
   private var canEdit: Bool {
+    guard isOwner else { return false }
     switch loaded {
-    case .fresh, nil: true
-    case .stale, .missing: false
+    case .fresh, nil: return true
+    case .stale, .missing: return false
     }
   }
+
+  /// The server sets `owner` only when someone else reads the trip: here, a member.
+  private var isOwner: Bool { !(trip?.hasOwner ?? false) }
 
   /// Take the server's trip as the new truth; the copy follows it.
   private func adopt(_ next: Loci_Trip_TripDraft) async {

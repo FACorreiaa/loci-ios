@@ -15,6 +15,7 @@ struct AppLinkDestination: View {
     case .contribute: YouDestination.contribute.screen
     case .sharedTrip(let code): SharedTripView(source: .code(code))
     case .invite(let code): InviteView(code: code)
+    case .tripInvite(let code): TripInviteView(code: code)
     case .user(let username): UserProfileView(username: username)
     case .friends: YouDestination.friends.screen
     case .followRequests: FriendsView(tab: .requests)

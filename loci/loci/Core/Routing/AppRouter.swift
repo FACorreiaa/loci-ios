@@ -115,6 +115,8 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   case contribute
   case sharedTrip(code: String)
   case invite(code: String)
+  /// `/j/<code>`: an invite onto someone's trip, as a co-planner.
+  case tripInvite(code: String)
   case user(username: String)
   case friends
   /// `/friends?tab=requests`: where a follow-request push opens.
@@ -180,6 +182,7 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
     case ("contribute", 1): self = .contribute
     case ("t", 2): self = .sharedTrip(code: segments[1])
     case ("invite", 2): self = .invite(code: segments[1])
+    case ("j", 2): self = .tripInvite(code: segments[1])
     case ("auth", 2):
       guard let link = Self.authLink(page: segments[1], url: url) else { return nil }
       self = link
@@ -308,7 +311,7 @@ nonisolated extension AppLink {
     switch link {
     case .list: .saved
     case .pack, .shared, .sharedRecap, .plan, .nearby: .discover
-    case .trip, .tripRecap: .calendar
+    case .trip, .tripRecap, .tripInvite: .calendar
     case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .followRequests, .friendTrip, .leaderboard, .progress, .achievements,
       .resetPassword, .confirmEmail, .yearRecap:
       .profile
