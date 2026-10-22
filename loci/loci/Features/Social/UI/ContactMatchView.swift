@@ -20,7 +20,7 @@ struct ContactMatchView: View {
     var id: String { user.id }
     let user: Loci_Social_PublicUser
     let contactName: String
-    var relationship: Relationship
+    var edge: FollowEdge
   }
 
   var body: some View {
@@ -51,7 +51,7 @@ struct ContactMatchView: View {
         Section(matches.isEmpty ? "None of your contacts are on Loci yet" : "On Loci") {
           ForEach($matches) { $match in
             PersonRow(user: match.user, subtitle: match.contactName) {
-              RelationshipButton(user: match.user, relationship: $match.relationship)
+              FollowButton(user: match.user, edge: $match.edge, via: "contacts")
             }
           }
         }
@@ -87,7 +87,11 @@ struct ContactMatchView: View {
     do {
       let found = try await SocialAPI.matchContacts(hashes: Array(names.keys))
       matches = found.uniqued(on: \.user.id).map { hit in
-        Match(user: hit.user, contactName: names[hit.hash] ?? "", relationship: Relationship(hit.relationship))
+        Match(
+          user: hit.user,
+          contactName: names[hit.hash] ?? "",
+          edge: FollowEdge(state: hit.followState, followsYou: hit.followsYou, relationship: hit.relationship)
+        )
       }
     } catch {
       self.error = error.userMessage

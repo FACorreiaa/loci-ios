@@ -6,7 +6,8 @@ import Observation
 import UserNotifications
 
 /// The "+10 · Visited Pantheon" chip, shown over the tabs for a moment when an
-/// action earns points. Only the newest one shows.
+/// action earns points, and "Achievement unlocked" after it. Points replace
+/// each other (only the newest shows); an unlock waits its turn.
 @MainActor @Observable final class PointsFeedback {
   static let shared = PointsFeedback()
 
@@ -14,26 +15,47 @@ import UserNotifications
     let id = UUID()
     let points: Int
     let label: String
+    /// An unlock's medallion symbol; nil for points.
+    var symbol: String?
   }
 
   private(set) var current: Toast?
+  /// Unlocks waiting for the chip.
+  private var queue: [Toast] = []
   /// Bumped when an award changes progress, so open progress views reload.
   private(set) var revision = 0
 
   func show(points: Int, label: String) {
     revision += 1
     guard points > 0 else { return }
-    let toast = Toast(points: points, label: label)
-    current = toast
+    present(Toast(points: points, label: label))
     // The chip leaves before VoiceOver would reach it, so it is read out now.
     AccessibilityNotification.Announcement(AttributedString(localized: "^[\(points) point](inflect: true): \(label)")).post()
-    Task {
-      try? await Task.sleep(for: .seconds(2.5))
-      if current?.id == toast.id { current = nil }
-    }
   }
 
-  func dismiss() { current = nil }
+  /// The best of what an action unlocked, as the server's push picks it: one
+  /// chip, "(+2 more)" for the rest, after any points chip showing.
+  func unlocked(_ achievements: [Loci_Achievement_Achievement]) {
+    guard let best = achievements.best else { return }
+    revision += 1
+    let more = achievements.count > 1 ? " (+\(achievements.count - 1) more)" : ""
+    let toast = Toast(points: 0, label: "Unlocked: \(best.label)\(more)", symbol: best.symbol)
+    AccessibilityNotification.Announcement(AttributedString("Achievement unlocked: \(best.label)")).post()
+    if current == nil { present(toast) } else { queue.append(toast) }
+  }
+
+  func dismiss() {
+    current = nil
+    if !queue.isEmpty { present(queue.removeFirst()) }
+  }
+
+  private func present(_ toast: Toast) {
+    current = toast
+    Task {
+      try? await Task.sleep(for: .seconds(toast.symbol == nil ? 2.5 : 4))
+      if current?.id == toast.id { dismiss() }
+    }
+  }
 }
 
 /// Points side effects of things the app already does. Each is best effort:
@@ -51,8 +73,7 @@ nonisolated enum ProgressReporter {
       UserDefaults.standard.set(today, forKey: checkInKey)
       PointsFeedback.shared.show(points: Int(response.pointsAwarded), label: "Daily check-in")
       if response.pointsAwarded > 0 { Analytics.capture(.pointsAwarded, ["kind": "check_in", "points": Int(response.pointsAwarded)]) }
-      for badge in response.newBadges { PointsFeedback.shared.show(points: 0, label: "Badge: \(badge.title)") }
-      await StreakReminder.schedule(after: response.progress, now: now)
+      if let field = try? await ProgressAPI.fieldProfile() { await StreakReminder.schedule(after: field.weekStreak, now: now) }
     } catch {
       // Tried again on the next foreground; the day is not marked done.
     }
@@ -89,6 +110,7 @@ nonisolated enum ProgressReporter {
         let points = Int(response.pointsAwarded)
         await MainActor.run {
           PointsFeedback.shared.show(points: points, label: label)
+          PointsFeedback.shared.unlocked(response.unlocked)
           if points > 0 { Analytics.capture(.pointsAwarded, ["kind": "trip_day", "points": points]) }
         }
       } catch {
@@ -103,34 +125,46 @@ nonisolated enum ProgressReporter {
   }
 }
 
-/// The evening nudge before a streak breaks. Local, so it never needs the
-/// server: after each check-in the next evening's reminder is replaced.
+/// The Sunday-evening nudge before a weekly streak breaks. Local, so it never
+/// needs the server at fire time: after each check-in the next reminder is
+/// replaced, from the Field profile's week streak.
 nonisolated enum StreakReminder {
   static let identifier = "loci_streak_reminder"
   static let enabledKey = "loci_streak_reminders"
-  /// 19:00 local: late enough to have done something, early enough to act.
-  static let hour = 19
+  /// Sunday 18:00 local: the streak's week (ISO, Monday to Sunday) ends at midnight.
+  static let weekday = 1
+  static let hour = 18
 
   static var isEnabled: Bool {
     UserDefaults.standard.object(forKey: enabledKey) as? Bool ?? true
   }
 
-  static func schedule(after progress: Loci_Gamification_Progress, now: Date = Date()) async {
+  static func schedule(after streak: Loci_Gamification_WeekStreak, now: Date = Date()) async {
     let center = UNUserNotificationCenter.current()
     center.removePendingNotificationRequests(withIdentifiers: [identifier])
-    guard isEnabled, progress.currentStreak > 0 else { return }
+    guard isEnabled, let when = fireDate(after: streak, now: now) else { return }
     let settings = await center.notificationSettings()
     guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
-    guard let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: now) else { return }
-    var when = Calendar.current.dateComponents([.year, .month, .day], from: tomorrow)
-    when.hour = hour
     let content = UNMutableNotificationContent()
-    content.title = "Keep your \(progress.currentStreak + 1)-day streak"
-    content.body = "Open Loci today so your streak doesn't reset."
+    content.title = "Keep your \(streak.current)-week streak"
+    content.body = "Save a place or walk a stop today so your streak doesn't reset."
     content.threadIdentifier = "progress"
-    let trigger = UNCalendarNotificationTrigger(dateMatching: when, repeats: false)
-    let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-    try? await center.add(request)
+    let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: when)
+    let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
+    try? await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
+  }
+
+  /// This week's Sunday evening when the week still needs exploring; next
+  /// week's once it is done (the next check-in moves it again). Nil without a streak.
+  static func fireDate(after streak: Loci_Gamification_WeekStreak, now: Date, calendar: Calendar = .current) -> Date? {
+    guard streak.current > 0 else { return nil }
+    let evening = DateComponents(hour: hour, minute: 0, weekday: weekday)
+    guard let thisSunday = calendar.nextDate(after: now, matching: evening, matchingPolicy: .nextTime) else { return nil }
+    // A Sunday reminder belongs to the week ending that day; past its hour, the next Sunday is next week's.
+    guard streak.exploredThisWeek else { return thisSunday }
+    let daysToSunday = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: thisSunday)).day ?? 0
+    // Already explored this week: remind at the end of the next one.
+    return daysToSunday >= 7 ? thisSunday : calendar.date(byAdding: .day, value: 7, to: thisSunday)
   }
 
   static func setEnabled(_ on: Bool) {

@@ -22,7 +22,7 @@ struct FacebookFriendsView: View {
   struct Match: Identifiable {
     var id: String { user.id }
     let user: Loci_Social_PublicUser
-    var relationship: Relationship
+    var edge: FollowEdge
   }
 
   var body: some View {
@@ -40,7 +40,7 @@ struct FacebookFriendsView: View {
       } else if phase == .matched {
         Section(matches.isEmpty ? "None of your Facebook friends are on Loci yet" : "On Loci") {
           ForEach($matches) { $match in
-            PersonRow(user: match.user) { RelationshipButton(user: match.user, relationship: $match.relationship) }
+            PersonRow(user: match.user) { FollowButton(user: match.user, edge: $match.edge, via: "facebook") }
           }
         }
         .listRowBackground(Color.lociCard)
@@ -72,7 +72,7 @@ struct FacebookFriendsView: View {
   private func match() async {
     do {
       let found = try await SocialAPI.facebookFriends()
-      matches = found.map { Match(user: $0.user, relationship: Relationship($0.relationship)) }
+      matches = found.map { Match(user: $0.user, edge: FollowEdge(state: $0.followState, followsYou: $0.followsYou, relationship: $0.relationship)) }
       phase = .matched
     } catch {
       self.error = error.userMessage

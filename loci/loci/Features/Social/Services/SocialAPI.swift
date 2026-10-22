@@ -71,6 +71,97 @@ nonisolated enum SocialAPI {
     }.matches
   }
 
+  // MARK: Follows
+
+  static func follow(userID: String) async throws -> FollowEdge {
+    var request = Loci_Social_FollowUserRequest()
+    request.target = .userID(userID)
+    let response = try await rpc("Could not follow.", request) { await client.follow(request: $0, headers: [:]) }
+    return FollowEdge(state: response.followState, followsYou: response.followsYou)
+  }
+
+  /// Also withdraws a request still waiting on a private account.
+  static func unfollow(userID: String) async throws {
+    var request = Loci_Social_UnfollowRequest()
+    request.userID = userID
+    _ = try await rpc("Could not unfollow.", request) { await client.unfollow(request: $0, headers: [:]) }
+  }
+
+  static func removeFollower(userID: String) async throws {
+    var request = Loci_Social_RemoveFollowerRequest()
+    request.userID = userID
+    _ = try await rpc("Could not remove the follower.", request) { await client.removeFollower(request: $0, headers: [:]) }
+  }
+
+  /// Someone's followers; the caller's own when `userID` is empty.
+  static func followers(userID: String = "", pageToken: String = "") async throws -> Loci_Social_ListFollowsResponse {
+    var request = Loci_Social_ListFollowersRequest()
+    request.userID = userID
+    request.pageSize = 50
+    request.pageToken = pageToken
+    return try await rpc("Could not load the followers.", request) { await client.listFollowers(request: $0, headers: [:]) }
+  }
+
+  /// Who someone follows; the caller's own when `userID` is empty.
+  static func following(userID: String = "", pageToken: String = "") async throws -> Loci_Social_ListFollowsResponse {
+    var request = Loci_Social_ListFollowingRequest()
+    request.userID = userID
+    request.pageSize = 50
+    request.pageToken = pageToken
+    return try await rpc("Could not load who they follow.", request) { await client.listFollowing(request: $0, headers: [:]) }
+  }
+
+  static func followRequests(incoming: Bool) async throws -> [Loci_Social_FollowRequestEntry] {
+    var request = Loci_Social_ListFollowRequestsRequest()
+    request.direction = Loci_Social_RequestDirection(rawValue: incoming ? 1 : 2) ?? .unspecified
+    return try await rpc("Could not load follow requests.", request) { await client.listFollowRequests(request: $0, headers: [:]) }.requests
+  }
+
+  static func respondFollow(requestID: String, approve: Bool) async throws {
+    var request = Loci_Social_RespondFollowRequestRequest()
+    request.requestID = requestID
+    request.approve = approve
+    _ = try await rpc("Could not answer the request.", request) { await client.respondFollowRequest(request: $0, headers: [:]) }
+  }
+
+  static func cancelFollow(requestID: String) async throws {
+    var request = Loci_Social_CancelFollowRequestRequest()
+    request.requestID = requestID
+    _ = try await rpc("Could not cancel the request.", request) { await client.cancelFollowRequest(request: $0, headers: [:]) }
+  }
+
+  static func socialSettings() async throws -> Loci_Social_SocialSettings {
+    try await rpc("Could not load your privacy setting.", Loci_Social_GetSocialSettingsRequest()) {
+      await client.getSocialSettings(request: $0, headers: [:])
+    }.settings
+  }
+
+  static func setPrivate(_ isPrivate: Bool) async throws -> Loci_Social_SocialSettings {
+    var request = Loci_Social_SetAccountPrivacyRequest()
+    request.isPrivate = isPrivate
+    return try await rpc("Could not change your privacy setting.", request) { await client.setAccountPrivacy(request: $0, headers: [:]) }.settings
+  }
+
+  // MARK: Feed
+
+  static func feed(pageToken: String = "") async throws -> Loci_Social_ListFeedResponse {
+    var request = Loci_Social_ListFeedRequest()
+    request.pageSize = 30
+    request.pageToken = pageToken
+    return try await rpc("Could not load the feed.", request) { await client.listFeed(request: $0, headers: [:]) }
+  }
+
+  static func cheer(itemID: String, _ on: Bool) async throws -> Loci_Social_CheerResponse {
+    if on {
+      var request = Loci_Social_CheerRequest()
+      request.itemID = itemID
+      return try await rpc("Could not cheer.", request) { await client.cheer(request: $0, headers: [:]) }
+    }
+    var request = Loci_Social_UncheerRequest()
+    request.itemID = itemID
+    return try await rpc("Could not take the cheer back.", request) { await client.uncheer(request: $0, headers: [:]) }
+  }
+
   // MARK: Invites
 
   static func myInvite() async throws -> Loci_Social_Invite {

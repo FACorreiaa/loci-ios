@@ -64,4 +64,90 @@ struct SocialModelTests {
     #expect(hashes.contains(ContactHasher.sha256Hex("ana@example.com")))
     #expect(hashes.allSatisfy { $0.count == 64 })
   }
+
+  @Test(arguments: [
+    (0, FollowState.unknown),
+    (1, .notFollowing),
+    (2, .requested),
+    (3, .following),
+    (4, .blocked),
+  ])
+  func followStateFollowsTheProtoNumbers(_ raw: Int, _ expected: FollowState) throws {
+    let proto = try #require(Loci_Social_FollowState(rawValue: raw))
+    #expect(FollowState(proto) == expected)
+  }
+
+  @Test func ownProfileIsSelfWhateverTheFollowState() throws {
+    let relationship = try #require(Loci_Social_Relationship(rawValue: 6))
+    #expect(FollowEdge(state: .unspecified, followsYou: false, relationship: relationship).state == .isSelf)
+    #expect(FollowEdge(state: .following, followsYou: true).state == .following)
+  }
+
+  @Test(arguments: [
+    (FollowState.notFollowing, false, "Follow"),
+    (.notFollowing, true, "Follow back"),
+    (.requested, false, "Requested"),
+    (.following, false, "Following"),
+    (.following, true, "Friends"),
+    (.blocked, false, "Unblock"),
+  ])
+  func followButtonSaysWhereYouStand(_ state: FollowState, _ followsYou: Bool, _ title: String) {
+    let edge = FollowEdge(state: state, followsYou: followsYou)
+    #expect(edge.title == title)
+    #expect(edge.isFriend == (state == .following && followsYou))
+  }
+
+  @Test func feedHeadlinesNameWhatHappened() {
+    var item = Loci_Social_FeedItem()
+    var summary = Loci_Achievement_AchievementSummary()
+    summary.title = "Cartographer"
+    summary.kind = .track
+    summary.tier = .gold
+    item.achievement = summary
+    #expect(item.headline == "unlocked Cartographer · Gold")
+    #expect(item.detailKind == "achievement")
+
+    var city = Loci_Social_FeedCity()
+    city.cityName = "Porto"
+    city.country = "Portugal"
+    item.city = city
+    #expect(item.headline == "explored Porto, Portugal for the first time")
+
+    var trip = Loci_Social_FeedTrip()
+    trip.cityName = "Rome"
+    item.trip = trip
+    item.kind = .tripShared
+    #expect(item.headline == "shared a trip: Rome")
+    item.kind = .tripFinished
+    trip.title = "Three days in Rome"
+    item.trip = trip
+    #expect(item.headline == "finished a trip: Three days in Rome")
+  }
+
+  @Test func cheerLineCountsYouFirst() {
+    var item = Loci_Social_FeedItem()
+    #expect(item.cheerLine == nil)
+    var ana = Loci_Social_PublicUser()
+    ana.displayName = "Ana"
+    item.cheerCount = 1
+    item.recentCheerers = [ana]
+    #expect(item.cheerLine == "Ana cheered")
+    item.cheerCount = 3
+    #expect(item.cheerLine == "Ana and 2 others cheered")
+    item.cheeredByMe = true
+    #expect(item.cheerLine == "You and 2 others cheered")
+    item.cheerCount = 1
+    #expect(item.cheerLine == "You cheered")
+  }
+
+  @Test func cheeringIsOptimisticAndIdempotent() {
+    var item = Loci_Social_FeedItem()
+    item.cheerCount = 2
+    let cheered = item.cheered(true)
+    #expect(cheered.cheeredByMe)
+    #expect(cheered.cheerCount == 3)
+    #expect(cheered.cheered(true) == cheered)
+    #expect(cheered.cheered(false).cheerCount == 2)
+    #expect(item.cheered(false) == item)
+  }
 }

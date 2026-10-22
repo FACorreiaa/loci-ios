@@ -13,6 +13,8 @@ struct SettingsView: View {
         NavigationLink(value: SettingsRoute.data) { Label("Your data", systemImage: "tray.and.arrow.down") }
       }
 
+      Section("Who can follow you") { AccountPrivacyToggle() }
+
       Section("Planning") {
         NavigationLink(value: SettingsRoute.travelProfiles) { Label("Travel profiles", systemImage: "suitcase") }
         NavigationLink(value: SettingsRoute.interests) { Label("Interests", systemImage: "heart.text.square") }

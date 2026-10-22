@@ -5,18 +5,19 @@ import LociConnectProto
 /// show them without a server.
 protocol ProgressService: Sendable {
   func progress() async throws -> Loci_Gamification_Progress
-  func leaderboard(period: Loci_Gamification_LeaderboardPeriod, metric: Loci_Gamification_LeaderboardMetric) async throws
-    -> Loci_Gamification_GetLeaderboardResponse
+  func fieldProfile() async throws -> Loci_Gamification_FieldProfile
+  func board(metric: Loci_Gamification_FieldBoardMetric) async throws -> Loci_Gamification_GetFieldBoardResponse
   func history(pageToken: String) async throws -> Loci_Gamification_ListPointsHistoryResponse
 }
 
 nonisolated struct ConnectProgressService: ProgressService {
   func progress() async throws -> Loci_Gamification_Progress { try await ProgressAPI.progress() }
 
-  func leaderboard(period: Loci_Gamification_LeaderboardPeriod, metric: Loci_Gamification_LeaderboardMetric) async throws
-    -> Loci_Gamification_GetLeaderboardResponse
-  {
-    try await ProgressAPI.leaderboard(period: period, metric: metric)
+  func fieldProfile() async throws -> Loci_Gamification_FieldProfile { try await ProgressAPI.fieldProfile() }
+
+  /// The Following board: you and who you follow, this week.
+  func board(metric: Loci_Gamification_FieldBoardMetric) async throws -> Loci_Gamification_GetFieldBoardResponse {
+    try await ProgressAPI.fieldBoard(scope: .friendsWeek, metric: metric)
   }
 
   func history(pageToken: String) async throws -> Loci_Gamification_ListPointsHistoryResponse {
@@ -24,44 +25,61 @@ nonisolated struct ConnectProgressService: ProgressService {
   }
 }
 
-extension Loci_Gamification_Progress {
-  /// How far into the current level the total is, 0…1.
-  var levelFraction: Double {
-    let span = Double(Self.threshold(Int(level) + 1) - Self.threshold(Int(level)))
-    guard span > 0 else { return 0 }
-    return min(max(1 - Double(pointsToNextLevel) / span, 0), 1)
-  }
-
-  /// Level L starts at 50·L·(L−1) points (server: gamification.LevelFor).
-  static func threshold(_ level: Int) -> Int64 { 50 * Int64(level) * Int64(level - 1) }
-
-  var earnedBadges: [Loci_Gamification_Badge] { badges.filter(\.hasAwardedAt) }
-}
-
-extension Loci_Gamification_LeaderboardMetric {
+/// The Field ranks, Scout to Keeper (web: routes/field RANK_ORDER).
+nonisolated extension Loci_Gamification_FieldRank {
   var title: String {
     switch self {
-    case .cities: "Cities"
-    case .places: "Places"
-    default: "Points"
+    case .walker: "Walker"
+    case .guide: "Guide"
+    case .local: "Local"
+    case .keeper: "Keeper"
+    default: "Scout"
+    }
+  }
+
+  /// The rank after this one; nil at Keeper.
+  var next: Self? {
+    switch self {
+    case .walker: .guide
+    case .guide: .local
+    case .local: .keeper
+    case .keeper: nil
+    default: .walker
+    }
+  }
+}
+
+nonisolated extension Loci_Gamification_FieldProfile {
+  /// 0…1 of the way from 0 to the next rank's threshold; 1 at Keeper.
+  var rankFraction: Double {
+    guard overallNextThreshold > 0 else { return 1 }
+    return min(max(Double(lifetimeScore) / Double(overallNextThreshold), 0), 1)
+  }
+}
+
+nonisolated extension Loci_Gamification_WeekStreak {
+  /// "3 weeks in a row · explore this week to keep it" (web: weekStreakLine).
+  var line: String {
+    guard current > 0 else { return "Explore this week to start a streak" }
+    let weeks = current == 1 ? "1 week in a row" : "\(current) weeks in a row"
+    return exploredThisWeek ? weeks : "\(weeks) · explore this week to keep it"
+  }
+}
+
+nonisolated extension Loci_Gamification_FieldBoardMetric {
+  var title: String {
+    switch self {
+    case .placesKept: "Places kept"
+    case .daysFinished: "Days finished"
+    default: "Overall"
     }
   }
 
   func format(_ value: Int64) -> String {
     switch self {
-    case .cities: value == 1 ? "1 city" : "\(value) cities"
-    case .places: value == 1 ? "1 place" : "\(value) places"
-    default: "\(value.formatted()) pts"
-    }
-  }
-}
-
-extension Loci_Gamification_LeaderboardPeriod {
-  var title: String {
-    switch self {
-    case .month: "Month"
-    case .allTime: "All time"
-    default: "Week"
+    case .placesKept: value == 1 ? "1 place" : "\(value) places"
+    case .daysFinished: value == 1 ? "1 day" : "\(value) days"
+    default: value.formatted()
     }
   }
 }

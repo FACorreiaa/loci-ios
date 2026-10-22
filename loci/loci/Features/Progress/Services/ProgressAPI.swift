@@ -26,13 +26,21 @@ nonisolated enum ProgressAPI {
     return try await rpc("Could not check in.", request) { await client.dailyCheckIn(request: $0, headers: [:]) }
   }
 
-  static func leaderboard(period: Loci_Gamification_LeaderboardPeriod, metric: Loci_Gamification_LeaderboardMetric) async throws
-    -> Loci_Gamification_GetLeaderboardResponse
+  /// The Field score: rank, this week's score and the weekly streak (web: /field).
+  static func fieldProfile() async throws -> Loci_Gamification_FieldProfile {
+    try await rpc("Could not load your progress.", Loci_Gamification_GetFieldProfileRequest()) {
+      await client.getFieldProfile(request: $0, headers: [:])
+    }.profile
+  }
+
+  /// The week's board: you and who you follow (`friendsWeek`), by `metric`.
+  static func fieldBoard(scope: Loci_Gamification_FieldBoardScope, metric: Loci_Gamification_FieldBoardMetric) async throws
+    -> Loci_Gamification_GetFieldBoardResponse
   {
-    var request = Loci_Gamification_GetLeaderboardRequest()
-    request.period = period
+    var request = Loci_Gamification_GetFieldBoardRequest()
+    request.scope = scope
     request.metric = metric
-    return try await rpc("Could not load the leaderboard.", request) { await client.getLeaderboard(request: $0, headers: [:]) }
+    return try await rpc("Could not load the leaderboard.", request) { await client.getFieldBoard(request: $0, headers: [:]) }
   }
 
   static func history(pageToken: String = "") async throws -> Loci_Gamification_ListPointsHistoryResponse {

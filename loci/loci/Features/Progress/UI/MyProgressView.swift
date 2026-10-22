@@ -2,8 +2,8 @@ import LociConnectProto
 import SwiftProtobuf
 import SwiftUI
 
-/// Your level, streak, today's checklist, badges and where the points came
-/// from (web: /friends?tab=progress).
+/// Your Field rank, this week, the weekly streak, achievements and where the
+/// points came from (web: /field).
 struct MyProgressView: View {
   @State private var store: ProgressStore
   /// The year in review, once the server says it is ready.
@@ -31,10 +31,20 @@ struct MyProgressView: View {
       case .failed(let message):
         Section { Text(message).font(.lociCaption()).foregroundStyle(Color.lociMutedInk) }.listRowBackground(Color.lociCard)
       case .loaded:
+        if let field = store.field {
+          Section {
+            FieldRankCard(field: field)
+            WeekStreakCard(streak: field.weekStreak)
+          }
+          .listRowBackground(Color.lociCard)
+        }
+        Section {
+          NavigationLink(value: AppRoute.you(.achievements)) { Label("Achievements", systemImage: "rosette") }
+          NavigationLink(value: AppRoute.you(.leaderboard)) { Label("Leaderboard", systemImage: "trophy") }
+        }
+        .listRowBackground(Color.lociCard)
         if let progress = store.progress {
-          Section { LevelCard(progress: progress) }.listRowBackground(Color.lociCard)
           Section("Today") { TodayChecklistRows(today: progress.today) }.listRowBackground(Color.lociCard)
-          Section("Badges") { BadgeGrid(badges: progress.badges) }.listRowBackground(Color.lociCard)
         }
         historySection
       }
@@ -78,41 +88,50 @@ struct MyProgressView: View {
   }
 }
 
-/// Level, total and the bar to the next level, with the streak beside it.
-struct LevelCard: View {
-  let progress: Loci_Gamification_Progress
+/// The Field rank, the score, and the bar to the next rank (web: /field's rank card).
+struct FieldRankCard: View {
+  let field: Loci_Gamification_FieldProfile
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: 10) {
       HStack(alignment: .firstTextBaseline) {
-        Text("Level \(progress.level)").font(.lociTitle(26)).foregroundStyle(Color.lociInk)
+        Text(field.overallRank.title).font(.lociTitle(26)).foregroundStyle(Color.lociInk)
         Spacer()
-        StreakBadge(days: Int(progress.currentStreak))
+        Text("\(field.lifetimeScore.formatted()) field score").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
       }
-      ProgressView(value: progress.levelFraction).tint(.lociCoral)
+      ProgressView(value: field.rankFraction).tint(.lociCoral)
       HStack {
-        Text("^[\(progress.totalPoints) point](inflect: true)")
+        Text("This week: \(field.weekScore.formatted())")
         Spacer()
-        Text("\(progress.pointsToNextLevel.formatted()) to level \(progress.level + 1)")
+        if let next = field.overallRank.next, field.overallNextThreshold > field.lifetimeScore {
+          Text("\((field.overallNextThreshold - field.lifetimeScore).formatted()) to \(next.title)")
+        }
       }
       .font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
-      if progress.longestStreak > progress.currentStreak {
-        Text("Longest streak: ^[\(progress.longestStreak) day](inflect: true)").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
-      }
     }
     .padding(.vertical, 6)
     .accessibilityElement(children: .combine)
   }
 }
 
-struct StreakBadge: View {
-  let days: Int
+/// Weeks in a row with something explored (a place kept, a stop walked, a
+/// day finished), and whether this week counts yet.
+struct WeekStreakCard: View {
+  let streak: Loci_Gamification_WeekStreak
 
   var body: some View {
-    Label("^[\(days) day](inflect: true)", systemImage: days > 0 ? "flame.fill" : "flame")
-      .font(.lociHeadline(15))
-      .foregroundStyle(days > 0 ? Color.lociCoral : Color.lociMutedInk)
-      .accessibilityLabel(days > 0 ? "\(days)-day streak" : "No streak")
+    HStack(spacing: 12) {
+      Image(systemName: streak.current > 0 ? "flame.fill" : "flame")
+        .font(.title2).foregroundStyle(streak.current > 0 ? Color.lociCoral : Color.lociMutedInk)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(streak.line).font(.lociCaption(15)).foregroundStyle(Color.lociInk)
+        if streak.longest > streak.current {
+          Text("Longest: ^[\(streak.longest) week](inflect: true)").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
+        }
+      }
+    }
+    .padding(.vertical, 4)
+    .accessibilityElement(children: .combine)
   }
 }
 
@@ -145,44 +164,20 @@ struct TodayChecklistRows: View {
   }
 }
 
-struct BadgeGrid: View {
-  let badges: [Loci_Gamification_Badge]
-  @ScaledMetric(relativeTo: .title) private var symbolSize = 26.0
-
-  var body: some View {
-    LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 12)], spacing: 12) {
-      ForEach(badges, id: \.id) { badge in
-        VStack(spacing: 6) {
-          Image(systemName: badge.hasAwardedAt ? "rosette" : "lock")
-            .font(.system(size: symbolSize))
-            .foregroundStyle(badge.hasAwardedAt ? Color.lociCoral : Color.lociMutedInk)
-          Text(badge.title).font(.lociCaption(13)).foregroundStyle(Color.lociInk).multilineTextAlignment(.center)
-          Text(badge.description_p).font(.lociCaption(11)).foregroundStyle(Color.lociMutedInk).multilineTextAlignment(.center).lineLimit(3)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(10)
-        .background(badge.hasAwardedAt ? Color.lociCoral.opacity(0.08) : Color.lociMuted.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
-        .accessibilityElement(children: .combine)
-        .accessibilityValue(badge.hasAwardedAt ? "Earned" : "Locked")
-      }
-    }
-    .padding(.vertical, 6)
-  }
-}
-
-/// Profile's subtitle: level, points and streak, loaded once per visit.
+/// Profile's subtitle: Field rank, score and weekly streak, loaded once per visit.
 struct ProgressSummaryLine: View {
   var service: any ProgressService = DesignPreview.requested == nil ? ConnectProgressService() : PreviewProgressService()
-  @State private var progress: Loci_Gamification_Progress?
+  @State private var field: Loci_Gamification_FieldProfile?
   private let feedback = PointsFeedback.shared
 
   var body: some View {
     Group {
-      if let progress {
+      if let field {
         HStack(spacing: 8) {
-          Text("Level \(progress.level) · \(progress.totalPoints.formatted()) pts")
-          if progress.currentStreak > 0 {
-            Label("\(progress.currentStreak)", systemImage: "flame.fill")
+          Text("\(field.overallRank.title) · \(field.lifetimeScore.formatted())")
+          if field.weekStreak.current > 0 {
+            Label("\(field.weekStreak.current)w", systemImage: "flame.fill")
+              .accessibilityLabel("\(field.weekStreak.current)-week streak")
           }
         }
       } else {
@@ -190,7 +185,7 @@ struct ProgressSummaryLine: View {
       }
     }
     .font(.subheadline).foregroundStyle(Color.lociCoral)
-    .task(id: feedback.revision) { progress = try? await service.progress() }
+    .task(id: feedback.revision) { field = try? await service.fieldProfile() }
   }
 }
 
@@ -207,7 +202,7 @@ struct PointsToastOverlay: View {
             if toast.points > 0 {
               Text("+\(toast.points)").font(.lociHeadline(15)).foregroundStyle(Color.lociPaper)
             } else {
-              Image(systemName: "rosette").foregroundStyle(Color.lociPaper)
+              Image(systemName: toast.symbol ?? "rosette").foregroundStyle(Color.lociPaper)
             }
             Text(toast.label).font(.lociCaption(14)).foregroundStyle(Color.lociPaper).lineLimit(1)
           }

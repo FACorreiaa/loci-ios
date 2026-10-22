@@ -3,40 +3,53 @@ import LociConnectProto
 import SwiftProtobuf
 
 /// Offline sample data for `-designPreview leaderboard`, `myProgress` and the
-/// profile's level line: a week where five friends are close.
+/// profile's rank line: a week where five people you follow are close.
 nonisolated struct PreviewProgressService: ProgressService {
   func progress() async throws -> Loci_Gamification_Progress { .preview }
 
-  func leaderboard(period: Loci_Gamification_LeaderboardPeriod, metric: Loci_Gamification_LeaderboardMetric) async throws
-    -> Loci_Gamification_GetLeaderboardResponse
-  {
+  func fieldProfile() async throws -> Loci_Gamification_FieldProfile {
+    var field = Loci_Gamification_FieldProfile()
+    field.lifetimeScore = 385
+    field.overallRank = .walker
+    field.overallNextThreshold = 600
+    field.weekScore = 46
+    field.lastWeekScore = 38
+    field.weekStreak.current = 3
+    field.weekStreak.longest = 5
+    field.weekStreak.exploredThisWeek = true
+    return field
+  }
+
+  func board(metric: Loci_Gamification_FieldBoardMetric) async throws -> Loci_Gamification_GetFieldBoardResponse {
     struct Row {
       let username: String
       let name: String
-      let points: Int64
-      let level: Int32
-      let streak: Int32
+      let score: Int64
+      let rank: Loci_Gamification_FieldRank
       var isMe = false
     }
     let rows = [
-      Row(username: "ana", name: "Ana Ribeiro", points: 420, level: 6, streak: 12),
-      Row(username: "me", name: "You", points: 385, level: 5, streak: 7, isMe: true),
-      Row(username: "tomas", name: "Tomás Lima", points: 310, level: 5, streak: 3),
-      Row(username: "joana", name: "Joana Costa", points: 255, level: 4, streak: 0),
-      Row(username: "marco", name: "Marco Bianchi", points: 120, level: 3, streak: 1),
+      Row(username: "ana", name: "Ana Ribeiro", score: 62, rank: .guide),
+      Row(username: "me", name: "You", score: 46, rank: .walker, isMe: true),
+      Row(username: "tomas", name: "Tomás Lima", score: 31, rank: .walker),
+      Row(username: "joana", name: "Joana Costa", score: 25, rank: .scout),
+      Row(username: "marco", name: "Marco Bianchi", score: 12, rank: .scout),
     ]
-    let scale: Int64 = metric == .points ? 1 : 30
-    var response = Loci_Gamification_GetLeaderboardResponse()
-    response.entries = rows.enumerated().map { offset, row in
-      var entry = Loci_Gamification_LeaderboardEntry()
+    let scale: Int64 = metric == .overall ? 1 : 8
+    var response = Loci_Gamification_GetFieldBoardResponse()
+    response.scope = .friendsWeek
+    response.friendsAvailable = true
+    response.scoredUsers = Int32(rows.count)
+    response.top = rows.enumerated().map { offset, row in
+      var entry = Loci_Gamification_FieldBoardRow()
       entry.user.id = "preview-\(row.username)"
       entry.user.username = row.username
       entry.user.displayName = row.name
       entry.user.homeCity = "Lisbon"
-      entry.rank = Int32(offset + 1)
-      entry.value = max(row.points / scale, 1)
-      entry.level = row.level
-      entry.currentStreak = row.streak
+      entry.displayName = row.name
+      entry.position = Int32(offset + 1)
+      entry.value = max(row.score / scale, 1)
+      entry.rank = row.rank
       entry.isMe = row.isMe
       return entry
     }

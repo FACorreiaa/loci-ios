@@ -15,6 +15,10 @@ enum AppRoute: Hashable {
   case recents(RecentsView.Segment)
   case you(YouDestination)
   case user(username: String)
+  /// Someone's achievements; `userID` empty for the caller's own.
+  case achievements(userID: String, name: String)
+  /// Someone's followers (`followers`) or who they follow.
+  case follows(userID: String, name: String, followers: Bool)
   case sharedTrip(SharedTripSource)
   /// A place snapshot, opened as Saved opens one (a board attachment).
   case savedPlace(Loci_Favorites_V1_FavoriteItem)
@@ -49,6 +53,8 @@ private struct AppRouteDestination: View {
     case .recents(let segment): RecentsView(segment: segment)
     case .you(let destination): destination.screen
     case .user(let username): UserProfileView(username: username)
+    case let .achievements(userID, name): AchievementsView(userID: userID, name: name)
+    case let .follows(userID, name, followers): FollowListView(userID: userID, name: name, followers: followers)
     case .sharedTrip(let source): SharedTripView(source: source)
     case .savedPlace(let item): SavedPlaceDetailView(item: item)
     case .myReports(let contribute): MyReportsView(store: MyReportsStore(service: contribute.object.service))

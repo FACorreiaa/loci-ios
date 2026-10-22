@@ -2,7 +2,7 @@ import LociConnectProto
 import SwiftUI
 
 /// The account's notification preferences (web: settings tab "notifications").
-/// UserService.GetNotificationSettings / UpdateNotificationSettings{recommendations, tripReminders, searchFinished, friendActivity}.
+/// UserService.GetNotificationSettings / UpdateNotificationSettings{recommendations, tripReminders, searchFinished, friendActivity, cheers, …}.
 /// Search finished and Friends are the ones the server acts on: they gate the push (web and APNs) for a
 /// run that ends and for friend requests and acceptances.
 struct ServerNotificationSettingsSection: View {
@@ -17,11 +17,12 @@ struct ServerNotificationSettingsSection: View {
         Toggle("Recommendations", isOn: binding(\.recommendations))
         Toggle("Trip reminders", isOn: binding(\.tripReminders))
         Toggle("Search finished", isOn: binding(\.searchFinished))
-        Toggle("Friends", isOn: binding(\.friendActivity))
-        Toggle("Badges and leaderboard", isOn: binding(\.progressUpdates))
+        Toggle("Followers and friends", isOn: binding(\.friendActivity))
+        Toggle("Cheers", isOn: binding(\.cheers))
+        Toggle("Achievements and leaderboard", isOn: binding(\.progressUpdates))
         Toggle("Streak reminder", isOn: binding(\.streakReminders))
         Toggle("Saved places nearby on a trip", isOn: binding(\.nearbyFits))
-        Toggle("Show me on friends' leaderboards", isOn: binding(\.leaderboardVisible))
+        Toggle("Show me on leaderboards", isOn: binding(\.leaderboardVisible))
       } else {
         ProgressView()
       }
@@ -31,7 +32,8 @@ struct ServerNotificationSettingsSection: View {
       Text(
         """
         Saved to your account, so they apply on the web too. Search finished is the push you get when a search you left running ends; \
-        Friends, when someone sends or accepts a friend request. The streak reminder comes at 7pm on a day you haven't opened Loci yet. \
+        Followers and friends, when someone follows you or asks to; Cheers, when someone cheers your achievement, city or trip \
+        (at most three a day). The streak reminder comes on Sunday evening in a week you haven't explored yet. \
         Saved places nearby tells you, at most twice a day, when you pass a saved place that fits your taste on a trip day; \
         it needs location access set to Always.
         """
@@ -78,6 +80,7 @@ struct ServerNotificationSettingsSection: View {
     request.streakReminders = updated.streakReminders
     request.progressUpdates = updated.progressUpdates
     request.nearbyFits = updated.nearbyFits
+    request.cheers = updated.cheers
     do {
       let saved = try await rpc("Could not save.", request) {
         await SettingsClients.user.updateNotificationSettings(request: $0, headers: [:])
