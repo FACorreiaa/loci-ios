@@ -107,6 +107,13 @@ public extension Color {
   /// destructive. Dark value from web (styles/base.css), as above.
   static let lociDestructive = dynamic(light: 0xB33A32, dark: 0xDA534E)
 
+  // MARK: - Achievement tiers (web: --tier-* in styles/base.css)
+  /// The metal of an earned track rung: a medallion's ring and tint.
+  static let lociBronze = dynamic(light: 0xB16A2F, dark: 0xD8935A)
+  static let lociSilver = dynamic(light: 0x7A8590, dark: 0xAFB8C0)
+  static let lociGold = dynamic(light: 0xBD890F, dark: 0xF2C036)
+  static let lociPlatinum = dynamic(light: 0x508C9B, dark: 0x94C7D1)
+
   // MARK: - Muse chat tokens (apps/_reviews/muse-chat-contract.md)
   /// Chat canvas: #101A16 dark, lociPaper light.
   static let museCanvas = dynamic(light: 0xF5F0E6, dark: 0x101A16)

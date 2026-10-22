@@ -122,10 +122,16 @@ enum DesignPreview: String {
   /// A boards post with a three-deep comment thread and one deleted comment.
   case boardsPost
 
-  /// Profile › Leaderboard: you and four friends this week.
+  /// Profile › Leaderboard: you and four people you follow this week (the Following board).
   case leaderboard
-  /// Profile › Your progress: level, a 7-day streak, today, badges, points.
+  /// Profile › Your progress: Walker rank, a 3-week streak, today, points.
   case myProgress
+  /// Profile › Achievements: tracks part way up, two moments, a secret, and the backfill reveal.
+  case achievements
+  /// The same page after the reveal: the catalogue alone.
+  case achievementsList
+  /// People › Feed: an achievement, a new city and a shared trip, one cheered.
+  case feed
   /// A finished Lisbon trip's recap, as its owner sees it (Save image / Share link).
   case recap
   /// The same recap opened from its share link: cities and counts only.
@@ -238,6 +244,9 @@ enum DesignPreview: String {
       }
     case .leaderboard: NavigationStack { LeaderboardView(store: ProgressStore(service: PreviewProgressService())) }
     case .myProgress: NavigationStack { MyProgressView(store: ProgressStore(service: PreviewProgressService()), recaps: PreviewRecapService()) }
+    case .achievements: NavigationStack { AchievementsView(store: AchievementsStore(service: PreviewAchievementsService())) }
+    case .achievementsList: NavigationStack { AchievementsView(store: AchievementsStore(service: PreviewAchievementsService(reveals: false))) }
+    case .feed: NavigationStack { FeedPreview().appRouteDestinations() }
     case .recap: NavigationStack { RecapScreen(source: .trip(id: "preview"), service: PreviewRecapService()) }
     case .sharedRecap: NavigationStack { RecapScreen(source: .shared(code: "preview"), service: PreviewRecapService()) }
     case .yearRecap: NavigationStack { RecapScreen(source: .year(2026), service: PreviewRecapService()) }

@@ -49,6 +49,12 @@ enum AnalyticsEvent: String {
   case tripCopied = "trip_copied"
   /// A friendship started (`via`: request | invite | contacts | profile).
   case friendAdded = "friend_added"
+  /// The caller followed someone (`state`: following | requested, `friends`, `back`). Same name as web.
+  case follow
+  /// The caller cheered a feed item (`kind`). Same name as web.
+  case cheer
+  /// The one-time reveal of backfilled achievements showed (`count`). Same name as web.
+  case achievementsRevealed = "achievements_revealed"
   /// An action earned points (`kind`: check_in | visit | trip_day, `points`).
   /// Metric: returning, active travellers.
   case pointsAwarded = "points_awarded"

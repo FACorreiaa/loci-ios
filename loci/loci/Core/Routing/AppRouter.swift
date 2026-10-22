@@ -117,11 +117,15 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   case invite(code: String)
   case user(username: String)
   case friends
+  /// `/friends?tab=requests`: where a follow-request push opens.
+  case followRequests
   case friendTrip(id: String)
   /// `/friends?tab=leaderboard` and `?tab=progress`: where a progress push
   /// (a badge, a friend passing you) opens.
   case leaderboard
   case progress
+  /// `/achievements`: where an achievement push opens.
+  case achievements
   /// Email links, allowed signed out: `/auth/reset-password?token=…`, `/auth/confirm-email-change?token=…`.
   case resetPassword(token: String)
   case confirmEmail(token: String)
@@ -141,11 +145,12 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   /// `loci://lists/abc` (the host is the route, as in `SessionLink`) or
   /// `https://lociai.fyi/lists/abc`. Anything with a missing id or extra
   /// segments is nil, so the link stays in Safari.
-  /// `/friends`, or its `?tab=leaderboard` / `?tab=progress` pages.
+  /// `/friends`, or its `?tab=leaderboard` / `?tab=progress` / `?tab=requests` pages.
   private static func friendsTab(_ url: URL) -> AppLink {
     switch URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "tab" })?.value {
     case "leaderboard": .leaderboard
     case "progress": .progress
+    case "requests": .followRequests
     default: .friends
     }
   }
@@ -163,7 +168,7 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
       return nil
     }
     segments.removeAll { $0.isEmpty }
-    if let link = Self.appOnlyLink(segments, url: url) ?? Self.recapLink(segments) {
+    if let link = Self.appOnlyLink(segments, url: url) ?? Self.recapLink(segments) ?? Self.socialLink(segments, url: url) {
       self = link
       return
     }
@@ -175,9 +180,6 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
     case ("contribute", 1): self = .contribute
     case ("t", 2): self = .sharedTrip(code: segments[1])
     case ("invite", 2): self = .invite(code: segments[1])
-    case ("u", 2): self = .user(username: segments[1])
-    case ("friends", 1): self = Self.friendsTab(url)
-    case ("friends", 3) where segments[1].lowercased() == "trips": self = .friendTrip(id: segments[2])
     case ("auth", 2):
       guard let link = Self.authLink(page: segments[1], url: url) else { return nil }
       self = link
@@ -216,6 +218,19 @@ nonisolated extension AppLink {
       return .plan(prompt: prompt ?? "")
     case ("nearby", 1): return .nearby
     default: return nil
+    }
+  }
+
+  /// `/u/<username>`, `/friends` (and its tabs), `/friends/trips/<id>`, `/achievements`, and `/profile`
+  /// (a cheer on a city or trip opens it; the app's nearest page is Your progress). Nil for anything else.
+  static func socialLink(_ segments: [String], url: URL) -> AppLink? {
+    switch (segments.first?.lowercased(), segments.count) {
+    case ("u", 2): .user(username: segments[1])
+    case ("friends", 1): friendsTab(url)
+    case ("friends", 3) where segments[1].lowercased() == "trips": .friendTrip(id: segments[2])
+    case ("achievements", 1): .achievements
+    case ("profile", 1): .progress
+    default: nil
     }
   }
 
@@ -294,8 +309,8 @@ nonisolated extension AppLink {
     case .list: .saved
     case .pack, .shared, .sharedRecap, .plan, .nearby: .discover
     case .trip, .tripRecap: .calendar
-    case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .friendTrip, .leaderboard, .progress, .resetPassword, .confirmEmail,
-      .yearRecap:
+    case .recents, .contribute, .sharedTrip, .invite, .user, .friends, .followRequests, .friendTrip, .leaderboard, .progress, .achievements,
+      .resetPassword, .confirmEmail, .yearRecap:
       .profile
     }
   }

@@ -1,5 +1,9 @@
 # 24 · Friends and trip sharing
 
+> Since proto v5.46.1, friendship is a mutual follow: see
+> [26 · Follows and the feed](26-follows-and-feed.md). The Friends screen
+> below is now People, and the relationship button is the follow button.
+
 Mutual friends (one side asks, the other accepts), trips shared at four
 levels, and a read-only view of someone else's trip that can be saved as
 your own. Web: `/friends`, `/t/:code`, `/u/:username`, `/invite/:code` and

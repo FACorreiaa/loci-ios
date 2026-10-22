@@ -1,8 +1,8 @@
 import LociConnectProto
 import Observation
 
-/// Progress and the friends leaderboard (web: /friends Progress and
-/// Leaderboard cards).
+/// The Field score and the Following board (web: /field): rank, this week,
+/// the weekly streak, where the points came from, and you against who you follow.
 @MainActor @Observable final class ProgressStore {
   enum Phase: Equatable {
     case loading
@@ -12,11 +12,11 @@ import Observation
 
   private(set) var phase = Phase.loading
   private(set) var progress: Loci_Gamification_Progress?
-  private(set) var entries: [Loci_Gamification_LeaderboardEntry] = []
+  private(set) var field: Loci_Gamification_FieldProfile?
+  private(set) var board: Loci_Gamification_GetFieldBoardResponse?
   private(set) var events: [Loci_Gamification_PointsEvent] = []
   private(set) var nextPageToken = ""
-  var period = Loci_Gamification_LeaderboardPeriod.week
-  var metric = Loci_Gamification_LeaderboardMetric.points
+  var metric = Loci_Gamification_FieldBoardMetric.overall
   /// A failed refresh or "Show more" once something is on screen.
   var error: String?
 
@@ -26,35 +26,46 @@ import Observation
     self.service = service
   }
 
-  /// Only the caller on the board: nobody to compete with yet.
-  var isAlone: Bool { entries.count <= 1 }
-  var me: Loci_Gamification_LeaderboardEntry? { entries.first(where: \.isMe) }
+  /// The board's rows: the top, then the one just above you and you when
+  /// you're outside it (the server sends those apart).
+  var rows: [Loci_Gamification_FieldBoardRow] {
+    guard let board else { return [] }
+    var rows = board.top
+    for extra in [board.hasAbove ? board.above : nil, board.hasMe ? board.me : nil].compactMap({ $0 })
+    where !rows.contains(where: { $0.position == extra.position && $0.isMe == extra.isMe }) {
+      rows.append(extra)
+    }
+    return rows
+  }
+
+  /// Nobody followed yet: nobody to compete with.
+  var isAlone: Bool { board.map { !$0.friendsAvailable } ?? false }
 
   func load() async {
     do {
       async let progress = service.progress()
-      async let board = service.leaderboard(period: period, metric: metric)
+      async let field = service.fieldProfile()
       async let history = service.history(pageToken: "")
-      let (p, b, h) = try await (progress, board, history)
+      let (p, f, h) = try await (progress, field, history)
       self.progress = p
-      entries = b.entries
+      self.field = f
       events = h.events
       nextPageToken = h.nextPageToken
       phase = .loaded
     } catch {
       guard !error.isCancellation else { return }
-      if progress == nil { phase = .failed(error.userMessage) } else { self.error = error.userMessage }
+      if field == nil { phase = .failed(error.userMessage) } else { self.error = error.userMessage }
     }
   }
 
-  func reloadBoard() async {
+  func loadBoard() async {
     do {
-      entries = try await service.leaderboard(period: period, metric: metric).entries
+      board = try await service.board(metric: metric)
       phase = .loaded
     } catch {
-      // A newer period or metric cancelled this one; its own reload follows.
+      // A newer metric cancelled this one; its own reload follows.
       guard !error.isCancellation else { return }
-      phase = .failed(error.userMessage)
+      if board == nil { phase = .failed(error.userMessage) } else { self.error = error.userMessage }
     }
   }
 
