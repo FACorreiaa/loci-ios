@@ -62,6 +62,8 @@ enum AnalyticsEvent: String {
   case pointsAwarded = "points_awarded"
   /// Places were read from a shared link (`source`, `places`, `resolved`). Same name as web.
   case linkImported = "link_imported"
+  /// The Discord invite was opened (`surface`: settings). Same name as web (footer | support).
+  case discordLinkClicked = "discord_link_clicked"
 }
 
 @MainActor enum Analytics {
