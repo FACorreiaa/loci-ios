@@ -158,7 +158,8 @@ struct TripEditorView: View {
       if let trip, !isOffline, isOwner {
         ToolbarItem(placement: .secondaryAction) { TripShareMenu(trip: trip).id(trip.id) }
       }
-      if canEdit, !isOffline {
+      // A co-planner's asks become suggestions for the owner.
+      if canChange, !isOffline {
         ToolbarItem(placement: .primaryAction) {
           Button { planning = true } label: { Label("Ask the planner", systemImage: "bubble.left.and.text.bubble.right") }
         }

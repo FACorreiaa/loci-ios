@@ -6,6 +6,9 @@ struct TripActionCardView: View {
   let proposal: Loci_Chat_ActionProposal
   let state: TripActionsModel.CardState
   let canApply: Bool
+  /// Someone else's trip: the card is the caller's suggestion, waiting for
+  /// the owner, and can only be taken back.
+  var isSuggestion = false
   let onApply: (_ option: Int?) -> Void
   let onDismiss: () -> Void
 
@@ -17,7 +20,11 @@ struct TripActionCardView: View {
     MuseBubble(role: .agent) {
       VStack(alignment: .leading, spacing: 10) {
         Text(proposal.summary).font(.museBody)
-        if isHotels {
+        if isSuggestion {
+          Text("Sent to the trip's planner. It's on the trip page for everyone to see.")
+            .font(.lociCaption(13)).foregroundStyle(Color.museTextSecondary)
+        }
+        if isHotels, !isSuggestion {
           ForEach(proposal.options.enumerated(), id: \.offset) { index, option in
             Button { onApply(index) } label: {
               VStack(alignment: .leading) {
@@ -38,14 +45,14 @@ struct TripActionCardView: View {
           Text(text).font(.lociCaption(13)).foregroundStyle(Color.lociDestructive)
         }
         HStack {
-          if !isHotels, !isFlight || !proposal.options.isEmpty {
+          if !isSuggestion, !isHotels, !isFlight || !proposal.options.isEmpty {
             Button(canApply ? (busy ? "Updating…" : (isFlight ? "Save to trip" : "Confirm")) : "Loading trip…") {
               onApply(isFlight ? 0 : nil)
             }
             .buttonStyle(MusePillButtonStyle())
             .disabled(busy || !canApply)
           }
-          Button("Not now", action: onDismiss).buttonStyle(MusePillButtonStyle()).disabled(busy)
+          Button(isSuggestion ? "Take back" : "Not now", action: onDismiss).buttonStyle(MusePillButtonStyle()).disabled(busy)
         }
       }
     }

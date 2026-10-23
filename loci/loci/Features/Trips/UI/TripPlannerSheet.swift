@@ -47,17 +47,25 @@ struct TripPlannerSheet: View {
     return text
   }
 
+  /// The server sets `owner` only when someone else's trip is read: then the
+  /// asks are a co-planner's suggestions for that owner.
+  private var intro: String {
+    trip.hasOwner
+      ? "Ask for places to add, swap or move on \(trip.title): they go to \(trip.owner.shownName) as suggestions."
+      : "Ask for dates, hotels, places to add or swap, or flights for \(trip.title)."
+  }
+
   var body: some View {
     NavigationStack {
       ScrollView {
         VStack(alignment: .leading, spacing: 12) {
-          Text("Ask for dates, hotels, more days or flights for \(trip.title).")
-            .font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk)
+          Text(intro).font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk)
           ForEach(actions.cards, id: \.id) { proposal in
             TripActionCardView(
               proposal: proposal,
               state: actions.state(proposal.id),
               canApply: currentVersion() != nil,
+              isSuggestion: trip.hasOwner,
               onApply: { option in Task { await apply(proposal, option) } },
               onDismiss: { Task { await actions.dismiss(proposal) } }
             )
