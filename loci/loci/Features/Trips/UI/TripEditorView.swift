@@ -33,7 +33,10 @@ struct TripEditorView: View {
   /// The day being walked stop by stop (pushed as WalkDayView).
   @State private var walkingDay: WalkDay?
   @State private var planning = false
+  /// A shared trip's open suggestions; empty on a trip planned alone.
+  @State private var proposals: [Loci_Chat_ActionProposal] = []
   @Environment(\.dismiss) private var dismiss
+  private let tripActions: TripActionService = ConnectTripActionService()
 
   /// Design previews pass a trip and a checklist and never touch the network.
   private let isOffline: Bool
@@ -76,6 +79,17 @@ struct TripEditorView: View {
           }
           if !isOffline {
             TripMembersSection(trip: trip, isOwner: isOwner) { dismiss() }
+          }
+          if !proposals.isEmpty {
+            TripProposalsSection(
+              proposals: proposals,
+              isOwner: isOwner,
+              currentUserID: AuthSessionManager.shared.currentUserID,
+              canApply: canEdit,
+              onApply: { await applyProposal($0) },
+              onDismiss: { await dismissProposal($0) },
+              onReact: { await react($0, $1) }
+            )
           }
           if isOwner {
             Section {
@@ -136,9 +150,11 @@ struct TripEditorView: View {
     }
     .settingsStyle(trip?.title ?? "Trip")
     .environment(\.editMode, .constant(isEditing ? .active : .inactive))
-    .onChange(of: canEdit) { _, ok in if !ok { isEditing = false } }
+    .onChange(of: canChange) { _, ok in if !ok { isEditing = false } }
     .toolbar {
-      ToolbarItem(placement: .primaryAction) { Button(isEditing ? "Done" : "Edit") { isEditing.toggle() }.disabled(!canEdit) }
+      ToolbarItem(placement: .primaryAction) {
+        Button(isEditing ? "Done" : (isOwner ? "Edit" : "Suggest")) { isEditing.toggle() }.disabled(!canChange)
+      }
       if let trip, !isOffline, isOwner {
         ToolbarItem(placement: .secondaryAction) { TripShareMenu(trip: trip).id(trip.id) }
       }
@@ -189,14 +205,15 @@ struct TripEditorView: View {
   private func daySection(_ day: Loci_Trip_TripDay, trip: Loci_Trip_TripDraft) -> some View {
     Section {
       ForEach(day.stops, id: \.id) { stop in
-        StopRow(stop: stop, color: LociTheme.dayColor(Int(day.dayNumber)), isEditing: isEditing) { minutes in
+        // Retiming stays the owner's; a co-planner's edits become suggestions.
+        StopRow(stop: stop, color: LociTheme.dayColor(Int(day.dayNumber)), isEditing: isEditing && canEdit) { minutes in
           enqueue { await setDuration(stop, minutes: minutes) }
         }
-        .moveDisabled(!canEdit)
+        .moveDisabled(!canChange)
         .swipeActions(edge: .trailing) {
-          if canEdit {
-            Button("Remove", role: .destructive) { enqueue { await remove(stop) } }
-            Button("Replace") { picking = .replace(stopID: stop.id) }.tint(.lociCoralFill)
+          if canChange {
+            Button(isOwner ? "Remove" : "Suggest removing", role: .destructive) { enqueue { await remove(stop) } }
+            Button(isOwner ? "Replace" : "Suggest a swap") { picking = .replace(stopID: stop.id) }.tint(.lociCoralFill)
           }
         }
         .swipeActions(edge: .leading) {
@@ -210,12 +227,25 @@ struct TripEditorView: View {
         }
       }
       .onMove { from, to in
+        guard isOwner else {
+          // The row snaps back: the move waits for the owner to apply it.
+          guard let index = from.first else { return }
+          let change = SuggestedChange.move(
+            stopID: day.stops[index].id,
+            toDayID: day.id,
+            toIndex: SuggestedChange.moveIndex(from: index, toOffset: to)
+          )
+          Task { await suggest(change) }
+          return
+        }
         var ids = day.stops.map(\.id)
         ids.move(fromOffsets: from, toOffset: to)
         enqueue { await reorder(day, ids: ids) }
       }
       if isEditing {
-        Button("Add a place to day \(day.dayNumber)", systemImage: "plus") { picking = .add(dayID: day.id) }
+        Button(isOwner ? "Add a place to day \(day.dayNumber)" : "Suggest a place for day \(day.dayNumber)", systemImage: "plus") {
+          picking = .add(dayID: day.id)
+        }
       }
     } header: {
       HStack {
@@ -268,6 +298,7 @@ struct TripEditorView: View {
     guard !isOffline else { return }
     async let plan: Void = side.loadPlan()
     await reload()
+    await loadProposals()
     // A member's GetTripChecklist is NotFound; only the owner has lists.
     if isOwner { await checklist.load() }
     _ = await plan
@@ -285,12 +316,18 @@ struct TripEditorView: View {
   }
 
   /// Edits need the server; a copy the server has not confirmed is read-only.
-  /// A member reads the trip; changes stay with its owner.
-  private var canEdit: Bool {
-    guard isOwner else { return false }
+  /// Only the owner edits; a co-planner suggests, a viewer reads.
+  private var canEdit: Bool { isOwner && isConfirmed }
+
+  /// A co-planner's adds, swaps, moves and removals go to the owner as suggestions.
+  private var canSuggest: Bool { trip?.viewerRole == .coPlanner && isConfirmed }
+
+  private var canChange: Bool { canEdit || canSuggest }
+
+  private var isConfirmed: Bool {
     switch loaded {
-    case .fresh, nil: return true
-    case .stale, .missing: return false
+    case .fresh, nil: true
+    case .stale, .missing: false
     }
   }
 
@@ -427,6 +464,10 @@ struct TripEditorView: View {
   /// web: routes/trips/[id].tsx addStop
   private func add(_ poi: Loci_Poi_POIDetailedInfo, toDay dayID: String) async {
     guard let trip, let day = trip.days.first(where: { $0.id == dayID }) else { return }
+    guard isOwner else {
+      await suggest(.add(dayID: dayID, stop: Self.stop(from: poi, orderIndex: day.stops.count)))
+      return
+    }
     var request = Loci_Trip_AddStopRequest()
     request.tripID = trip.id
     request.dayID = dayID
@@ -437,6 +478,10 @@ struct TripEditorView: View {
 
   private func replace(_ stopID: String, with poi: Loci_Poi_POIDetailedInfo) async {
     guard let trip, let old = trip.days.flatMap(\.stops).first(where: { $0.id == stopID }) else { return }
+    guard isOwner else {
+      await suggest(.replace(stopID: stopID, with: Self.stop(from: poi, orderIndex: Int(old.orderIndex))))
+      return
+    }
     var request = Loci_Trip_ReplaceStopRequest()
     request.tripID = trip.id
     request.stopID = stopID
@@ -458,10 +503,61 @@ struct TripEditorView: View {
 
   private func remove(_ stop: Loci_Trip_TripStop) async {
     guard let trip else { return }
+    guard isOwner else {
+      await suggest(.remove(stopID: stop.id))
+      return
+    }
     var request = Loci_Trip_RemoveStopRequest()
     request.tripID = trip.id
     request.stopID = stop.id
     request.baseVersion = trip.version
     await apply("Could not remove the stop.", request) { await TripAPI.client.removeStop(request: $0, headers: [:]) }
+  }
+
+  // MARK: - Suggestions (planning together)
+
+  /// Only a trip planned together has suggestions; a solo trip skips the call.
+  private func loadProposals() async {
+    guard !isOffline, let trip, !isOwner || !trip.members.isEmpty else { return }
+    if let list = try? await TripProposalsAPI.list(tripID: trip.id) { proposals = list }
+  }
+
+  private func suggest(_ change: SuggestedChange) async {
+    guard let trip else { return }
+    do {
+      _ = try await TripProposalsAPI.propose(tripID: trip.id, baseVersion: trip.version, action: change.action)
+      await loadProposals()
+    } catch {
+      self.error = error.userMessage
+    }
+  }
+
+  /// The owner applies against the trip they see; a stale copy reloads.
+  private func applyProposal(_ proposal: Loci_Chat_ActionProposal) async -> String? {
+    guard let trip else { return nil }
+    do {
+      let response = try await tripActions.apply(proposalID: proposal.id, option: nil, baseVersion: trip.version)
+      if response.hasTrip { await adopt(response.trip) }
+      await loadProposals()
+      return nil
+    } catch {
+      if error.kind == .stale { await reload() }
+      return error.tripPageMessage
+    }
+  }
+
+  private func dismissProposal(_ proposal: Loci_Chat_ActionProposal) async -> String? {
+    do {
+      try await tripActions.dismiss(proposalID: proposal.id)
+      proposals.removeAll { $0.id == proposal.id }
+      return nil
+    } catch {
+      return "Couldn't turn this down. Try again."
+    }
+  }
+
+  private func react(_ proposal: Loci_Chat_ActionProposal, _ value: Int32) async {
+    guard let updated = try? await TripProposalsAPI.react(proposalID: proposal.id, value: value) else { return }
+    if let index = proposals.firstIndex(where: { $0.id == updated.id }) { proposals[index] = updated }
   }
 }
