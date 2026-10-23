@@ -38,6 +38,12 @@ public struct ProfileView: View {
             Text(Self.versionText).foregroundStyle(.secondary)
           }
           ExternalLinkRow(title: "Loci Web", destination: URL(string: "https://lociai.fyi")!)
+          // Counts the tap, then lets the system open the invite as usual.
+          ExternalLinkRow(title: "Join us on Discord", destination: AppConfig.discordInviteURL)
+            .environment(\.openURL, OpenURLAction { _ in
+              Analytics.capture(.discordLinkClicked, ["surface": "settings"])
+              return .systemAction
+            })
           // Hidden until the app has an App Store ID (Info.plist `AppStoreID`).
           if let reviewURL = AppConfig.shared.writeReviewURL {
             ExternalLinkRow(title: "Rate Loci on the App Store", destination: reviewURL)

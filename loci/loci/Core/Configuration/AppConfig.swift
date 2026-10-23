@@ -19,6 +19,9 @@ public nonisolated struct AppConfig: Sendable {
   /// Empty until the app is on the App Store; the Rate row hides while it is.
   public let appStoreID: String
 
+  /// Invite to the #loci channel of the shared Discord server. Never expires; same URL as web.
+  public static let discordInviteURL = URL(string: "https://discord.gg/xjqCUrFFb")!
+
   /// The App Store's write-a-review page, once there is an ID.
   public var writeReviewURL: URL? {
     appStoreID.isEmpty ? nil : URL(string: "https://apps.apple.com/app/id\(appStoreID)?action=write-review")
