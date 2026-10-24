@@ -75,4 +75,10 @@ struct TodayFirstTests {
     let brief: [AnyHashable: Any] = ["url": "https://lociai.fyi/trips/t1", "origin": "trip_brief", "category": "loci_brief"]
     #expect(PushRoute.tap(userInfo: brief) == .openLink(.trip(id: "t1")))
   }
+
+  /// A brief that saw a closed stop opens the trip on swapping it.
+  @Test func briefPushWithAClosedStopOpensTheSwap() {
+    let brief: [AnyHashable: Any] = ["url": "https://lociai.fyi/trips/t1?swap=s9", "origin": "trip_brief", "category": "loci_brief"]
+    #expect(PushRoute.tap(userInfo: brief) == .openLink(.trip(id: "t1", swapStopID: "s9")))
+  }
 }
