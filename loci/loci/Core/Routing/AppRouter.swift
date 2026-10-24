@@ -110,7 +110,9 @@ public nonisolated struct SessionLink: Sendable, Equatable, Hashable {
 public nonisolated enum AppLink: Sendable, Equatable, Hashable {
   case list(id: String)
   case pack(slug: String)
-  case trip(id: String)
+  /// `/trips/<id>`; `?swap=<stop>` (a trip brief that saw a closed stop) opens
+  /// the swap picker on that stop.
+  case trip(id: String, swapStopID: String? = nil)
   case recents
   case contribute
   case sharedTrip(code: String)
@@ -157,6 +159,12 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
     }
   }
 
+  /// A query item's value; nil when it is missing or empty.
+  private static func query(_ name: String, in url: URL) -> String? {
+    let value = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == name }?.value
+    return value?.isEmpty == false ? value : nil
+  }
+
   public init?(url: URL) {
     var segments: [String]
     switch url.scheme?.lowercased() {
@@ -177,7 +185,7 @@ public nonisolated enum AppLink: Sendable, Equatable, Hashable {
     switch (segments.first?.lowercased(), segments.count) {
     case ("lists", 2): self = .list(id: segments[1])
     case ("packs", 2): self = .pack(slug: segments[1])
-    case ("trips", 2): self = .trip(id: segments[1])
+    case ("trips", 2): self = .trip(id: segments[1], swapStopID: Self.query("swap", in: url))
     case ("recents", 1): self = .recents
     case ("contribute", 1): self = .contribute
     case ("t", 2): self = .sharedTrip(code: segments[1])

@@ -35,6 +35,11 @@ struct TripEditorView: View {
   @State private var planning = false
   /// A shared trip's open suggestions; empty on a trip planned alone.
   @State private var proposals: [Loci_Chat_ActionProposal] = []
+  /// A shared trip's comments, and the stop the composer is about ("" for the trip).
+  @State private var comments: [Loci_Trip_TripComment] = []
+  @State private var commentAbout = ""
+  /// A trip brief's `?swap=<stop>`: the stop to open the swap picker on, once.
+  @State private var swapStopID: String?
   @Environment(\.dismiss) private var dismiss
   private let tripActions: TripActionService = ConnectTripActionService()
 
@@ -47,8 +52,10 @@ struct TripEditorView: View {
     trip: Loci_Trip_TripDraft? = nil,
     checklist: TripChecklistStore? = nil,
     isOffline: Bool = false,
-    expandsPreferences: Bool = false
+    expandsPreferences: Bool = false,
+    swapStopID: String? = nil
   ) {
+    _swapStopID = State(initialValue: swapStopID)
     self.tripID = tripID
     self.isOffline = isOffline
     self.expandsPreferences = expandsPreferences
@@ -77,20 +84,7 @@ struct TripEditorView: View {
               .listRowInsets(EdgeInsets())
               .listRowBackground(Color.clear)
           }
-          if !isOffline {
-            TripMembersSection(trip: trip, isOwner: isOwner) { dismiss() }
-          }
-          if !proposals.isEmpty {
-            TripProposalsSection(
-              proposals: proposals,
-              isOwner: isOwner,
-              currentUserID: AuthSessionManager.shared.currentUserID,
-              canApply: canEdit,
-              onApply: { await applyProposal($0) },
-              onDismiss: { await dismissProposal($0) },
-              onReact: { await react($0, $1) }
-            )
-          }
+          togetherSections(trip)
           if isOwner {
             Section {
               NavigationLink(value: AppRoute.tripJournal(id: tripID)) {
@@ -203,6 +197,36 @@ struct TripEditorView: View {
 
   // MARK: - Sections
 
+  /// Planning together: who is on the trip, their suggestions and their comments.
+  @ViewBuilder
+  private func togetherSections(_ trip: Loci_Trip_TripDraft) -> some View {
+    if !isOffline {
+      TripMembersSection(trip: trip, isOwner: isOwner) { dismiss() }
+    }
+    if !proposals.isEmpty {
+      TripProposalsSection(
+        proposals: proposals,
+        isOwner: isOwner,
+        currentUserID: AuthSessionManager.shared.currentUserID,
+        canApply: canEdit,
+        onApply: { await applyProposal($0) },
+        onDismiss: { await dismissProposal($0) },
+        onReact: { await react($0, $1) }
+      )
+    }
+    if !isOffline, isShared(trip) {
+      TripCommentsSection(
+        comments: comments,
+        stops: trip.days.flatMap(\.stops),
+        aboutStopID: $commentAbout,
+        onPost: { await postComment($0, stopID: $1) },
+        onDelete: { await deleteComment($0) },
+        onReport: { await reportComment($0, reason: $1) },
+        onBlock: { await blockAuthor($0) }
+      )
+    }
+  }
+
   private func daySection(_ day: Loci_Trip_TripDay, trip: Loci_Trip_TripDraft) -> some View {
     Section {
       ForEach(day.stops, id: \.id) { stop in
@@ -299,7 +323,10 @@ struct TripEditorView: View {
     guard !isOffline else { return }
     async let plan: Void = side.loadPlan()
     await reload()
+    openSwapFromBrief()
+    async let notes: Void = loadComments()
     await loadProposals()
+    _ = await notes
     // A member's GetTripChecklist is NotFound; only the owner has lists.
     if isOwner { await checklist.load() }
     _ = await plan
@@ -519,7 +546,7 @@ struct TripEditorView: View {
 
   /// Only a trip planned together has suggestions; a solo trip skips the call.
   private func loadProposals() async {
-    guard !isOffline, let trip, !isOwner || !trip.members.isEmpty else { return }
+    guard !isOffline, let trip, isShared(trip) else { return }
     if let list = try? await TripProposalsAPI.list(tripID: trip.id) { proposals = list }
   }
 
@@ -560,5 +587,69 @@ struct TripEditorView: View {
   private func react(_ proposal: Loci_Chat_ActionProposal, _ value: Int32) async {
     guard let updated = try? await TripProposalsAPI.react(proposalID: proposal.id, value: value) else { return }
     if let index = proposals.firstIndex(where: { $0.id == updated.id }) { proposals[index] = updated }
+  }
+}
+
+// MARK: - Comments (planning together)
+
+extension TripEditorView {
+  /// A trip someone else is on: a member's view, or an owner with members.
+  private func isShared(_ trip: Loci_Trip_TripDraft) -> Bool { !isOwner || !trip.members.isEmpty }
+
+  private func loadComments() async {
+    guard !isOffline, let trip, isShared(trip) else { return }
+    if let list = try? await TripCommentsAPI.list(tripID: trip.id) { comments = list }
+  }
+
+  private func postComment(_ body: String, stopID: String?) async -> String? {
+    do {
+      comments.append(try await TripCommentsAPI.add(tripID: tripID, body: body, stopID: stopID))
+      return nil
+    } catch {
+      return error.userMessage
+    }
+  }
+
+  private func deleteComment(_ comment: Loci_Trip_TripComment) async -> String? {
+    do {
+      try await TripCommentsAPI.delete(commentID: comment.id)
+      comments.removeAll { $0.id == comment.id }
+      return nil
+    } catch {
+      return error.userMessage
+    }
+  }
+
+  /// A reported comment leaves the reporter's view at once, as on the server.
+  private func reportComment(_ comment: Loci_Trip_TripComment, reason: String) async -> String? {
+    do {
+      try await TripCommentsAPI.report(commentID: comment.id, reason: reason)
+      comments.removeAll { $0.id == comment.id }
+      return nil
+    } catch {
+      return error.userMessage
+    }
+  }
+
+  /// Blocking hides both sides' comments; the list is read again to match.
+  private func blockAuthor(_ comment: Loci_Trip_TripComment) async -> String? {
+    do {
+      try await SocialAPI.block(userID: comment.author.id)
+      comments.removeAll { $0.author.id == comment.author.id }
+      await loadComments()
+      return nil
+    } catch {
+      return error.userMessage
+    }
+  }
+
+  /// A trip brief that saw a closed stop opens here on the swap picker: a
+  /// replace for the owner, a suggested swap for a co-planner. A viewer, or a
+  /// stop that has since gone, just shows the trip.
+  private func openSwapFromBrief() {
+    guard let stopID = swapStopID, let trip else { return }
+    swapStopID = nil
+    guard canChange, trip.days.contains(where: { $0.stops.contains { $0.id == stopID } }) else { return }
+    picking = .replace(stopID: stopID)
   }
 }

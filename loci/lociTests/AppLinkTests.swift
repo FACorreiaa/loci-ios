@@ -13,6 +13,8 @@ struct AppLinkTests {
     ("https://lociai.fyi/lists/l1", .list(id: "l1")),
     ("https://www.lociai.fyi/packs/lisbon-3-days", .pack(slug: "lisbon-3-days")),
     ("https://lociai.fyi/trips/t1?tab=days", .trip(id: "t1")),
+    ("https://lociai.fyi/trips/t1?swap=s9", .trip(id: "t1", swapStopID: "s9")),
+    ("https://lociai.fyi/trips/t1?swap=", .trip(id: "t1")),
     ("https://lociai.fyi/recents", .recents),
     ("https://LOCIAI.FYI/contribute/", .contribute),
     ("https://lociai.fyi/t/abc123", .sharedTrip(code: "abc123")),
