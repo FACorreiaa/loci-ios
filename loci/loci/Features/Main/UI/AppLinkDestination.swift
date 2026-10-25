@@ -8,7 +8,7 @@ struct AppLinkDestination: View {
 
   var body: some View {
     switch link {
-    case .trip(let id): TripEditorView(tripID: id)
+    case let .trip(id, swapStopID): TripEditorView(tripID: id, swapStopID: swapStopID)
     case .list(let id): ListDetailView(listID: id)
     case .pack(let slug): PackDetailView(slug: slug)
     case .recents: YouDestination.recents.screen
