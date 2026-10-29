@@ -2,7 +2,8 @@ import LociConnectProto
 import SwiftUI
 
 /// Who is on the trip (web: TripMembersBar). The owner gets Plan together,
-/// which opens the trip's invite link in the share sheet; a member gets Leave
+/// which opens the trip's invite link in the share sheet, and, once someone
+/// has joined, whether co-planners may apply suggestions; a member gets Leave
 /// trip.
 struct TripMembersSection: View {
   let trip: Loci_Trip_TripDraft
@@ -12,6 +13,9 @@ struct TripMembersSection: View {
   @State private var inviting = false
   @State private var confirmLeave = false
   @State private var error: String?
+  /// The rule as last saved here; the trip's own until then.
+  @State private var mayApply: Bool?
+  @State private var savingRule = false
 
   var body: some View {
     Section {
@@ -36,6 +40,16 @@ struct TripMembersSection: View {
           Button("Leave", role: .destructive) { confirmLeave = true }.controlSize(.small)
         }
       }
+      if isOwner, !trip.members.isEmpty {
+        Toggle(isOn: Binding(get: { mayApply ?? trip.coPlannersMayApply }, set: { setMayApply($0) })) {
+          VStack(alignment: .leading, spacing: 2) {
+            Text("Co-planners can apply suggestions").font(.lociCaption(15))
+            Text("Otherwise only you change the trip.").font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk)
+          }
+        }
+        .tint(.lociCoralFill)
+        .disabled(savingRule)
+      }
     }
     .sheet(isPresented: $inviting) { TripInviteSheet(trip: trip) }
     .confirmationDialog("Leave this trip?", isPresented: $confirmLeave, titleVisibility: .visible) {
@@ -44,6 +58,21 @@ struct TripMembersSection: View {
       Text("You'll need a new invite to join again.")
     }
     .errorAlert($error)
+  }
+
+  private func setMayApply(_ may: Bool) {
+    let before = mayApply ?? trip.coPlannersMayApply
+    mayApply = may
+    savingRule = true
+    Task {
+      defer { savingRule = false }
+      do {
+        mayApply = try await TripMembersAPI.setCoPlannersMayApply(tripID: trip.id, may)
+      } catch {
+        mayApply = before
+        self.error = error.localizedDescription
+      }
+    }
   }
 
   private func leave() {

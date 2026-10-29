@@ -30,6 +30,17 @@ nonisolated enum TripMembersAPI {
     }.tripID
   }
 
+  /// Whether co-planners may apply suggestions too. Owner only; answers the
+  /// rule as saved.
+  static func setCoPlannersMayApply(tripID: String, _ may: Bool) async throws -> Bool {
+    var request = Loci_Trip_SetTripPlanningRulesRequest()
+    request.tripID = tripID
+    request.coPlannersMayApply = may
+    return try await rpc("Couldn't change that setting.", request) {
+      await client.setTripPlanningRules(request: $0, headers: [:])
+    }.coPlannersMayApply
+  }
+
   /// The owner removes anyone; a member removes only themselves.
   static func remove(tripID: String, userID: String) async throws {
     var request = Loci_Trip_RemoveTripMemberRequest()

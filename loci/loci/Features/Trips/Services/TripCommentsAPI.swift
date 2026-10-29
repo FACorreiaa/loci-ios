@@ -1,5 +1,6 @@
 import Foundation
 import LociConnectProto
+import SwiftProtobuf
 
 /// Planning together's comments (web: lib/api/trip-comments.ts): notes the
 /// owner and members leave on a trip or one of its stops.
@@ -11,11 +12,16 @@ nonisolated enum TripCommentsAPI {
     ("spam", "Spam"), ("inappropriate", "Inappropriate"), ("offensive", "Offensive"), ("other", "Something else"),
   ]
 
-  /// The trip's latest comments, oldest first, for anyone on it.
-  static func list(tripID: String) async throws -> [Loci_Trip_TripComment] {
+  /// A page of the trip's comments, oldest first, for anyone on it: the
+  /// latest, or those before `before`. `hasMore` means older ones remain.
+  /// `before` is a comment's own created_at, passed through whole: a Date
+  /// would round the server's microseconds.
+  static func list(tripID: String, before: Google_Protobuf_Timestamp? = nil) async throws -> (comments: [Loci_Trip_TripComment], hasMore: Bool) {
     var request = Loci_Trip_ListTripCommentsRequest()
     request.tripID = tripID
-    return try await rpc("Could not load the comments.", request) { await client.listTripComments(request: $0, headers: [:]) }.comments
+    if let before { request.before = before }
+    let response = try await rpc("Could not load the comments.", request) { await client.listTripComments(request: $0, headers: [:]) }
+    return (response.comments, response.hasMore_p)
   }
 
   /// A comment about the trip, or about one of its stops.

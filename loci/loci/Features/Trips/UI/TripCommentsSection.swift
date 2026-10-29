@@ -9,6 +9,8 @@ import SwiftUI
 /// that answers with the error to show, if any.
 struct TripCommentsSection: View {
   let comments: [Loci_Trip_TripComment]
+  /// Older comments remain on the server; the list shows the latest page.
+  var hasMore = false
   /// The trip's stops, for "about" and for naming what a comment is on.
   let stops: [Loci_Trip_TripStop]
   /// The stop the composer is about; the page sets it from a stop's swipe.
@@ -17,17 +19,32 @@ struct TripCommentsSection: View {
   let onDelete: (Loci_Trip_TripComment) async -> String?
   let onReport: (Loci_Trip_TripComment, _ reason: String) async -> String?
   let onBlock: (Loci_Trip_TripComment) async -> String?
+  var onLoadOlder: () async -> Void = {}
 
   @State private var draft = ""
   @State private var posting = false
   @State private var postError: String?
   @State private var errors: [String: String] = [:]
   @State private var blocking: Loci_Trip_TripComment?
+  @State private var loadingOlder = false
 
   static let maxLength = 2000
 
   var body: some View {
-    Section("Comments · \(comments.count)") {
+    Section(Self.title(count: comments.count, hasMore: hasMore)) {
+      if hasMore {
+        Button {
+          Task {
+            loadingOlder = true
+            await onLoadOlder()
+            loadingOlder = false
+          }
+        } label: {
+          Label(loadingOlder ? "Loading…" : "Load older comments", systemImage: "arrow.up")
+            .font(.lociCaption(13))
+        }
+        .disabled(loadingOlder)
+      }
       if comments.isEmpty {
         Text("Nothing yet. Leave a note for everyone on the trip.")
           .font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk)
@@ -45,6 +62,11 @@ struct TripCommentsSection: View {
     } message: { _ in
       Text("You won't see each other's comments or profiles.")
     }
+  }
+
+  /// "Comments · 100+" while older ones remain unloaded.
+  nonisolated static func title(count: Int, hasMore: Bool) -> String {
+    "Comments · \(count)\(hasMore ? "+" : "")"
   }
 
   nonisolated static func name(_ c: Loci_Trip_TripComment) -> String {

@@ -37,6 +37,7 @@ struct TripEditorView: View {
   @State private var proposals: [Loci_Chat_ActionProposal] = []
   /// A shared trip's comments, and the stop the composer is about ("" for the trip).
   @State private var comments: [Loci_Trip_TripComment] = []
+  @State private var commentsHasMore = false
   @State private var commentAbout = ""
   /// A trip brief's `?swap=<stop>`: the stop to open the swap picker on, once.
   @State private var swapStopID: String?
@@ -207,8 +208,9 @@ struct TripEditorView: View {
       TripProposalsSection(
         proposals: proposals,
         isOwner: isOwner,
+        mayApply: mayApply,
         currentUserID: AuthSessionManager.shared.currentUserID,
-        canApply: canEdit,
+        canApply: isConfirmed,
         onApply: { await applyProposal($0) },
         onDismiss: { await dismissProposal($0) },
         onReact: { await react($0, $1) }
@@ -217,12 +219,14 @@ struct TripEditorView: View {
     if !isOffline, isShared(trip) {
       TripCommentsSection(
         comments: comments,
+        hasMore: commentsHasMore,
         stops: trip.days.flatMap(\.stops),
         aboutStopID: $commentAbout,
         onPost: { await postComment($0, stopID: $1) },
         onDelete: { await deleteComment($0) },
         onReport: { await reportComment($0, reason: $1) },
-        onBlock: { await blockAuthor($0) }
+        onBlock: { await blockAuthor($0) },
+        onLoadOlder: { await loadOlderComments() }
       )
     }
   }
@@ -348,6 +352,11 @@ struct TripEditorView: View {
   private var canEdit: Bool { isOwner && isConfirmed }
 
   /// A co-planner's adds, swaps, moves and removals go to the owner as suggestions.
+  /// Applying suggestions: the owner, or a co-planner the owner lets apply.
+  private var mayApply: Bool {
+    isOwner || trip?.viewerRole == .coPlanner && trip?.coPlannersMayApply == true
+  }
+
   private var canSuggest: Bool { trip?.viewerRole == .coPlanner && isConfirmed }
 
   private var canChange: Bool { canEdit || canSuggest }
@@ -565,7 +574,8 @@ struct TripEditorView: View {
     guard let trip else { return nil }
     do {
       let response = try await tripActions.apply(proposalID: proposal.id, option: nil, baseVersion: trip.version)
-      if response.hasTrip { await adopt(response.trip) }
+      // A co-planner gets no trip back (it is the owner's view); read it again.
+      if response.hasTrip { await adopt(response.trip) } else { await reload() }
       await loadProposals()
       return nil
     } catch {
@@ -596,9 +606,28 @@ extension TripEditorView {
   /// A trip someone else is on: a member's view, or an owner with members.
   private func isShared(_ trip: Loci_Trip_TripDraft) -> Bool { !isOwner || !trip.members.isEmpty }
 
+  /// The latest page. Older pages loaded before are dropped: the list starts
+  /// again from the newest, as it does on the web.
   private func loadComments() async {
     guard !isOffline, let trip, isShared(trip) else { return }
-    if let list = try? await TripCommentsAPI.list(tripID: trip.id) { comments = list }
+    if let page = try? await TripCommentsAPI.list(tripID: trip.id) {
+      comments = page.comments
+      commentsHasMore = page.hasMore
+    }
+  }
+
+  /// The page before the oldest comment shown, put above it.
+  private func loadOlderComments() async {
+    guard let oldest = comments.first, oldest.hasCreatedAt else { return }
+    guard let page = try? await TripCommentsAPI.list(tripID: tripID, before: oldest.createdAt) else { return }
+    comments = Self.prepending(page.comments, to: comments)
+    commentsHasMore = page.hasMore
+  }
+
+  /// Older comments above the ones shown, without repeating any.
+  nonisolated static func prepending(_ older: [Loci_Trip_TripComment], to shown: [Loci_Trip_TripComment]) -> [Loci_Trip_TripComment] {
+    let seen = Set(shown.map(\.id))
+    return older.filter { !seen.contains($0.id) } + shown
   }
 
   private func postComment(_ body: String, stopID: String?) async -> String? {
