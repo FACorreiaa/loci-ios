@@ -438,11 +438,7 @@ private struct RecentsEmpty: View {
   let onAction: () -> Void
 
   var body: some View {
-    ContentUnavailableView {
-      Label(title, systemImage: "clock.arrow.circlepath")
-    } description: {
-      Text(message)
-    } actions: {
+    LociEmptyState(title: title, message: message) {
       Button(action, systemImage: "sparkles", action: onAction).lociProminentButton()
     }
   }

@@ -19,20 +19,22 @@ public enum LociTheme {
   public static let selectionSettle = Animation.timingCurve(0.22, 1, 0.36, 1, duration: 0.25)
   /// What Reduce Motion falls back to: a short fade, no movement.
   public static let reducedFade = Animation.easeOut(duration: 0.2)
+  /// The mascot's idle bob: 2pt, 4s round trip. Off under Reduce Motion.
+  public static let mascotIdle = Animation.easeInOut(duration: 2).repeatForever(autoreverses: true)
 
   /// Map day colours, in order (day 1 first). Cycle past day 8.
   /// Web's `LOCI_DAY_COLORS` (loci-client/src/lib/theme-colors.ts), same order
   /// and the same indexing: the server's 1-based day picks `dayColors[day % 8]`,
   /// so Day 1 is pine teal on both, and a one-day list (day 0) is coral.
   public static let dayColors: [Color] = [0xE2664A, 0x2F7D6E, 0xB07A2A, 0x7A5CA8, 0x4A7CB0, 0x8C6248, 0x5E8C3A, 0xA34F72].map { Color(hex: $0) }
-  public static let clusterColor = Color(hex: 0x294D3C)
+  public static let clusterColor = Color(hex: 0xAE3722)
   public static let ungroupedColor = Color(hex: 0x6E7A82)
 
   public static func dayColor(_ day: Int) -> Color { dayColors[max(day, 0) % dayColors.count] }
   /// Web's `colorForMapDay(0)`: the pins and stamps of a list that has no days.
   public static var listColor: Color { dayColor(0) }
   /// Text on a day-coloured stamp or pin: the light paper in both schemes, since the stamps stay dark.
-  public static let stampInk = Color(hex: 0xF5F0E6)
+  public static let stampInk = Color(hex: 0xFBF6EF)
 
   /// Muse chat metrics, from apps/_reviews/muse-chat-contract.md (shared across the four apps).
   public enum Muse {
@@ -74,38 +76,57 @@ public extension Color {
   }
 
   // MARK: - Tokens (NATIVE_DESIGN §1)
-  /// background
-  static let lociPaper = dynamic(light: 0xF5F0E6, dark: 0x101A16)
-  /// foreground
-  static let lociInk = dynamic(light: 0x1A2E26, dark: 0xEDE8DC)
-  /// card
-  static let lociCard = dynamic(light: 0xFDFBF7, dark: 0x162019)
-  /// primary
-  static let lociForest = dynamic(light: 0x214D3C, dark: 0xA8B896)
-  /// Text and icons on a `lociForest` fill. Dark mode's forest is a light sage,
-  /// so white labels on it measure 2.1:1 and fail WCAG AA; the canvas colour
-  /// measures 8.4:1 there, and white on the light-mode forest 9.6:1.
-  static let lociOnForest = dynamic(light: 0xFFFFFF, dark: 0x101A16)
-  /// A forest fill for places the system forces a white label: swipe actions.
-  /// Dark mode deepens it so white measures 5.7:1 (the sage forest gives 2.1:1).
-  static let lociForestFill = dynamic(light: 0x214D3C, dark: 0x40705A)
-  /// A terracotta fill for places that carry a white label: swipe actions,
-  /// `.borderedProminent` buttons and chips tinted coral. `lociCoral` itself
-  /// stays the text/icon accent; under white it measures only 3.7:1 light /
-  /// 2.9:1 dark. This deeper coral gives white 5.6:1 light / 4.7:1 dark (WCAG AA).
-  static let lociCoralFill = dynamic(light: 0xA54E2E, dark: 0xB35A38)
+  // "Explore your way" (2026-10): obsidian / cream / signal coral, the same
+  // sRGB as web themes.css. The old names (paper, ink, forest, sage, coral) are
+  // kept so call sites and branches in flight still compile; each now carries
+  // the new value, and the semantic names below point at them.
+  /// background: cream / obsidian
+  static let lociPaper = dynamic(light: 0xFBF6EF, dark: 0x11161D)
+  /// foreground: ink / cream
+  static let lociInk = dynamic(light: 0x151B23, dark: 0xF7F1E9)
+  /// card: white / graphite
+  static let lociCard = dynamic(light: 0xFFFFFF, dark: 0x1B222D)
+  /// primary: signal coral. Deep coral on light (white label 5.4:1, 5.0:1 on
+  /// cream), bright coral on dark (6.8:1 on obsidian, obsidian label).
+  static let lociForest = dynamic(light: 0xB8452E, dark: 0xF47B5D)
+  /// Text and icons on a `lociForest` fill: white on the deep coral (5.4:1),
+  /// obsidian on the bright coral (6.8:1). White on the bright coral is 2.5:1.
+  static let lociOnForest = dynamic(light: 0xFFFFFF, dark: 0x11161D)
+  /// A primary fill for places the system forces a white label: swipe actions.
+  /// The deep coral in both schemes, so white measures 5.4:1.
+  static let lociForestFill = dynamic(light: 0xB8452E, dark: 0xB8452E)
+  /// A coral fill for places that carry a white label: swipe actions,
+  /// `.borderedProminent` buttons and chips tinted coral. Same deep coral as
+  /// `lociForestFill`: white on it is 5.4:1 (WCAG AA) in both schemes.
+  static let lociCoralFill = dynamic(light: 0xB8452E, dark: 0xB8452E)
   /// secondary (also the active tab fill)
-  static let lociSage = dynamic(light: 0xD8E0D0, dark: 0x384840)
-  /// muted. Dark value kept from the app's earlier palette; NATIVE_DESIGN gives none.
-  static let lociMuted = dynamic(light: 0xE8E2D6, dark: 0x1F2923)
-  /// mutedForeground. NATIVE_DESIGN gives no dark value; this one is web's (styles/base.css).
-  static let lociMutedInk = dynamic(light: 0x5A6B62, dark: 0xB9AFA2)
-  /// accent (terracotta)
-  static let lociCoral = dynamic(light: 0xC76B4A, dark: 0xD4845C)
+  static let lociSage = dynamic(light: 0xF1EADF, dark: 0x232D38)
+  /// muted
+  static let lociMuted = dynamic(light: 0xF3ECE2, dark: 0x1D252F)
+  /// mutedForeground: 5.6:1 on cream, 7.9:1 on obsidian
+  static let lociMutedInk = dynamic(light: 0x5A6472, dark: 0xA4ACB7)
+  /// The text/icon coral accent. Bright coral fails as text on cream (2.5:1),
+  /// so light mode takes the deep coral, the same as primary.
+  static let lociCoral = dynamic(light: 0xB8452E, dark: 0xF47B5D)
   /// border
-  static let lociBorder = dynamic(light: 0xCFC5B5, dark: 0x384840)
-  /// destructive. Dark value from web (styles/base.css), as above.
-  static let lociDestructive = dynamic(light: 0xB33A32, dark: 0xDA534E)
+  static let lociBorder = dynamic(light: 0xE4DACD, dark: 0x2A3441)
+  /// destructive
+  static let lociDestructive = dynamic(light: 0xB32D29, dark: 0xF0615C)
+  /// Lantern (warm): discovery, in-season, achievements.
+  static let lociLantern = dynamic(light: 0x9B5B17, dark: 0xFBBB7E)
+  /// Holo (cool steel): info, spatial data, routes.
+  static let lociHolo = dynamic(light: 0x3F6A92, dark: 0x7A9CC2)
+  /// Confirmations.
+  static let lociSuccess = dynamic(light: 0x1F7A4D, dark: 0x4CB882)
+
+  // MARK: - Semantic names (prefer these in new code)
+  static var lociPrimary: Color { lociForest }
+  static var lociOnPrimary: Color { lociOnForest }
+  static var lociPrimaryFill: Color { lociForestFill }
+  /// Hero bands and the launch screen: obsidian in both schemes.
+  static let lociObsidian = Color(hex: 0x11161D)
+  /// Text on `lociObsidian` in both schemes.
+  static let lociOnObsidian = Color(hex: 0xF7F1E9)
 
   // MARK: - Achievement tiers (web: --tier-* in styles/base.css)
   /// The metal of an earned track rung: a medallion's ring and tint.
@@ -115,14 +136,14 @@ public extension Color {
   static let lociPlatinum = dynamic(light: 0x508C9B, dark: 0x94C7D1)
 
   // MARK: - Muse chat tokens (apps/_reviews/muse-chat-contract.md)
-  /// Chat canvas: #101A16 dark, lociPaper light.
-  static let museCanvas = dynamic(light: 0xF5F0E6, dark: 0x101A16)
-  /// Agent bubble: #162019 dark, lociCard light.
-  static let museAgentBubble = dynamic(light: 0xFDFBF7, dark: 0x162019)
-  /// User bubble: darkened coral in both schemes.
-  static let museUserBubble = Color(hex: 0xD4845C)
-  /// Ink on the user bubble. Always the dark ink: the light dark-mode ink fails contrast on coral.
-  static let museUserText = Color(hex: 0x1A2E26)
+  /// Chat canvas: the page.
+  static let museCanvas = lociPaper
+  /// Agent bubble: a card.
+  static let museAgentBubble = lociCard
+  /// User bubble: primary, as on the web.
+  static let museUserBubble = lociForest
+  /// Ink on the user bubble: primary's own label colour.
+  static let museUserText = lociOnForest
   /// Header pill, header buttons and the composer field.
   static let musePill = lociMuted
   static let museText = lociInk
@@ -134,11 +155,12 @@ public extension Color {
 // MARK: - Type (NATIVE_DESIGN §2)
 
 public extension Font {
-  /// Fraunces, for destination headlines. Scales with Dynamic Type.
+  /// Outfit, the brand's display face (the wordmark's rounded geometry), for
+  /// headlines and brand moments. Scales with Dynamic Type.
   static func lociDisplay(_ size: CGFloat = 34) -> Font {
-    .custom("Fraunces", size: size, relativeTo: .largeTitle).weight(.semibold)
+    .custom("Outfit", size: size, relativeTo: .largeTitle).weight(.semibold)
   }
-  static func lociTitle(_ size: CGFloat = 24) -> Font { .custom("Fraunces", size: size, relativeTo: .title).weight(.semibold) }
+  static func lociTitle(_ size: CGFloat = 24) -> Font { .custom("Outfit", size: size, relativeTo: .title).weight(.semibold) }
   /// DM Sans, for UI text.
   static func lociHeadline(_ size: CGFloat = 17) -> Font {
     .custom("DM Sans", size: size, relativeTo: .headline).weight(.medium)

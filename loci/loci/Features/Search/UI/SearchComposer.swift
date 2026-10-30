@@ -5,6 +5,7 @@ import SwiftUI
 /// Starting goes through `SearchSessionController`; when the server names the
 /// session, `onStarted` gets the link to push.
 struct SearchComposer: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   var placeholder = "Ask Loci — “3 days in Lisbon with kids”"
   /// Text another control puts in the box (a category chip); cleared once taken.
   var seed: Binding<String>?
@@ -119,7 +120,7 @@ struct SearchComposer: View {
       case .recording:
         Image(systemName: "mic.fill")
           .foregroundStyle(Color.lociCoral)
-          .symbolEffect(.pulse, options: .repeating)
+          .symbolEffect(.pulse, options: .repeating).symbolEffectsRemoved(reduceMotion)
       case .transcribing:
         ProgressView()
       }

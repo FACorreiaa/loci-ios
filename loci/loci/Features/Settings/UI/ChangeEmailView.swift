@@ -24,7 +24,7 @@ struct ChangeEmailView: View {
           SecureField("Current password", text: $password).textContentType(.password)
           TextField("New email address", text: $newEmail)
             .textContentType(.emailAddress).keyboardType(.emailAddress).textInputAutocapitalization(.never).autocorrectionDisabled()
-          if let problem { Text(problem).font(.lociCaption(12)).foregroundStyle(.red) }
+          if let problem { Text(problem).font(.lociCaption(12)).foregroundStyle(Color.lociDestructive) }
         } footer: {
           Text("We will send a confirmation link to the new address.")
         }

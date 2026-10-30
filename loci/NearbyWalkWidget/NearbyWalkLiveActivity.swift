@@ -5,15 +5,15 @@ import WidgetKit
 /// Lock Screen and Dynamic Island for a walk (Near me, or a day stop by stop): steps, distance, how
 /// many places are fenced, and the closest one (or, when following a route,
 /// the place being walked to). The extension cannot see the
-/// app's theme, so the three brand colours are written here (NATIVE_DESIGN §1).
+/// app's theme, so the brand colours are written here (NATIVE_DESIGN §1).
 struct NearbyWalkLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: NearbyWalkAttributes.self) { context in
       LockScreenView(state: context.state, attributes: context.attributes)
-        // The tint is always cream, so `.secondary` must resolve against light.
-        .environment(\.colorScheme, .light)
-        .activityBackgroundTint(Palette.paper)
-        .activitySystemActionForegroundColor(Palette.forest)
+        // The tint is always obsidian, so `.secondary` must resolve against dark.
+        .environment(\.colorScheme, .dark)
+        .activityBackgroundTint(Palette.ground)
+        .activitySystemActionForegroundColor(Palette.primary)
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
@@ -25,20 +25,20 @@ struct NearbyWalkLiveActivity: Widget {
         DynamicIslandExpandedRegion(.bottom) {
           if let destination = context.state.routeText {
             Label(destination, systemImage: "arrow.triangle.turn.up.right.diamond.fill")
-              .font(.subheadline).foregroundStyle(Palette.islandForest).lineLimit(1)
+              .font(.subheadline).foregroundStyle(Palette.holo).lineLimit(1)
           } else if let nearest = context.state.nearestText {
-            Label(nearest, systemImage: "mappin.and.ellipse").font(.subheadline).foregroundStyle(Palette.terracotta).lineLimit(1)
+            Label(nearest, systemImage: "mappin.and.ellipse").font(.subheadline).foregroundStyle(Palette.lantern).lineLimit(1)
           } else {
             Text(context.attributes.title ?? "\(context.state.placesNearby) places within \(context.attributes.radiusKm) km")
               .font(.subheadline).foregroundStyle(.secondary)
           }
         }
       } compactLeading: {
-        Image(systemName: "figure.walk").foregroundStyle(Palette.terracotta)
+        Image(systemName: "figure.walk").foregroundStyle(Palette.lantern)
       } compactTrailing: {
         Text(context.state.steps.formatted(.number)).font(.caption.monospacedDigit()).contentTransition(.numericText())
       } minimal: {
-        Image(systemName: "figure.walk").foregroundStyle(Palette.terracotta)
+        Image(systemName: "figure.walk").foregroundStyle(Palette.lantern)
       }
     }
   }
@@ -51,7 +51,7 @@ private struct LockScreenView: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack {
-        Label(attributes.title ?? "Near me walk", systemImage: "figure.walk").font(.caption.weight(.medium)).foregroundStyle(Palette.forest)
+        Label(attributes.title ?? "Near me walk", systemImage: "figure.walk").font(.caption.weight(.medium)).foregroundStyle(Palette.primary)
         Spacer()
         Text(attributes.startedAt, style: .timer).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
       }
@@ -74,22 +74,27 @@ private struct LockScreenView: View {
       }
       if let destination = state.routeText {
         Label(destination, systemImage: "arrow.triangle.turn.up.right.diamond.fill")
-          .font(.subheadline.weight(.medium)).foregroundStyle(Palette.forest).lineLimit(1)
+          .font(.subheadline.weight(.medium)).foregroundStyle(Palette.primary).lineLimit(1)
       } else if let nearest = state.nearestText {
-        Label(nearest, systemImage: "mappin.and.ellipse").font(.subheadline).foregroundStyle(Palette.terracotta).lineLimit(1)
+        Label(nearest, systemImage: "mappin.and.ellipse").font(.subheadline).foregroundStyle(Palette.lantern).lineLimit(1)
       }
     }
     .padding(16)
   }
 }
 
-/// NATIVE_DESIGN light tokens. The Lock Screen tints the background itself.
-/// The Dynamic Island is always black, so it uses white and `islandForest`
-/// in place of `ink` and `forest`.
+/// NATIVE_DESIGN dark tokens (LociTheme.swift, same sRGB). The Lock Screen is
+/// obsidian like the app's dark-first ground; the Dynamic Island is always
+/// black, so it shares the same light-on-dark colours.
 enum Palette {
-  static let paper = Color(red: 0.961, green: 0.941, blue: 0.902)
-  static let ink = Color(red: 0.102, green: 0.180, blue: 0.149)
-  static let forest = Color(red: 0.129, green: 0.302, blue: 0.235)
-  static let terracotta = Color(red: 0.780, green: 0.420, blue: 0.290)
-  static let islandForest = Color(red: 0.561, green: 0.800, blue: 0.690)
+  /// obsidian
+  static let ground = Color(red: 0.067, green: 0.086, blue: 0.114)
+  /// cream
+  static let ink = Color(red: 0.969, green: 0.945, blue: 0.914)
+  /// signal coral, 6.8:1 on obsidian
+  static let primary = Color(red: 0.957, green: 0.482, blue: 0.365)
+  /// lantern: the nearest place, a discovery
+  static let lantern = Color(red: 0.984, green: 0.733, blue: 0.494)
+  /// holo: the route being walked
+  static let holo = Color(red: 0.478, green: 0.612, blue: 0.761)
 }

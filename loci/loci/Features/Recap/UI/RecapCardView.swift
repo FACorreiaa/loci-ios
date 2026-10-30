@@ -2,18 +2,20 @@ import LociConnectProto
 import SwiftUI
 
 /// The recap's own palette: the traveller's-desk objects keep Loci's brand
-/// colours in both appearances, as on the web and in the shared images.
+/// colours in both appearances, as on the web (`recap.css`, same hex) and in
+/// the shared images.
 enum RecapPalette {
-  static let cream = Color(red: 0xFD / 255, green: 0xF5 / 255, blue: 0xEA / 255)
-  static let ink = Color(red: 0x32 / 255, green: 0x3B / 255, blue: 0x42 / 255)
-  static let coral = Color(red: 0xFA / 255, green: 0x78 / 255, blue: 0x62 / 255)
-  static let coralDeep = Color(red: 0xC6 / 255, green: 0x3C / 255, blue: 0x24 / 255)
-  static let night = Color(red: 0x1F / 255, green: 0x29 / 255, blue: 0x30 / 255)
+  static let cream = Color(red: 0xFB / 255, green: 0xF6 / 255, blue: 0xEF / 255)
+  static let ink = Color(red: 0x15 / 255, green: 0x1B / 255, blue: 0x23 / 255)
+  static let coral = Color(red: 0xF4 / 255, green: 0x7B / 255, blue: 0x5E / 255)
+  static let coralDeep = Color(red: 0xB8 / 255, green: 0x45 / 255, blue: 0x2E / 255)
+  static let night = Color(red: 0x11 / 255, green: 0x16 / 255, blue: 0x1D / 255)
   static let paper = Color(red: 0xFF / 255, green: 0xFD / 255, blue: 0xF9 / 255)
   static let sand = Color(red: 0xEF / 255, green: 0xE3 / 255, blue: 0xD2 / 255)
   static let post = Color(red: 0xE9 / 255, green: 0xDD / 255, blue: 0xCA / 255)
-  static let teal = Color(red: 0x2D / 255, green: 0x6A / 255, blue: 0x6A / 255)
-  static let muted = Color(red: 0x6C / 255, green: 0x64 / 255, blue: 0x58 / 255)
+  /// Holo, the brand's cool partner (web keeps the `--rc-teal` name too).
+  static let teal = Color(red: 0x3F / 255, green: 0x6A / 255, blue: 0x93 / 255)
+  static let muted = Color(red: 0x5B / 255, green: 0x65 / 255, blue: 0x73 / 255)
 }
 
 /// Sizes in hundredths of the card's width, like the web's `cqw`, so a card
@@ -21,8 +23,8 @@ enum RecapPalette {
 struct RecapUnit {
   let u: CGFloat
 
-  func display(_ size: CGFloat, _ weight: Font.Weight = .bold) -> Font { .custom("Fraunces", fixedSize: size * u).weight(weight) }
-  func italic(_ size: CGFloat) -> Font { .custom("Fraunces", fixedSize: size * u).italic() }
+  func display(_ size: CGFloat, _ weight: Font.Weight = .bold) -> Font { .custom("Outfit", fixedSize: size * u).weight(weight) }
+  func italic(_ size: CGFloat) -> Font { .custom("Outfit", fixedSize: size * u).weight(.semibold).italic() }
   func body(_ size: CGFloat, _ weight: Font.Weight = .medium) -> Font { .custom("DM Sans", fixedSize: size * u).weight(weight) }
   func mono(_ size: CGFloat) -> Font { .custom("Space Mono", fixedSize: size * u) }
 }

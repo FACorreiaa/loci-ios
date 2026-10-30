@@ -38,7 +38,7 @@ public struct TripsView: View {
     }
     .overlay {
       if !isLoading, trips.isEmpty {
-        ContentUnavailableView("No trips yet", systemImage: "suitcase", description: Text("Save an itinerary or a compare result and it lands here."))
+        LociEmptyState(title: "No trips yet", message: "Save an itinerary or a compare result and it lands here.")
       }
     }
     .settingsStyle("My trips")

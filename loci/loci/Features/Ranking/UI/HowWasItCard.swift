@@ -28,7 +28,7 @@ struct HowWasItCard: View {
           .labelStyle(.iconOnly).foregroundStyle(Color.lociMutedInk)
       }
       buttons.disabled(busy)
-      if let error { Text(error).font(.lociCaption(12)).foregroundStyle(.red) }
+      if let error { Text(error).font(.lociCaption(12)).foregroundStyle(Color.lociDestructive) }
     }
     .padding(14)
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -90,17 +90,18 @@ struct HowWasItCard: View {
 
 /// The "How was it?" card for whatever is due, over the whole app.
 struct RatePromptOverlay: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Bindable private var prompter = RatePrompter.shared
 
   var body: some View {
     if let pending = prompter.current {
       HowWasItCard(pending: pending) {
-        withAnimation(LociTheme.selectionSettle) { prompter.resolve(poiID: pending.poiID) }
+        withAnimation(reduceMotion ? LociTheme.reducedFade : LociTheme.selectionSettle) { prompter.resolve(poiID: pending.poiID) }
       }
       .id(pending.poiID)
       .padding(.horizontal, 16)
       .padding(.bottom, 64)
-      .transition(.move(edge: .bottom).combined(with: .opacity))
+      .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
     }
   }
 }

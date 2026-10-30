@@ -64,9 +64,9 @@ public struct NotificationSettingsView: View {
   @ViewBuilder private var statusBadge: some View {
     switch notificationManager.authorizationStatus {
     case .authorized, .provisional, .ephemeral:
-      Label("Active", systemImage: "checkmark.circle.fill").font(.caption.weight(.semibold)).foregroundStyle(.green)
-    case .denied: Label("Disabled", systemImage: "xmark.circle.fill").font(.caption.weight(.semibold)).foregroundStyle(.red)
-    case .notDetermined: Label("Not Enabled", systemImage: "questionmark.circle").font(.caption).foregroundStyle(.orange)
+      Label("Active", systemImage: "checkmark.circle.fill").font(.caption.weight(.semibold)).foregroundStyle(Color.lociSuccess)
+    case .denied: Label("Disabled", systemImage: "xmark.circle.fill").font(.caption.weight(.semibold)).foregroundStyle(Color.lociDestructive)
+    case .notDetermined: Label("Not Enabled", systemImage: "questionmark.circle").font(.caption).foregroundStyle(Color.lociLantern)
     @unknown default: EmptyView()
     }
   }

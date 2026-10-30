@@ -26,12 +26,14 @@ public struct ForgotPasswordSheet: View {
           }
 
           if let successMessage {
-            Text(successMessage).font(.subheadline).foregroundStyle(.green).padding().frame(maxWidth: .infinity).background(Color.green.opacity(0.1))
+            Text(successMessage).font(.subheadline).foregroundStyle(Color.lociSuccess).padding().frame(maxWidth: .infinity)
+              .background(Color.lociSuccess.opacity(0.1))
               .clipShape(.rect(cornerRadius: LociTheme.cornerRadius))
           }
 
           if let errorMessage {
-            Text(errorMessage).font(.subheadline).foregroundStyle(.red).padding().frame(maxWidth: .infinity).background(Color.red.opacity(0.1))
+            Text(errorMessage).font(.subheadline).foregroundStyle(Color.lociDestructive).padding().frame(maxWidth: .infinity)
+              .background(Color.lociDestructive.opacity(0.1))
               .clipShape(.rect(cornerRadius: LociTheme.cornerRadius))
           }
 

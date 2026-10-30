@@ -23,7 +23,7 @@ struct RankedPlaceRow: View {
   private var dot: Color {
     switch place.verdict {
     case .loved: .lociForest
-    case .notForMe: .red.opacity(0.7)
+    case .notForMe: Color.lociDestructive.opacity(0.7)
     default: .lociMutedInk
     }
   }

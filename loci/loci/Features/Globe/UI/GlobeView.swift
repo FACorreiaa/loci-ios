@@ -91,8 +91,8 @@ struct GlobeView: View {
     )
   }
 
-  private let arcColor = Color(hex: 0xFA7862)
-  private let selectedArcColor = Color(hex: 0xFFD2C4)
+  private let arcColor = Color(hex: 0xF47B5E)
+  private let selectedArcColor = Color(hex: 0xF8A67F)
 
   var body: some View {
     ZStack {
@@ -151,8 +151,8 @@ struct GlobeView: View {
       }
       if let leg = store.leg(selectedLegID), !leg.label.isEmpty {
         Annotation("", coordinate: GreatCircle.midpoint(from: leg.from, to: leg.to).coordinate, anchor: .bottom) {
-          Text(leg.label).font(.lociCaption(12).weight(.semibold)).monospacedDigit().foregroundStyle(Color(hex: 0xF5EDE1)).padding(.horizontal, 10)
-            .padding(.vertical, 5).background(Color(hex: 0x1B2126), in: Capsule()).overlay(Capsule().strokeBorder(Color(hex: 0x3A444C))).padding(
+          Text(leg.label).font(.lociCaption(12).weight(.semibold)).monospacedDigit().foregroundStyle(Color(hex: 0xF7F2EA)).padding(.horizontal, 10)
+            .padding(.vertical, 5).background(Color(hex: 0x1A212B), in: Capsule()).overlay(Capsule().strokeBorder(Color(hex: 0x2A3441))).padding(
               .bottom,
               6
             ).accessibilityLabel("Selected leg: \(leg.fromName) to \(leg.toName), \(leg.label)")
@@ -233,8 +233,8 @@ private struct CityDot: View {
   var body: some View {
     let diameter = city.nodeRadius * 2
     Button(action: onTap) {
-      Circle().fill(Color(hex: 0x8FA6B5)).overlay {
-        Circle().strokeBorder(isSelected ? Color.white : Color(hex: 0x0E1114), lineWidth: isSelected ? 3 : 1.5)
+      Circle().fill(Color(hex: 0x7A9CC2)).overlay {
+        Circle().strokeBorder(isSelected ? Color.white : Color(hex: 0x11161D), lineWidth: isSelected ? 3 : 1.5)
       }.frame(width: diameter, height: diameter).frame(width: 44, height: 44).contentShape(Circle())
     }.buttonStyle(.plain).accessibilityLabel("\(city.cityName), \(GlobeCallout.visits(city.visitCount))").accessibilityAddTraits(
       isSelected ? .isSelected : []

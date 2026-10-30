@@ -26,7 +26,7 @@ struct ResetPasswordView: View {
           Section("New password") {
             SecureField("New password (8+ characters)", text: $password).textContentType(.newPassword)
             SecureField("Repeat new password", text: $confirm).textContentType(.newPassword)
-            if let problem { Text(problem).font(.lociCaption(12)).foregroundStyle(.red) }
+            if let problem { Text(problem).font(.lociCaption(12)).foregroundStyle(Color.lociDestructive) }
           }
           Section {
             Button(isSaving ? "Saving…" : "Set new password") { Task { await save() } }

@@ -113,7 +113,7 @@
 	<string>phc_xtQKkiev2PEpGZhrLFAYR5cfPLVPuXTx9wXnMF99XmJE</string>
 	<key>UIAppFonts</key>
 	<array>
-		<string>Fraunces.ttf</string>
+		<string>Outfit.ttf</string>
 		<string>DMSans.ttf</string>
 		<string>SpaceMono-Regular.ttf</string>
 		<string>SpaceMono-Bold.ttf</string>
@@ -125,7 +125,12 @@
 		<string>location</string>
 	</array>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+		<key>UIImageName</key>
+		<string>LaunchMark</string>
+	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

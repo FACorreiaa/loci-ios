@@ -7,7 +7,7 @@
   - light and dark colour tokens
   - the map day colours
   - the motion curves
-  - `Font.loci*` for Fraunces, DM Sans and Space Mono, bundled under `Resources/Fonts` with their OFL licences and registered in `UIAppFonts`
+  - `Font.loci*` for Outfit (Fraunces until the 2026-10 rebrand), DM Sans and Space Mono, bundled under `Resources/Fonts` with their OFL licences and registered in `UIAppFonts`
   - `.lociCard()`
 - Deep links: `Core/Routing/AppRouter.swift`. It parses `loci://{itinerary|hotels|restaurants|activities}?sessionId=&cityName=&domain=`, the web routes with the `loci` scheme as host. It ignores `loci://oauth2redirect/*`, which `ASWebAuthenticationSession` owns. Notification taps go through the same parser.
 

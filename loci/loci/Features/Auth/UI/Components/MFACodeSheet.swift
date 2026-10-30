@@ -3,6 +3,7 @@ import SwiftUI
 /// The second-factor step of sign-in. The caller owns the request, so it owns
 /// `isLoading` and `errorMessage` too; the sheet only collects the code.
 public struct MFACodeSheet: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   public let isLoading: Bool
   public let errorMessage: String?
   public let onSubmit: (String, String?) -> Void
@@ -54,7 +55,7 @@ public struct MFACodeSheet: View {
           }
 
           Button {
-            withAnimation { useRecoveryCode.toggle() }
+            withAnimation(reduceMotion ? LociTheme.reducedFade : .default) { useRecoveryCode.toggle() }
           } label: {
             Text(useRecoveryCode ? "Use Authenticator Code instead" : "Use a backup recovery code").font(.footnote.weight(.medium)).foregroundStyle(
               Color.lociCoral
