@@ -97,7 +97,7 @@ struct VisitMatchTests {
     let store = store()
     store.add(visit("1"), now: arrival)
     let recorder = StubVisitRecorder()
-    try await store.confirm(id: "1", recorder: recorder)
+    try await store.confirm(id: "1", recorder: recorder, now: arrival)
     let request = try #require(recorder.sent.first)
     #expect(request.source == .visitEvent)
     #expect(request.tripID == "t1")
@@ -112,7 +112,7 @@ struct VisitMatchTests {
     store.add(visit("1"), now: arrival)
     let recorder = StubVisitRecorder()
     recorder.fails = true
-    await #expect(throws: (any Error).self) { try await store.confirm(id: "1", recorder: recorder) }
+    await #expect(throws: (any Error).self) { try await store.confirm(id: "1", recorder: recorder, now: arrival) }
     #expect(store.all(now: arrival).map(\.id) == ["1"])
   }
 
