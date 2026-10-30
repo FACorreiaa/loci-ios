@@ -256,7 +256,7 @@ loci/loci
 │   │                                Services (ChatStreamClient, ResultsAPI, SearchNotifier); UI (composer, results page)
 │   ├── Settings/                    SettingsClients + one view per web settings tab
 │   └── Trips/                       UI (TripsView, TripEditorView + hero/preferences/export/checklists, TodayBand), Model (TripFormat, TripChecklist, TripExportGate, TripChecklistStore, DayTimeline), Services (TripAPI, TripChecklistService, TripDayActivityController)
-├── Resources/Fonts                  Fraunces, DM Sans, Space Mono (+ OFL licences)
+├── Resources/Fonts                  Outfit, DM Sans, Space Mono (+ OFL licences)
 └── Shared/NearbyWalkAttributes.swift  ActivityAttributes compiled into app and widget
 ```
 
@@ -1261,10 +1261,12 @@ this repo records them working against a configured provider.
 they come from: `loci-client/docs/NATIVE_DESIGN.md`, "change them there first".
 
 **Colours** are `Color.loci*` statics built with a `dynamic(light:dark:)`
-helper over a `UIColor` trait closure, so dark mode is free everywhere:
+helper over a `UIColor` trait closure, so dark mode is free everywhere. Since
+the "Explore your way" rebrand (2026-10) the values are obsidian / cream /
+signal coral, the same sRGB as web `themes.css`:
 
 ```swift
-// loci/loci/Core/Theme/LociTheme.swift:62
+// loci/loci/Core/Theme/LociTheme.swift:64
   nonisolated private static func dynamic(light: UInt32, dark: UInt32) -> Color {
     Color(
       UIColor { trait in
@@ -1272,31 +1274,42 @@ helper over a `UIColor` trait closure, so dark mode is free everywhere:
 ```
 
 ```swift
-// loci/loci/Core/Theme/LociTheme.swift:78
-  static let lociPaper = dynamic(light: 0xF5F0E6, dark: 0x101A16)
-  /// foreground
-  static let lociInk = dynamic(light: 0x1A2E26, dark: 0xEDE8DC)
-  /// card
-  static let lociCard = dynamic(light: 0xFDFBF7, dark: 0x162019)
-  /// primary
-  static let lociForest = dynamic(light: 0x214D3C, dark: 0xA8B896)
+// loci/loci/Core/Theme/LociTheme.swift:84
+  static let lociPaper = dynamic(light: 0xFBF6EF, dark: 0x11161D)
+  /// foreground: ink / cream
+  static let lociInk = dynamic(light: 0x151B23, dark: 0xF7F1E9)
+  /// card: white / graphite
+  static let lociCard = dynamic(light: 0xFFFFFF, dark: 0x1B222D)
 ```
 
-Where NATIVE_DESIGN gives no dark value (`muted`, `mutedForeground`,
-`destructive`) the comment says which source the dark value came from.
+The old names (`lociPaper`, `lociInk`, `lociForest`, `lociSage`, `lociCoral`)
+were kept on purpose: they carry the new values, so call sites and branches in
+flight did not have to change in the same PR. `lociForest` *is* primary now —
+deep coral `#B8452E` on light, bright coral `#F47B5D` on dark — and new code
+should say `lociPrimary` / `lociOnPrimary` / `lociPrimaryFill`, which point at
+it. `lociLantern` (warm: discovery, achievements), `lociHolo` (cool: info,
+routes) and `lociSuccess` are new. Every pair's contrast is in the doc
+comments; bright coral never carries a white label (2.5:1).
+
+The app icon has any / dark / tinted variants; the launch screen is
+`LaunchBackground` (obsidian) with `LaunchMark`. The Live Activities copy the
+dark tokens into their own `Palette` because the extension cannot see the
+app's theme.
 
 **Fonts** are bundled (`Resources/Fonts`, listed in `UIAppFonts`) and exposed
 as `Font.loci*` functions that scale with Dynamic Type through `relativeTo:`:
 
 ```swift
-// loci/loci/Core/Theme/LociTheme.swift:119
+// loci/loci/Core/Theme/LociTheme.swift:160
   static func lociDisplay(_ size: CGFloat = 34) -> Font {
-    .custom("Fraunces", size: size, relativeTo: .largeTitle).weight(.semibold)
+    .custom("Outfit", size: size, relativeTo: .largeTitle).weight(.semibold)
   }
 ```
 
-`lociTitle` (Fraunces), `lociHeadline`, `lociBody`, `lociCaption` (DM Sans)
-and `lociCoord` (Space Mono) follow the same shape (lines 117-125).
+`lociTitle` (Outfit), `lociHeadline`, `lociBody`, `lociCaption` (DM Sans)
+and `lociCoord` (Space Mono) follow the same shape. Outfit is one variable
+file whose default instance is **Thin**: a `.custom("Outfit", …)` without a
+`.weight` renders hairline, so always pass one.
 
 **Radii, motion, day palette.** `cornerRadius` 12.8, `cornerRadiusHero` 14.4,
 `minTapTarget` 44, `defaultPadding` 16. The animations are named after
@@ -1316,7 +1329,7 @@ uses:
   /// and the same indexing: the server's 1-based day picks `dayColors[day % 8]`,
   /// so Day 1 is pine teal on both, and a one-day list (day 0) is coral.
   public static let dayColors: [Color] = [0xE2664A, 0x2F7D6E, 0xB07A2A, 0x7A5CA8, 0x4A7CB0, 0x8C6248, 0x5E8C3A, 0xA34F72].map { Color(hex: $0) }
-  public static let clusterColor = Color(hex: 0x294D3C)
+  public static let clusterColor = Color(hex: 0xAE3722)
   public static let ungroupedColor = Color(hex: 0x6E7A82)
 
   public static func dayColor(_ day: Int) -> Color { dayColors[max(day, 0) % dayColors.count] }
@@ -1354,8 +1367,18 @@ at 5 pt inset) plus `Color.muse*` tokens mapped from the contract's table
 **Reduce Motion** is read with `@Environment(\.accessibilityReduceMotion)`
 in every animated view and swaps to `reducedFade` or `.identity`: result
 arrival, the celebration scale, the ring (static stroke), the marquee (plain
-scroll), chip press scale (off). The contract's "no float or bob" is met by
-the avatar never moving.
+scroll), chip press scale (off), expanding cards, the rate prompt's slide,
+walk/route phase changes, and repeating SF Symbol effects
+(`.symbolEffectsRemoved(reduceMotion)`). The contract's "no float or bob" is
+met by the avatar never moving.
+
+**Mascot.** `MascotView(state:width:decorative:idle:)` in
+`Core/Theme/MascotView.swift`; the states match web's `Mascot.tsx`. Every state
+falls back to `LociMascot` until its pose is approved. It is decorative by
+default (the sentence beside it carries the meaning), and its `idle` bob is off
+under Reduce Motion. `LociEmptyState` wraps `ContentUnavailableView` with it
+for the moments that earn a character (saved, trips, lists, recents, search
+not found); other empty states keep an SF Symbol.
 
 **DesignPreview.** Launching a Debug build with `-designPreview <case>` shows
 one component with sample data and no account; `lociApp` checks it before

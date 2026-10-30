@@ -10,6 +10,7 @@ import SwiftUI
 /// only the small pieces that show it read it: the header, the "Running now"
 /// row, the empty state and the flash tracker. This body never does.
 struct AssistantView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   private let router = AppRouter.shared
   private let controller = SearchSessionController.shared
   @State private var path: [SessionLink] = []
@@ -71,7 +72,7 @@ struct AssistantView: View {
   private func scrollToTop(_ proxy: ScrollViewProxy) {
     let target: String? = controller.state.isActive && controller.state.link != nil ? Self.topRow : sessions.first?.id
     guard let target else { return }
-    withAnimation(LociTheme.selectionSettle) { proxy.scrollTo(target, anchor: .top) }
+    withAnimation(reduceMotion ? nil : LociTheme.selectionSettle) { proxy.scrollTo(target, anchor: .top) }
   }
 
   /// "New chat" from a results page: back to this root, then the cursor in the

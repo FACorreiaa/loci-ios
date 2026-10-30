@@ -83,9 +83,9 @@ struct SavedView: View {
       .background(Color.lociPaper.ignoresSafeArea())
       .overlay {
         if !isLoading, segment == .places, favorites.isEmpty {
-          ContentUnavailableView("No saved places", systemImage: "heart", description: Text("Save a place from any result and it lands here."))
+          LociEmptyState(title: "No saved places", message: "Save a place from any result and it lands here.")
         } else if !isLoading, segment == .itineraries, itineraries.isEmpty {
-          ContentUnavailableView("No saved itineraries", systemImage: "bookmark", description: Text("Save an itinerary from its page."))
+          LociEmptyState(title: "No saved itineraries", message: "Save an itinerary from its page.")
         }
       }
       .navigationTitle("Saved")

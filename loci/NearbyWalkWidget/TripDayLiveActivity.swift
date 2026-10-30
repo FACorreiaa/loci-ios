@@ -8,9 +8,9 @@ struct TripDayLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: TripDayAttributes.self) { context in
       TripDayLockScreen(state: context.state, attributes: context.attributes)
-        .environment(\.colorScheme, .light)
-        .activityBackgroundTint(Palette.paper)
-        .activitySystemActionForegroundColor(Palette.forest)
+        .environment(\.colorScheme, .dark)
+        .activityBackgroundTint(Palette.ground)
+        .activitySystemActionForegroundColor(Palette.primary)
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
@@ -21,17 +21,17 @@ struct TripDayLiveActivity: Widget {
         }
         DynamicIslandExpandedRegion(.bottom) {
           if let next = context.state.nextText {
-            Label(next, systemImage: "arrow.turn.down.right").font(.subheadline).foregroundStyle(Palette.terracotta).lineLimit(1)
+            Label(next, systemImage: "arrow.turn.down.right").font(.subheadline).foregroundStyle(Palette.lantern).lineLimit(1)
           } else {
             Text(context.state.phase == .done ? "Day complete" : "Last stop of the day").font(.subheadline).foregroundStyle(.secondary)
           }
         }
       } compactLeading: {
-        Image(systemName: "mappin.and.ellipse").foregroundStyle(Palette.terracotta)
+        Image(systemName: "mappin.and.ellipse").foregroundStyle(Palette.lantern)
       } compactTrailing: {
         TripDayCountdown(state: context.state).font(.caption.monospacedDigit())
       } minimal: {
-        Image(systemName: "mappin.and.ellipse").foregroundStyle(Palette.terracotta)
+        Image(systemName: "mappin.and.ellipse").foregroundStyle(Palette.lantern)
       }
     }
   }
@@ -58,7 +58,7 @@ private struct TripDayLockScreen: View {
     VStack(alignment: .leading, spacing: 8) {
       HStack {
         Label("Day in \(attributes.cityName) · \(state.progressText(of: attributes.stopCount))", systemImage: "suitcase")
-          .font(.caption.weight(.medium)).foregroundStyle(Palette.forest)
+          .font(.caption.weight(.medium)).foregroundStyle(Palette.primary)
         Spacer()
         if state.phase != .done {
           TripDayCountdown(state: state).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
@@ -66,7 +66,7 @@ private struct TripDayLockScreen: View {
       }
       Text(state.phase == .done ? "Day complete" : state.currentName).font(.title3.weight(.semibold)).foregroundStyle(Palette.ink).lineLimit(1)
       if let next = state.nextText {
-        Label(next, systemImage: "arrow.turn.down.right").font(.subheadline).foregroundStyle(Palette.terracotta).lineLimit(1)
+        Label(next, systemImage: "arrow.turn.down.right").font(.subheadline).foregroundStyle(Palette.lantern).lineLimit(1)
       }
     }
     .padding(16)

@@ -116,11 +116,10 @@ private struct ListsChrome: ViewModifier {
       }
     case .loaded where store.visible.isEmpty:
       // Web's copy, per tab.
-      ContentUnavailableView {
-        Label(store.tab.emptyTitle, systemImage: "folder.badge.plus")
-      } description: {
-        Text("Create your first list to start organizing your favorite places and travel plans.")
-      } actions: {
+      LociEmptyState(
+        title: store.tab.emptyTitle,
+        message: "Create your first list to start organizing your favorite places and travel plans."
+      ) {
         Button("Create a list", systemImage: "plus") { store.editor = .new }
           .lociProminentButton()
       }

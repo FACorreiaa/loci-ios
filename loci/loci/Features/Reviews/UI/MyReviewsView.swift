@@ -113,6 +113,7 @@ struct MyReviewsView: View {
 /// Contribute › Your reports: the row's own name first, then the stored place
 /// from GetPOI (the saved-place pattern).
 struct ReviewedPlaceView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let poiID: String
   let placeName: String
   @State private var stop: Loci_Poi_POIDetailedInfo
@@ -140,7 +141,7 @@ struct ReviewedPlaceView: View {
         if !ResultsSideData.isOffline, var richer = await ReviewsAPI.place(poiID: poiID) {
           richer.id = poiID
           if richer.name.isEmpty { richer.name = placeName }
-          withAnimation(.smooth) { stop = richer }
+          withAnimation(reduceMotion ? LociTheme.reducedFade : .smooth) { stop = richer }
         }
         loading = false
       }

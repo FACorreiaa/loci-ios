@@ -160,6 +160,7 @@ struct ReviewComposer: View {
 
 /// Tap a star to rate; the label under it is web's word for that rating.
 struct StarPicker: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Binding var rating: Int
   @ScaledMetric(relativeTo: .title) private var starSize = 30.0
 
@@ -173,7 +174,7 @@ struct StarPicker: View {
             Image(systemName: star <= rating ? "star.fill" : "star")
               .font(.system(size: starSize, weight: .medium))
               .foregroundStyle(star <= rating ? Color.lociCoral : Color.lociBorder)
-              .symbolEffect(.bounce, value: rating == star)
+              .symbolEffect(.bounce, value: rating == star).symbolEffectsRemoved(reduceMotion)
               .frame(minWidth: 44, minHeight: 44)
           }
           .buttonStyle(.plain)

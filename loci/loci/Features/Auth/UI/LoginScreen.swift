@@ -44,11 +44,14 @@ public struct LoginScreen: View {
 
   @ViewBuilder private var headerView: some View {
     VStack(spacing: 12) {
-      Image(decorative: "LociMascot").resizable().scaledToFit().frame(width: 96, height: 96).padding(.top, 16)
+      // The lockup carries the name and "Explore your way"; its letters are
+      // drawn, so VoiceOver gets them from the label.
+      Image("LociLockup").resizable().scaledToFit().frame(height: 132).padding(.top, 16)
+        .accessibilityLabel("Loci. Explore your way.")
+        .accessibilityAddTraits(.isHeader)
 
-      Text("Loci").font(.lociDisplay(34)).foregroundStyle(Color.lociInk)
-
-      Text("Explore cities with friends").font(.lociBody(15)).foregroundStyle(Color.lociMutedInk)
+      Text("Plan a trip in one sentence, walk it stop by stop.").font(.lociBody(15)).foregroundStyle(Color.lociMutedInk)
+        .multilineTextAlignment(.center)
     }
   }
 

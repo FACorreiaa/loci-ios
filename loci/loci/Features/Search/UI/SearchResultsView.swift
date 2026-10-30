@@ -211,11 +211,11 @@ struct SearchResultsView: View {
   }
 
   private var unavailable: some View {
-    ContentUnavailableView {
-      Label("Search not found", systemImage: "magnifyingglass")
-    } description: {
-      Text("This search finished on another device or has expired.")
-    } actions: {
+    LociEmptyState(
+      title: "Search not found",
+      message: "This search finished on another device or has expired.",
+      mascot: .searching
+    ) {
       if let message = rerunMessage, !message.isEmpty {
         Button("Run it again") { Task { await runAgain(message) } }
           .lociProminentButton()

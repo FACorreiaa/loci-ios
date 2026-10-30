@@ -4,6 +4,7 @@ import SwiftUI
 /// and verdict lead; the factors fold under a tap so the number is never the
 /// only thing on screen for long.
 struct GoScoreCard: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let model: GoScoreModel
   var cityName = ""
   @State private var expanded = false
@@ -11,7 +12,7 @@ struct GoScoreCard: View {
   private var tint: Color {
     switch model.tone {
     case .go: Color.lociForest
-    case .skip: Color.red
+    case .skip: Color.lociDestructive
     case .maybe: Color.lociInk
     }
   }
@@ -19,7 +20,7 @@ struct GoScoreCard: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
       Button {
-        withAnimation(.snappy) { expanded.toggle() }
+        withAnimation(reduceMotion ? LociTheme.reducedFade : .snappy) { expanded.toggle() }
       } label: {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
           VStack(alignment: .leading, spacing: 2) {
@@ -61,7 +62,7 @@ struct GoScoreCard: View {
       HStack {
         Text(row.label).font(.lociCaption(13).weight(.medium)).foregroundStyle(Color.lociInk)
         Spacer()
-        Text(row.valueText).font(.lociCaption(12)).monospacedDigit().foregroundStyle(row.isNegative ? Color.red : Color.lociMutedInk)
+        Text(row.valueText).font(.lociCaption(12)).monospacedDigit().foregroundStyle(row.isNegative ? Color.lociDestructive : Color.lociMutedInk)
       }
       if let share = row.share {
         GeometryReader { geo in

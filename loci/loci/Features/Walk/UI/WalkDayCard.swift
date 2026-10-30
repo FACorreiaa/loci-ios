@@ -4,6 +4,7 @@ import SwiftUI
 /// The card under the map: where you're walking to, where you are, or the
 /// day's tally.
 struct WalkDayCard: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let walk: StopWalk
   let withoutLocation: Int
   /// True while the first fix and route are being fetched.
@@ -45,7 +46,7 @@ struct WalkDayCard: View {
     .background(Color.lociPaper, in: .rect(cornerRadius: 20))
     .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
     .padding(.horizontal, 12)
-    .animation(LociTheme.selectionSettle, value: walk.phase)
+    .animation(reduceMotion ? LociTheme.reducedFade : LociTheme.selectionSettle, value: walk.phase)
   }
 
   private var stopName: String { walk.stops.indices.contains(walk.index) ? walk.stops[walk.index].name : "" }

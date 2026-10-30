@@ -6,6 +6,7 @@ import SwiftUI
 /// length and time, Go, and Open in Maps; while following, what is left and
 /// End; on arrival, a word and Done.
 struct RouteCard: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let navigator: WalkNavigator
   let steps: String?
   let canGo: Bool
@@ -53,7 +54,7 @@ struct RouteCard: View {
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
     .background(Color.lociSage.opacity(0.5))
-    .animation(LociTheme.selectionSettle, value: navigator.isNavigating)
+    .animation(reduceMotion ? LociTheme.reducedFade : LociTheme.selectionSettle, value: navigator.isNavigating)
   }
 
   private var summary: String {

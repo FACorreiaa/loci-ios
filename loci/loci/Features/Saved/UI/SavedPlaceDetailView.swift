@@ -5,6 +5,7 @@ import SwiftUI
 /// favourite kept and fills in from the server when there is more; a place the
 /// server knows nothing about still opens, with its name, pin and note.
 struct SavedPlaceDetailView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let item: Loci_Favorites_V1_FavoriteItem
   var onSavedChange: ((Bool) -> Void)?
 
@@ -36,7 +37,7 @@ struct SavedPlaceDetailView: View {
     }
     .task(id: item.id) {
       if let richer = await SavedPlaceAPI.enrich(item, base: SavedPlace.snapshot(item)) {
-        withAnimation(.smooth) { stop = richer }
+        withAnimation(reduceMotion ? LociTheme.reducedFade : .smooth) { stop = richer }
       }
       enriching = false
     }

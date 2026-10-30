@@ -89,7 +89,7 @@ struct HereBriefSection: View {
       let severe = alert.severity >= 0.6
       Label(alert.title, systemImage: severe ? "exclamationmark.octagon.fill" : "exclamationmark.triangle")
         .font(.lociCaption(13))
-        .foregroundStyle(severe ? Color.red : Color.lociInk)
+        .foregroundStyle(severe ? Color.lociDestructive : Color.lociInk)
     }
   }
 

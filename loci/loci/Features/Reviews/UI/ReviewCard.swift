@@ -4,6 +4,7 @@ import SwiftUI
 /// folded at 200 characters with "Read more", the visit month, and either a
 /// helpful vote or, for your own, Edit / Delete.
 struct ReviewCard: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let review: LociReview
   var vote: HelpfulVote?
   var isOwn = false
@@ -85,7 +86,7 @@ struct ReviewCard: View {
         .font(.lociBody(15)).foregroundStyle(Color.lociInk)
         .fixedSize(horizontal: false, vertical: true)
       if folds, isInteractive {
-        Button(expanded ? "Show less" : "Read more") { withAnimation(.smooth) { expanded.toggle() } }
+        Button(expanded ? "Show less" : "Read more") { withAnimation(reduceMotion ? LociTheme.reducedFade : .smooth) { expanded.toggle() } }
           .font(.lociCaption(13).weight(.semibold))
           .foregroundStyle(Color.lociForest)
           .buttonStyle(.plain)
