@@ -352,11 +352,6 @@ struct TripEditorView: View {
   private var canEdit: Bool { isOwner && isConfirmed }
 
   /// A co-planner's adds, swaps, moves and removals go to the owner as suggestions.
-  /// Applying suggestions: the owner, or a co-planner the owner lets apply.
-  private var mayApply: Bool {
-    isOwner || trip?.viewerRole == .coPlanner && trip?.coPlannersMayApply == true
-  }
-
   private var canSuggest: Bool { trip?.viewerRole == .coPlanner && isConfirmed }
 
   private var canChange: Bool { canEdit || canSuggest }
@@ -603,6 +598,11 @@ struct TripEditorView: View {
 // MARK: - Comments (planning together)
 
 extension TripEditorView {
+  /// Applying suggestions: the owner, or a co-planner the owner lets apply.
+  private var mayApply: Bool {
+    isOwner || trip?.viewerRole == .coPlanner && trip?.coPlannersMayApply == true
+  }
+
   /// A trip someone else is on: a member's view, or an owner with members.
   private func isShared(_ trip: Loci_Trip_TripDraft) -> Bool { !isOwner || !trip.members.isEmpty }
 
