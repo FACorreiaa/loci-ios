@@ -2,12 +2,15 @@ import LociConnectProto
 import SwiftUI
 
 /// A shared trip's open suggestions (web: components/trip/TripProposals.tsx).
-/// Everyone on the trip reacts; the owner applies or turns one down; whoever
-/// suggested one can take it back. The page owns the network: each action is
+/// Everyone on the trip reacts; the owner applies or turns one down (a
+/// co-planner applies too when the owner lets them); whoever suggested one
+/// can take it back. The page owns the network: each action is
 /// a closure that answers with the error to show, if any.
 struct TripProposalsSection: View {
   let proposals: [Loci_Chat_ActionProposal]
   let isOwner: Bool
+  /// The owner, or a co-planner the owner lets apply.
+  let mayApply: Bool
   let currentUserID: String?
   /// The trip is loaded and confirmed by the server, so Apply has a version.
   let canApply: Bool
@@ -42,7 +45,7 @@ struct TripProposalsSection: View {
         reaction(p, value: 1, count: p.upVotes, symbol: "hand.thumbsup", busy: busy)
         reaction(p, value: -1, count: p.downVotes, symbol: "hand.thumbsdown", busy: busy)
         Spacer()
-        if isOwner, !Self.needsPick(p) {
+        if mayApply, !Self.needsPick(p) {
           Button(busy ? "Applying…" : "Apply") { run(p) { await onApply(p) } }
             .buttonStyle(.borderedProminent).tint(.lociCoralFill).controlSize(.small)
             .disabled(busy || !canApply)

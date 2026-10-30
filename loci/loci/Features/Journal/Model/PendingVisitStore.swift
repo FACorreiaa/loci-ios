@@ -121,7 +121,7 @@ nonisolated struct PendingVisitStore: @unchecked Sendable {
     all(now: now).filter { $0.tripID == tripID }.sorted { $0.arrival < $1.arrival }
   }
 
-  func visit(id: String) -> PendingVisit? { all().first { $0.id == id } }
+  func visit(id: String, now: Date = Date()) -> PendingVisit? { all(now: now).first { $0.id == id } }
 
   /// Keeps the visit unless the same place is already waiting for that day.
   @discardableResult func add(_ visit: PendingVisit, now: Date = Date()) -> Bool {
@@ -138,8 +138,8 @@ nonisolated struct PendingVisitStore: @unchecked Sendable {
   func dismiss(id: String) { save(all().filter { $0.id != id }) }
 
   /// Records the visit, then forgets it. A failure keeps it for another try.
-  func confirm(id: String, recorder: any VisitRecorder = ConnectVisitRecorder()) async throws {
-    guard let visit = visit(id: id) else { return }
+  func confirm(id: String, recorder: any VisitRecorder = ConnectVisitRecorder(), now: Date = Date()) async throws {
+    guard let visit = visit(id: id, now: now) else { return }
     try await recorder.record(visit.request)
     dismiss(id: id)
   }
