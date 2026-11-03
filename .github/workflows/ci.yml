@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main ]
 
+# A newer push to the same PR makes the older run moot; main keeps every run.
+concurrency:
+  group: ios-ci-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lint:
     name: SwiftLint
@@ -29,11 +34,21 @@ jobs:
   test:
     name: Build and Test
     runs-on: macos-15
-    timeout-minutes: 45 # a cold build plus the suite runs 27–30 min
+    timeout-minutes: 45
 
     defaults:
       run:
         working-directory: loci
+
+    env:
+      # One fixed DerivedData and SwiftPM checkout location for every step, so
+      # the app is compiled exactly once (build-for-testing) and the test step
+      # reuses it (test-without-building). Before, a plain build targeted the
+      # generic simulator (~14.5 min) and `fastlane test` then recompiled
+      # everything for the concrete device (~16 min incl. tests). Same fix as
+      # norviq-ios #140. The `test` lane stays for local use.
+      DERIVED_DATA: ${{ github.workspace }}/build/DerivedData
+      SPM_DIR: ${{ github.workspace }}/build/SourcePackages
 
     steps:
       - name: Checkout repository
@@ -56,46 +71,79 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.3"
-          bundler-cache: true
-          working-directory: loci
-
-      - name: Cache derived data
+      # Only the SwiftPM checkouts are cached. DerivedData is deliberately not:
+      # checkout gives every source a fresh mtime, so Xcode recompiles all of it
+      # regardless, and restoring a multi-GB cache costs more than it saves
+      # (measured on norviq-ios). The old DerivedData key hashed
+      # contents.xcworkspacedata, which never changes, so it restored the same
+      # stale snapshot on every run.
+      - name: Cache SwiftPM checkouts
         uses: actions/cache@v4
         with:
-          path: ~/Library/Developer/Xcode/DerivedData
-          key: ${{ runner.os }}-derived-data-${{ hashFiles('loci/loci.xcodeproj/project.xcworkspace/contents.xcworkspacedata') }}
+          path: build/SourcePackages
+          key: ${{ runner.os }}-spm-${{ hashFiles('loci/loci.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
-            ${{ runner.os }}-derived-data-
-
-      - name: Cache SwiftPM repositories
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Library/Caches/org.swift.swiftpm
-            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
-          key: ${{ runner.os }}-swiftpm-${{ hashFiles('**/Package.resolved') }}
-          restore-keys: |
-            ${{ runner.os }}-swiftpm-
+            ${{ runner.os }}-spm-
 
       - name: Resolve Package Dependencies
         run: |
           set -euo pipefail
           for i in 1 2 3; do
-            xcodebuild -project loci.xcodeproj -scheme "loci Beta" -resolvePackageDependencies && break
+            xcodebuild -project loci.xcodeproj -scheme "loci Beta" \
+              -clonedSourcePackagesDirPath "$SPM_DIR" \
+              -resolvePackageDependencies && break
             echo "Resolve attempt $i failed; retrying in 15s..."
             sleep 15
           done
 
-      - name: Build (no tests) to surface Swift compile errors
+      # Ask xcodebuild, not simctl: it lists only simulators whose runtime meets
+      # the deployment target.
+      - name: Resolve a simulator
+        id: sim
         run: |
-          xcodebuild build \
+          set -euo pipefail
+          destinations="$(xcodebuild -project loci.xcodeproj -scheme "loci Beta" -showdestinations \
+            -clonedSourcePackagesDirPath "$SPM_DIR" 2>/dev/null)"
+          line="$(grep -E 'platform:iOS Simulator, arch:arm64, id:[0-9A-F-]{36}, OS:[0-9.]+, name:iPhone' <<<"$destinations" | tail -1 || true)"
+          if [ -z "$line" ]; then
+            echo "::error::No iPhone simulator meets the deployment target. Available destinations:"
+            echo "$destinations" | sed -n '1,60p'
+            exit 1
+          fi
+          udid="$(grep -oE 'id:[0-9A-F-]{36}' <<<"$line" | cut -d: -f2)"
+          echo "Using simulator: $(grep -oE 'name:[^}]+' <<<"$line" | cut -d: -f2) iOS $(grep -oE 'OS:[0-9.]+' <<<"$line" | cut -d: -f2) ($udid)"
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+
+      # Compiles the app and lociTests once, for the simulator the tests run on.
+      # A compile error fails here, before the test step.
+      - name: Build for testing
+        run: |
+          xcodebuild build-for-testing \
             -project loci.xcodeproj \
             -scheme "loci Beta" \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -clonedSourcePackagesDirPath "$SPM_DIR" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
             -quiet
 
       - name: Run Unit Tests
-        run: bundle exec fastlane test
+        run: |
+          xcodebuild test-without-building \
+            -project loci.xcodeproj \
+            -scheme "loci Beta" \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -clonedSourcePackagesDirPath "$SPM_DIR" \
+            -only-testing:lociTests \
+            -resultBundlePath "$GITHUB_WORKSPACE/build/TestResults.xcresult" \
+            -quiet
+
+      - name: Upload Test Results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/TestResults.xcresult
+          if-no-files-found: ignore
+          retention-days: 7
