@@ -177,8 +177,13 @@ struct ResultsPage: View {
     }
     if !state.isActive, !groups.isEmpty {
       TripKitView(
-        groups: groups, cityName: cityName, title: title, summary: summary, side: side,
-        sessionID: state.sessionId, tripID: state.savedTripID
+        groups: groups,
+        cityName: cityName,
+        title: title,
+        summary: summary,
+        side: side,
+        sessionID: state.sessionId,
+        tripID: state.savedTripID
       )
       .id(Anchor.kit)
     }

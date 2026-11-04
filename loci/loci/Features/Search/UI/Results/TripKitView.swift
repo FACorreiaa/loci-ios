@@ -81,6 +81,7 @@ struct TripKitView: View {
 
   private var firstDay: Date { date(at: 0) }
   private var lastDay: Date { date(at: max(unlocked.count - 1, 0)) }
+
   private func date(at index: Int) -> Date { TripDateRange.date(ofDay: index, start: startDate) }
   private func dayNumber(at index: Int) -> Int { unlocked.indices.contains(index) ? unlocked[index].number : index + 1 }
 
