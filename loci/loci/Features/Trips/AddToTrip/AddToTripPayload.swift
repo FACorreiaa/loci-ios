@@ -6,6 +6,7 @@ import SwiftProtobuf
 /// can be tested (web: lib/api/trips.ts useTrips / useAddStop / useSaveTrip).
 nonisolated enum AddToTripPayload {
   /// web: useTrips → ListTrips{page 1, pageSize 50}, the same page TripsView asks for.
+  /// The server rejects a ListTrips with no pagination, so Calendar sends this too.
   static func listTrips() -> Loci_Trip_ListTripsRequest {
     var request = Loci_Trip_ListTripsRequest()
     request.pagination.page = 1
