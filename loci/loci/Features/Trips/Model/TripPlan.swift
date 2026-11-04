@@ -54,6 +54,15 @@ nonisolated enum TripPlan {
     return (start, end)
   }
 
+  /// What the pickers offer a trip with no dates yet: its pinned first day,
+  /// else tomorrow, and as many days as it has, so saving them unchanged can't
+  /// write an end date before the plan's last day.
+  static func suggestedDates(of trip: Loci_Trip_TripDraft, now: Date = Date(), calendar: Calendar = .current) -> (start: Date, end: Date) {
+    let start = CalendarSchedule.pinnedStart(of: trip, calendar: calendar) ?? CalendarSchedule.defaultStartDate(now: now, calendar: calendar)
+    let end = calendar.date(byAdding: .day, value: max(trip.days.count - 1, 0), to: start) ?? start
+    return (start, end)
+  }
+
   /// A new flight search departs on the trip's first day, else today.
   @MainActor static func defaultDeparture(of trip: Loci_Trip_TripDraft, today: Date) -> String {
     trip.hasStartDate && !trip.startDate.isEmpty ? trip.startDate : CalendarMath.dateKey(today)

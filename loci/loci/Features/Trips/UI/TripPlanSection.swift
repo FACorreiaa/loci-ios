@@ -33,15 +33,14 @@ struct TripPlanSection: View {
     }
     // Keyed on the dates, not onAppear: a change applied from the planner or a
     // reload after a conflict must reach the pickers, or "Save dates" would put
-    // the old ones back.
-    .task(id: "\(trip.startDate)|\(trip.endDate)") { seedDates() }
+    // the old ones back. The day count too: it sets an undated trip's end.
+    .task(id: "\(trip.startDate)|\(trip.endDate)|\(trip.days.count)") { seedDates() }
   }
 
   private func seedDates() {
-    if let range = TripPlan.dates(of: trip) {
-      start = range.start
-      end = range.end
-    }
+    let range = TripPlan.dates(of: trip) ?? TripPlan.suggestedDates(of: trip)
+    start = range.start
+    end = range.end
     // The Departs picker shows a date, so the search must hold one too, or
     // "Search flights" stays disabled under a form that looks complete.
     if search.departDate.isEmpty { search.departDate = TripPlan.defaultDeparture(of: trip, today: Date()) }

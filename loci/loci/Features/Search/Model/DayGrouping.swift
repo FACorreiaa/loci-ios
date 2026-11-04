@@ -146,6 +146,9 @@ nonisolated struct StopEvent: Equatable, Sendable {
   let end: Date
   let location: String
   let notes: String
+  /// The label of the day it belongs to, which is how a later export of the
+  /// same day finds and replaces it.
+  var dayNumber = 1
 }
 
 nonisolated enum CalendarSchedule {
@@ -180,7 +183,9 @@ nonisolated enum CalendarSchedule {
         }
         let blurb = stop.hasDescriptionPoi ? stop.descriptionPoi : stop.description_p
         let notes = [blurb, stop.category].filter { !$0.isEmpty }.joined(separator: " · ")
-        events.append(StopEvent(title: stop.name, start: cursor, end: end, location: location, notes: notes.isEmpty ? summary : notes))
+        events.append(
+          StopEvent(title: stop.name, start: cursor, end: end, location: location, notes: notes.isEmpty ? summary : notes, dayNumber: group.number)
+        )
         cursor = end.addingTimeInterval(TimeInterval(bufferMinutes * 60))
       }
     }
@@ -196,6 +201,75 @@ nonisolated enum CalendarSchedule {
   /// Web's default: tomorrow.
   static func defaultStartDate(now: Date = Date(), calendar: Calendar = .current) -> Date {
     calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
+  }
+
+  /// What an exported stop carries so exporting its day again replaces it. A
+  /// real itinerary link, so tapping it in Calendar opens the itinerary.
+  static func dayLink(sessionID: String, dayNumber: Int) -> URL? {
+    guard !sessionID.isEmpty else { return nil }
+    var components = URLComponents()
+    components.scheme = "loci"
+    components.host = SearchDestination.itinerary.rawValue
+    components.queryItems = [URLQueryItem(name: "sessionId", value: sessionID), URLQueryItem(name: "day", value: String(dayNumber))]
+    return components.url
+  }
+
+  /// Day 1's date for a trip whose days are pinned: the first dated day, walked
+  /// back by its number. nil for a relative "Day N" plan.
+  static func pinnedStart(of trip: Loci_Trip_TripDraft, calendar: Calendar = .current) -> Date? {
+    for day in trip.days {
+      guard let midnight = DayTimeline.localMidnight(of: day, calendar: calendar) else { continue }
+      return calendar.date(byAdding: .day, value: 1 - Int(day.dayNumber), to: midnight)
+    }
+    return nil
+  }
+}
+
+// MARK: - Export range
+
+/// The days a Trip Kit export covers, as positions in the trip's day list.
+/// Positions rather than dates: Day 1's date can change under them, and the
+/// same days stay selected while their dates move.
+nonisolated struct TripDateRange: Equatable, Sendable {
+  private(set) var from: Int
+  private(set) var to: Int
+
+  init(from: Int, to: Int, dayCount: Int) {
+    let last = max(dayCount - 1, 0)
+    self.from = min(max(from, 0), last)
+    self.to = min(max(to, self.from), last)
+  }
+
+  static func all(dayCount: Int) -> TripDateRange { TripDateRange(from: 0, to: dayCount - 1, dayCount: dayCount) }
+
+  /// The same range on a day list that may have changed length.
+  func fitted(dayCount: Int) -> TripDateRange { TripDateRange(from: from, to: to, dayCount: dayCount) }
+
+  /// From moves freely; moved past To, it brings To along.
+  func moving(from index: Int, dayCount: Int) -> TripDateRange {
+    let last = max(dayCount - 1, 0)
+    let next = min(max(index, 0), last)
+    return TripDateRange(from: next, to: max(to, next), dayCount: dayCount)
+  }
+
+  /// To can't go before From.
+  func moving(to index: Int, dayCount: Int) -> TripDateRange { TripDateRange(from: from, to: index, dayCount: dayCount) }
+
+  func slice(_ groups: [DayGroup]) -> [DayGroup] {
+    guard to < groups.count else { return Array(groups.dropFirst(from)) }
+    return Array(groups[from...to])
+  }
+
+  /// Calendar arithmetic, not 24-hour steps: a day isn't always 24 hours long.
+  static func date(ofDay index: Int, start: Date, calendar: Calendar = .current) -> Date {
+    let first = calendar.startOfDay(for: start)
+    return calendar.date(byAdding: .day, value: index, to: first) ?? first
+  }
+
+  /// Which position a picked date falls on, inside the trip.
+  static func dayIndex(of date: Date, start: Date, dayCount: Int, calendar: Calendar = .current) -> Int {
+    let offset = calendar.dateComponents([.day], from: calendar.startOfDay(for: start), to: calendar.startOfDay(for: date)).day ?? 0
+    return min(max(offset, 0), max(dayCount - 1, 0))
   }
 }
 
