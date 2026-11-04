@@ -269,7 +269,7 @@ public struct CalendarView: View {
     errorMessage = nil
     Task {
       let headers: Connect.Headers = [:]
-      let response = await client.listTrips(request: Loci_Trip_ListTripsRequest(), headers: headers)
+      let response = await client.listTrips(request: AddToTripPayload.listTrips(), headers: headers)
       isLoading = false
       if let error = response.error {
         errorMessage = error.message ?? "Couldn't load your trips. Try again."
