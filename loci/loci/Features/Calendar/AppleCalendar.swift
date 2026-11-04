@@ -37,7 +37,7 @@ import SwiftProtobuf
     let dates = days.map { Date(timeIntervalSince1970: TimeInterval($0.date.seconds)) }
     do {
       if let link {
-        for old in events(linkedTo: link, in: cal, around: dates) { try store.remove(old, span: .thisEvent, commit: false) }
+        for old in events(linkedTo: [link], in: cal, around: dates) { try store.remove(old, span: .thisEvent, commit: false) }
       }
       for (day, start) in zip(days, dates) {
         let event = EKEvent(eventStore: store)
@@ -60,31 +60,45 @@ import SwiftProtobuf
 
   /// Events this app wrote for a trip, searched a year either side of its
   /// dates (and today), since re-pinned days may have moved.
-  private func events(linkedTo link: URL, in cal: EKCalendar, around dates: [Date]) -> [EKEvent] {
+  private func events(linkedTo links: Set<URL>, in cal: EKCalendar, around dates: [Date]) -> [EKEvent] {
     let now = Date()
     let year: TimeInterval = 365 * 24 * 60 * 60
     let start = min(dates.min() ?? now, now).addingTimeInterval(-year)
     let end = max(dates.max() ?? now, now).addingTimeInterval(year)
     let pred = store.predicateForEvents(withStart: start, end: end, calendars: [cal])
-    return store.events(matching: pred).filter { $0.url == link }
+    return store.events(matching: pred).filter { event in event.url.map(links.contains) ?? false }
   }
 
   /// One event per stop, timed by `CalendarSchedule` (web's `.ics` from the
-  /// Trip Kit). Returns how many events were written.
-  @discardableResult func writeStops(_ events: [StopEvent]) throws -> Int {
+  /// Trip Kit). Returns how many events were written. With a `sessionID`, each
+  /// event carries its day's link and those days' earlier events go first, so
+  /// exporting a day again replaces it, wherever it was dated, and leaves the
+  /// other days alone.
+  @discardableResult func writeStops(_ events: [StopEvent], sessionID: String? = nil) throws -> Int {
     guard isAuthorized else { throw APIError.custom("Calendar access was not granted.") }
     let cal = try lociCalendar()
-    for stop in events {
-      let event = EKEvent(eventStore: store)
-      event.calendar = cal
-      event.title = stop.title
-      event.startDate = stop.start
-      event.endDate = stop.end
-      event.location = stop.location
-      event.notes = stop.notes.isEmpty ? "Loci" : "\(stop.notes)\n\nLoci"
-      try store.save(event, span: .thisEvent, commit: false)
+    func link(_ stop: StopEvent) -> URL? { sessionID.flatMap { CalendarSchedule.dayLink(sessionID: $0, dayNumber: stop.dayNumber) } }
+    do {
+      let links = Set(events.compactMap(link))
+      if !links.isEmpty {
+        for old in self.events(linkedTo: links, in: cal, around: events.map(\.start)) { try store.remove(old, span: .thisEvent, commit: false) }
+      }
+      for stop in events {
+        let event = EKEvent(eventStore: store)
+        event.calendar = cal
+        event.title = stop.title
+        event.startDate = stop.start
+        event.endDate = stop.end
+        event.location = stop.location
+        event.notes = stop.notes.isEmpty ? "Loci" : "\(stop.notes)\n\nLoci"
+        event.url = link(stop)
+        try store.save(event, span: .thisEvent, commit: false)
+      }
+      try store.commit()
+    } catch {
+      store.reset()
+      throw error
     }
-    try store.commit()
     return events.count
   }
 

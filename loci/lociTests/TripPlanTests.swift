@@ -1,5 +1,6 @@
 import Foundation
 import LociConnectProto
+import SwiftProtobuf
 import Testing
 
 @testable import loci
@@ -59,6 +60,53 @@ struct TripPlanTests {
 
 @MainActor
 struct TripPlanDatesTests {
+  private var utc: Calendar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
+    return calendar
+  }
+
+  private func undatedTrip(days: Int) -> Loci_Trip_TripDraft {
+    var t = Loci_Trip_TripDraft()
+    t.days = (1...days).map { number in
+      var d = Loci_Trip_TripDay()
+      d.dayNumber = Int32(number)
+      return d
+    }
+    return t
+  }
+
+  @Test func undatedTripSuggestsTomorrowForItsDayCount() throws {
+    let now = try #require(utc.date(from: DateComponents(year: 2026, month: 11, day: 4, hour: 15)))
+    let range = TripPlan.suggestedDates(of: undatedTrip(days: 4), now: now, calendar: utc)
+    #expect(CalendarMath.dateKey(range.start, calendar: utc) == "2026-11-05")
+    #expect(CalendarMath.dateKey(range.end, calendar: utc) == "2026-11-08")
+  }
+
+  @Test func oneDayTripSuggestsOneDay() throws {
+    let now = try #require(utc.date(from: DateComponents(year: 2026, month: 11, day: 4)))
+    let range = TripPlan.suggestedDates(of: undatedTrip(days: 1), now: now, calendar: utc)
+    #expect(range.start == range.end)
+  }
+
+  @Test func tripWithNoDaysStillSuggestsARealRange() throws {
+    let now = try #require(utc.date(from: DateComponents(year: 2026, month: 11, day: 4)))
+    let range = TripPlan.suggestedDates(of: Loci_Trip_TripDraft(), now: now, calendar: utc)
+    #expect(range.start == range.end)
+    #expect(CalendarMath.dateKey(range.start, calendar: utc) == "2026-11-05")
+  }
+
+  /// Days pinned from the Calendar carry dates with no trip start or end.
+  @Test func daysAlreadyDatedSuggestTheirOwnStart() throws {
+    let now = try #require(utc.date(from: DateComponents(year: 2026, month: 11, day: 4)))
+    var t = undatedTrip(days: 3)
+    let second = try #require(utc.date(from: DateComponents(year: 2026, month: 12, day: 2)))
+    t.days[1].date.seconds = Int64(second.timeIntervalSince1970)
+    let range = TripPlan.suggestedDates(of: t, now: now, calendar: utc)
+    #expect(CalendarMath.dateKey(range.start, calendar: utc) == "2026-12-01")
+    #expect(CalendarMath.dateKey(range.end, calendar: utc) == "2026-12-03")
+  }
+
   @Test func datesAreTheTripsWhenBothAreSet() {
     var t = Loci_Trip_TripDraft()
     #expect(TripPlan.dates(of: t) == nil, "no dates yet")

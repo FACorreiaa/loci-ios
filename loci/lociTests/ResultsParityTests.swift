@@ -159,6 +159,101 @@ struct ResultsParityTests {
     #expect(events[0].location == "A, Rome")
   }
 
+  // MARK: - Export range
+
+  private var utc: Calendar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
+    return calendar
+  }
+
+  @Test func rangeDefaultsToEveryDay() {
+    let groups = DayGrouping.groups([stop("A", day: 1), stop("B", day: 2), stop("C", day: 3)])
+    let range = TripDateRange.all(dayCount: groups.count)
+    #expect(range.slice(groups).map(\.number) == [1, 2, 3])
+  }
+
+  @Test func rangeSlicesKeepTheirDayNumbers() {
+    let groups = DayGrouping.groups([stop("A", day: 1), stop("B", day: 2), stop("C", day: 3), stop("D", day: 4)])
+    let range = TripDateRange(from: 2, to: 3, dayCount: 4)
+    #expect(range.slice(groups).map(\.number) == [3, 4])
+    #expect(range.slice(groups).flatMap(\.stops).map(\.name) == ["C", "D"])
+  }
+
+  @Test func fromPastToBringsToAlong() {
+    let range = TripDateRange(from: 0, to: 1, dayCount: 4).moving(from: 3, dayCount: 4)
+    #expect(range.from == 3)
+    #expect(range.to == 3)
+  }
+
+  @Test func toCannotGoBeforeFrom() {
+    let range = TripDateRange(from: 2, to: 3, dayCount: 4).moving(to: 0, dayCount: 4)
+    #expect(range.from == 2)
+    #expect(range.to == 2)
+  }
+
+  @Test func rangeClampsToTheDays() {
+    let range = TripDateRange(from: -3, to: 40, dayCount: 4)
+    #expect(range.from == 0)
+    #expect(range.to == 3)
+    let fitted = TripDateRange(from: 2, to: 3, dayCount: 4).fitted(dayCount: 2)
+    #expect(fitted.from == 1)
+    #expect(fitted.to == 1)
+  }
+
+  @Test func oneDayRangeSlicesThatDay() {
+    let groups = DayGrouping.groups([stop("A", day: 1), stop("B", day: 1)])
+    let range = TripDateRange.all(dayCount: groups.count)
+    #expect(range.slice(groups).count == 1)
+    #expect(range.slice(groups).first?.stops.count == 2)
+  }
+
+  @Test func noDaysSliceToNothing() {
+    #expect(TripDateRange.all(dayCount: 0).slice([]).isEmpty)
+  }
+
+  @Test func movingTheStartKeepsTheSameDays() throws {
+    let range = TripDateRange(from: 1, to: 2, dayCount: 4)
+    let start = try #require(utc.date(from: DateComponents(year: 2026, month: 11, day: 12)))
+    let moved = try #require(utc.date(from: DateComponents(year: 2026, month: 12, day: 1)))
+    let picked = TripDateRange.date(ofDay: range.from, start: start, calendar: utc)
+    #expect(TripDateRange.dayIndex(of: picked, start: start, dayCount: 4, calendar: utc) == 1)
+    let after = TripDateRange.date(ofDay: range.from, start: moved, calendar: utc)
+    #expect(utc.component(.month, from: after) == 12)
+    #expect(utc.component(.day, from: after) == 2)
+    #expect(TripDateRange.dayIndex(of: after, start: moved, dayCount: 4, calendar: utc) == 1)
+  }
+
+  /// Europe/Lisbon's 25 October 2026 is 25 hours long.
+  @Test func rangeDatesSurviveAClockChange() throws {
+    var lisbon = Calendar(identifier: .gregorian)
+    lisbon.timeZone = try #require(TimeZone(identifier: "Europe/Lisbon"))
+    let start = try #require(lisbon.date(from: DateComponents(year: 2026, month: 10, day: 24)))
+    let third = TripDateRange.date(ofDay: 2, start: start, calendar: lisbon)
+    #expect(lisbon.component(.day, from: third) == 26)
+    #expect(lisbon.component(.hour, from: third) == 0)
+    #expect(TripDateRange.dayIndex(of: third, start: start, dayCount: 4, calendar: lisbon) == 2)
+  }
+
+  @Test func slicedCalendarStartsOnFromAtItsOwnDays() throws {
+    let start = try #require(utc.date(from: DateComponents(year: 2026, month: 11, day: 12)))
+    let groups = DayGrouping.groups([stop("A", day: 1), stop("B", day: 2), stop("C", day: 3), stop("D", day: 4)])
+    let range = TripDateRange(from: 2, to: 3, dayCount: 4)
+    let from = TripDateRange.date(ofDay: range.from, start: start, calendar: utc)
+    let events = CalendarSchedule.events(groups: range.slice(groups), startDate: from, cityName: "Rome", summary: "Trip", calendar: utc)
+    #expect(events.map(\.title) == ["C", "D"])
+    #expect(events.map(\.dayNumber) == [3, 4])
+    #expect(events.map { utc.component(.day, from: $0.start) } == [14, 15])
+  }
+
+  @Test func dayLinkOpensTheItineraryAndIdentifiesTheDay() throws {
+    let url = try #require(CalendarSchedule.dayLink(sessionID: "abc", dayNumber: 3))
+    #expect(url.absoluteString == "loci://itinerary?sessionId=abc&day=3")
+    #expect(SessionLink(url: url)?.sessionId == "abc")
+    #expect(CalendarSchedule.dayLink(sessionID: "", dayNumber: 3) == nil)
+    #expect(CalendarSchedule.dayLink(sessionID: "abc", dayNumber: 3) != CalendarSchedule.dayLink(sessionID: "abc", dayNumber: 4))
+  }
+
   // MARK: - Pro gate
 
   @Test func proGateMatchesWebPlans() {
