@@ -97,17 +97,50 @@ jobs:
           done
 
       # Ask xcodebuild, not simctl: it lists only simulators whose runtime meets
-      # the deployment target.
+      # the deployment target. On some runs it sees only the "Any iOS Simulator"
+      # placeholders, on the same image and Xcode as runs that find one: the
+      # simulator service hadn't loaded its runtimes yet. So wake it, retry, and if
+      # a new enough runtime exists with no iPhone on it, make one.
       - name: Resolve a simulator
         id: sim
         run: |
           set -euo pipefail
-          destinations="$(xcodebuild -project loci.xcodeproj -scheme "loci Beta" -showdestinations \
-            -clonedSourcePackagesDirPath "$SPM_DIR" 2>/dev/null)"
-          line="$(grep -E 'platform:iOS Simulator, arch:arm64, id:[0-9A-F-]{36}, OS:[0-9.]+, name:iPhone' <<<"$destinations" | tail -1 || true)"
+          pick() {
+            xcodebuild -project loci.xcodeproj -scheme "loci Beta" -showdestinations \
+              -clonedSourcePackagesDirPath "$SPM_DIR" 2>/dev/null \
+              | grep -E 'platform:iOS Simulator, arch:arm64, id:[0-9A-F-]{36}, OS:[0-9.]+, name:iPhone' | tail -n 1 || true
+          }
+          line=""
+          for attempt in 1 2 3 4; do
+            xcrun simctl list runtimes >/dev/null 2>&1 || true
+            line="$(pick)"
+            [ -n "$line" ] && break
+            echo "No iPhone simulator yet (attempt $attempt); waiting for the simulator service..."
+            sleep 20
+          done
           if [ -z "$line" ]; then
-            echo "::error::No iPhone simulator meets the deployment target. Available destinations:"
-            echo "$destinations" | sed -n '1,60p'
+            target="$(xcodebuild -project loci.xcodeproj -scheme "loci Beta" -showBuildSettings 2>/dev/null \
+              | awk '/ IPHONEOS_DEPLOYMENT_TARGET = / { print $3; exit }')"
+            # The newest runtime that meets the target, and the newest iPhone it runs.
+            read -r runtime device < <(xcrun simctl list runtimes -j | python3 -c '
+          import json, sys
+          target = tuple(int(p) for p in sys.argv[1].split("."))
+          version = lambda r: tuple(int(p) for p in r["version"].split("."))
+          ok = sorted((r for r in json.load(sys.stdin)["runtimes"]
+                       if r.get("platform") == "iOS" and r.get("isAvailable") and version(r) >= target), key=version)
+          phones = [d["identifier"] for d in (ok[-1].get("supportedDeviceTypes", []) if ok else [])
+                    if d.get("productFamily") == "iPhone"]
+          print(ok[-1]["identifier"], phones[-1]) if ok and phones else print("", "")
+          ' "${target:-0}") || true
+            if [ -n "${runtime:-}" ] && [ -n "${device:-}" ]; then
+              echo "Creating an iPhone on $runtime ($device)"
+              xcrun simctl create "CI iPhone" "$device" "$runtime" >/dev/null
+              line="$(pick)"
+            fi
+          fi
+          if [ -z "$line" ]; then
+            echo "::error::No iPhone simulator meets the deployment target (${target:-unknown})."
+            xcrun simctl list runtimes || true
             exit 1
           fi
           udid="$(grep -oE 'id:[0-9A-F-]{36}' <<<"$line" | cut -d: -f2)"
