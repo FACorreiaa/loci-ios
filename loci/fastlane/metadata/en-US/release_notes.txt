@@ -1,3 +1,7 @@
+Ask Loci, from anywhere
+• Hold the Assistant tab to talk or type a question on any screen, about your trips, your lists or where you're going.
+• Spoken questions get a spoken answer. Nothing changes until you tap Confirm.
+
 A companion for every trip day
 • On a trip day, Loci opens on today: the city, the day and your next stop.
 • Optional: hear about saved places nearby that fit your taste.
