@@ -140,6 +140,14 @@ enum DesignPreview: String {
   case yearRecap
   /// The same year opened from its share link.
   case sharedYearRecap
+  /// The app's tabs, signed out: for checking the hold on the Assistant tab.
+  case askLociTabs
+  /// Ask Loci as a hold opens it, with nothing asked yet.
+  case askLociEmpty
+  /// The mic running, then waiting for the transcript.
+  case askLociListening, askLociTranscribing
+  /// An answer in progress, and one finished with each kind of card.
+  case askLociThinking, askLociCards
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -154,6 +162,12 @@ enum DesignPreview: String {
   @ViewBuilder var body: some View {
     switch self {
     case .inSeason: InSeasonPreview()
+    case .askLociTabs: MainTabView()
+    case .askLociEmpty: AskLociPreview()
+    case .askLociListening: AskLociPreview(mic: .recording)
+    case .askLociTranscribing: AskLociPreview(mic: .transcribing)
+    case .askLociThinking: AskLociPreview(turns: AskLociPreview.thinking)
+    case .askLociCards: AskLociPreview(turns: AskLociPreview.cards)
     case .pushPrimer: Color.lociPaper.ignoresSafeArea().sheet(isPresented: .constant(true)) { PushPrimerSheet(primer: PushPrimer()) }
     case .museChat: MuseChatPreview(state: .museSampleCompleted)
     case .museChatStreaming: MuseChatPreview(state: .museSampleStreaming)

@@ -103,6 +103,7 @@ struct NearbyView: View {
     }
     .sensoryFeedback(.success, trigger: navigator.arrivedAt) { (_: String?, arrived: String?) -> Bool in arrived != nil }
     .navigationTitle("Near me")
+    .askLociContext(AskLociScreen(screen: "nearby"))
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
       ToolbarItem(placement: .primaryAction) {

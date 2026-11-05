@@ -94,6 +94,7 @@ struct SearchResultsView: View {
     }
     .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
     .navigationTitle(link.destination.title)
+    .askLociContext(AskLociScreen(screen: "results_\(link.destination.rawValue)", city: state?.cityName ?? link.cityName))
     .toolbarVisibility(.hidden, for: .navigationBar)
     .interactivePopEnabled()
     .errorAlert($exportError)

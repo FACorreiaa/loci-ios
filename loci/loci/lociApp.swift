@@ -67,6 +67,7 @@ import SwiftUI
       }.onReceive(NotificationCenter.default.publisher(for: .authSessionDidInvalidate)) { _ in
         Analytics.reset()
         EntitlementsStore.shared.reset()
+        AskLociController.shared.reset()
         withAnimation {
           isAuthenticated = false
           isCheckingAuth = false

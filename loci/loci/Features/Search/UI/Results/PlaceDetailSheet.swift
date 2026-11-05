@@ -127,6 +127,7 @@ struct PlaceDetailView: View {
     }
     .background(Color.lociPaper.ignoresSafeArea())
     .safeAreaInset(edge: .bottom) { footer }
+    .askLociContext(AskLociScreen(screen: "place_detail", city: cityName, places: [stop.id]))
     .sheet(isPresented: $addingToList) { AddToListSheet(stop: stop, destination: destination) }
     .sheet(isPresented: $addingToTrip) { AddToTripSheet(stop: stop, cityName: cityName) }
     .sheet(isPresented: $reporting) { ReportFactSheet(stop: stop) { Task { await loadFacts() } } }
