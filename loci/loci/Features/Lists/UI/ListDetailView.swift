@@ -104,6 +104,9 @@ struct ListDetailView: View {
     }
     .refreshable { await store.load() }
     .task { await store.load() }
+    .askLociContext(AskLociScreen(screen: "list_detail", lists: [store.listID]))
+    // A card confirmed in Ask Loci, over this page.
+    .onChange(of: AskLociController.shared.changes) { Task { await store.load() } }
     .sheet(item: $editing) { entry in ListItemEditSheet(entry: entry) { edit in await store.updateItem(entry, edit: edit) } }
     .task(id: store.detail?.list.id) { await prepareShare() }
     .toolbar {

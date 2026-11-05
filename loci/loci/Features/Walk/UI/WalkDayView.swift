@@ -54,6 +54,7 @@ struct WalkDayView: View {
       .padding(.bottom, 8)
     }
     .navigationTitle(day.title)
+    .askLociContext(AskLociScreen(screen: "walk"))
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
       ToolbarItem(placement: .primaryAction) {

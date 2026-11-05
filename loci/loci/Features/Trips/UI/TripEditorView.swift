@@ -194,6 +194,9 @@ struct TripEditorView: View {
     .errorAlert($error)
     .errorAlert($checklist.error)
     .task { await load() }
+    .askLociContext(AskLociScreen(screen: "trip_detail", trips: [tripID]))
+    // A card confirmed in Ask Loci, over this page.
+    .onChange(of: AskLociController.shared.changes) { Task { await reload() } }
   }
 
   // MARK: - Sections

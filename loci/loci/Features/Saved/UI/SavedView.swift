@@ -107,6 +107,8 @@ struct SavedView: View {
       .refreshable { await refresh() }
       .errorAlert($error)
       .task { await load() }
+      // A card confirmed in Ask Loci, over this page.
+      .onChange(of: AskLociController.shared.changes) { Task { await refresh() } }
       .onAppear(perform: openPending)
       .onChange(of: router.pendingLink) { openPending() }
     }

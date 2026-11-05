@@ -64,6 +64,32 @@ nonisolated func appendTranscript(_ existing: String, _ new: String) -> String {
   return base + " " + addition
 }
 
+/// Decides when somebody has stopped talking
+/// (web: loci-client/src/lib/audio/silence.ts).
+///
+/// Only after they have started: a pause before the first word is someone
+/// thinking of what to ask, and stopping then would send nothing. In a loud place
+/// this may never fire, which is why the tap and the recording cap stay.
+nonisolated struct SilenceDetector: Sendable {
+  /// Average power above this counts as speech. Quiet enough for a normal voice
+  /// at arm's length; AVAudioRecorder reports 0 dB for the loudest it can hear.
+  static let speechLevel: Float = -38
+  /// How long a pause means they have finished.
+  static let silenceAfter: TimeInterval = 1.2
+
+  private var heardAt: TimeInterval?
+
+  /// Takes a loudness and the time it was measured; true means stop.
+  mutating func feed(power: Float, at now: TimeInterval) -> Bool {
+    if power >= Self.speechLevel {
+      heardAt = now
+      return false
+    }
+    guard let heardAt else { return false }
+    return now - heardAt >= Self.silenceAfter
+  }
+}
+
 /// Records a trip request and turns it into text. One tap starts, the next
 /// stops; a recording also stops by itself after `maxDuration`.
 ///
@@ -88,8 +114,12 @@ final class DictationController {
   @ObservationIgnored private var recorder: AVAudioRecorder?
   @ObservationIgnored private var stopSignal: CheckedContinuation<Bool, Never>?
   @ObservationIgnored private var autoStop: Task<Void, Never>?
+  @ObservationIgnored private var silenceWatch: Task<Void, Never>?
+  /// The assistant ends a recording on a pause; the search composer doesn't.
+  @ObservationIgnored private let stopsOnSilence: Bool
 
   init(
+    stopsOnSilence: Bool = false,
     transcribe: @escaping Transcribe = { audio in
       var request = Loci_Speech_TranscribeRequest()
       request.audio = audio
@@ -97,6 +127,7 @@ final class DictationController {
       return await SpeechAPI.speech.transcribe(request: request)
     }
   ) {
+    self.stopsOnSilence = stopsOnSilence
     transcribeCall = transcribe
   }
 
@@ -154,6 +185,7 @@ final class DictationController {
       guard !Task.isCancelled else { return }
       self?.finishRecording(keep: true)
     }
+    if stopsOnSilence { watchForSilence() }
     let keep = await withCheckedContinuation { stopSignal = $0 }
 
     guard keep else {
@@ -195,13 +227,33 @@ final class DictationController {
       AVEncoderAudioQualityKey: AVAudioQuality.medium.rawValue,
     ]
     let recorder = try AVAudioRecorder(url: url, settings: settings)
+    recorder.isMeteringEnabled = stopsOnSilence
     guard recorder.record() else { throw DictationError.micFailed }
     self.recorder = recorder
+  }
+
+  private func watchForSilence() {
+    silenceWatch = Task { [weak self] in
+      var detector = SilenceDetector()
+      let started = ContinuousClock.now
+      while !Task.isCancelled {
+        try? await Task.sleep(for: .milliseconds(100))
+        guard !Task.isCancelled, let self, let recorder = self.recorder else { return }
+        recorder.updateMeters()
+        let elapsed = started.duration(to: .now) / .seconds(1)
+        if detector.feed(power: recorder.averagePower(forChannel: 0), at: elapsed) {
+          self.finishRecording(keep: true)
+          return
+        }
+      }
+    }
   }
 
   private func finishRecording(keep: Bool) {
     autoStop?.cancel()
     autoStop = nil
+    silenceWatch?.cancel()
+    silenceWatch = nil
     recorder?.stop()
     recorder = nil
     deactivateSession()
