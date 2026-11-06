@@ -52,6 +52,8 @@ final class AskLociController {
   /// For `-designPreview` screens: open, with this conversation already in it.
   func preview(turns: [AskLociTurn], mic: DictationController.State? = nil) {
     self.turns = turns
+    // A question asked on the preview must not reuse a sample turn's id.
+    nextID = (turns.map(\.id).max() ?? 0) + 1
     previewMic = mic
     isOpen = true
   }
