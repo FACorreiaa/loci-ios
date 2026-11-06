@@ -54,6 +54,13 @@ struct SearchComposer: View {
         .lineLimit(1...4)
         .submitLabel(.send)
         .onSubmit(send)
+        // A multi-line field takes Return as a new line, not a submit: a
+        // Return typed at the end sends, as the key's "send" label says.
+        .onChange(of: text) { old, new in
+          guard new.hasSuffix("\n"), !old.hasSuffix("\n") else { return }
+          text = String(new.dropLast())
+          send()
+        }
         .focused($isFocused)
         .disabled(isDictating)
         .padding(.horizontal, 14).padding(.vertical, 10)
