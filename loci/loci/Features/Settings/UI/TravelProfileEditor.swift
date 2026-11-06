@@ -2,9 +2,11 @@ import LociConnectProto
 import SwiftUI
 
 /// The travel profile form, in the web form's sections: Basic, Hotels,
-/// Dining, Activities, Planning.
+/// Dining, Activities, Planning, Access.
 struct TravelProfileEditor: View {
-  enum Section: String, CaseIterable { case basic = "Basic", hotels = "Hotels", dining = "Dining", activities = "Activities", planning = "Planning" }
+  enum Section: String, CaseIterable {
+    case basic = "Basic", hotels = "Hotels", dining = "Dining", activities = "Activities", planning = "Planning", access = "Access"
+  }
 
   @State private var draft: TravelProfileDraft
   let onSave: (TravelProfileDraft) async -> Bool
@@ -32,6 +34,7 @@ struct TravelProfileEditor: View {
         case .dining: dining
         case .activities: activities
         case .planning: planning
+        case .access: AccessibilityNeedsSection(draft: $draft)
         }
       }
       .navigationTitle(draft.id == nil ? "New profile" : draft.name).navigationBarTitleDisplayMode(.inline)
