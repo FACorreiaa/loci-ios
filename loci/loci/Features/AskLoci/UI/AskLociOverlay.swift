@@ -107,6 +107,8 @@ private struct AskLociHeader: View {
 
 private struct AskLociAnswers: View {
   let controller: AskLociController
+  @State private var scroll = ScrollPosition(edge: .bottom)
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     ScrollView {
@@ -119,6 +121,11 @@ private struct AskLociAnswers: View {
       .padding(.vertical, 8)
     }
     .defaultScrollAnchor(.bottom)
+    .scrollPosition($scroll)
+    // A new question goes under the rest: bring it into view, wherever the list was.
+    .onChange(of: controller.turns.count) { old, new in
+      if new > old { withAnimation(reduceMotion ? nil : LociTheme.resultArrive) { scroll.scrollTo(edge: .bottom) } }
+    }
     .scrollDismissesKeyboard(.interactively)
   }
 }
@@ -192,6 +199,13 @@ private struct AskLociComposer: View {
           .foregroundStyle(Color.museText)
           .submitLabel(.send)
           .onSubmit(send)
+          // A multi-line field takes Return as a new line, not a submit: a
+          // Return typed at the end sends, as the key's "send" label says.
+          .onChange(of: text) { old, new in
+            guard new.hasSuffix("\n"), new.count == old.count + 1 else { return }
+            text = String(new.dropLast())
+            send()
+          }
           .padding(.horizontal, 14)
           .padding(.vertical, 10)
           .background(Color.museAgentBubble, in: RoundedRectangle(cornerRadius: 20, style: .continuous))

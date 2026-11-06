@@ -61,4 +61,30 @@ final class AskLociOverlayUITests: XCTestCase {
 
     XCTAssertTrue(app.buttons["Close"].isHittable, "Close is off screen after a typed question")
   }
+
+  /// Return on the keyboard sends, as its "send" label says, rather than adding a line.
+  @MainActor func testReturnSends() throws {
+    let app = try launch()
+    let field = app.textFields["Ask anything"]
+    field.tap()
+    field.typeText("check my highlights\n")
+
+    XCTAssertTrue(app.staticTexts["check my highlights"].waitForExistence(timeout: 3), "Return did not send the question")
+    XCTAssertEqual(field.value as? String, "Ask anything", "The field kept the text after Return")
+  }
+
+  /// A new question under a long conversation comes into view.
+  @MainActor func testNewQuestionScrollsIntoView() throws {
+    let app = try launch()
+    let field = app.textFields["Ask anything"]
+    field.tap()
+    field.typeText("check my highlights")
+    app.windows.firstMatch.buttons.matching(NSPredicate(format: "label == 'Send'")).firstMatch.tap()
+
+    let question = app.staticTexts["check my highlights"]
+    XCTAssertTrue(question.waitForExistence(timeout: 3), "The question was not sent")
+    let visible = expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: question)
+    wait(for: [visible], timeout: 3)
+    shot("new-question", app)
+  }
 }
