@@ -5,17 +5,25 @@ struct AskLociOverlay: View {
   var controller = AskLociController.shared
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+  /// Backdrop left showing above the panel: somewhere to tap to close.
+  private static let backdropGap: CGFloat = 64
+
   var body: some View {
-    ZStack(alignment: .bottom) {
-      if controller.isOpen {
-        Color.black.opacity(0.4)
-          .ignoresSafeArea()
-          .onTapGesture { controller.close() }
-          .accessibilityHidden(true)
-          .transition(.opacity)
-        AskLociPanel(controller: controller)
-          .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+    // The space between the safe areas, keyboard included: the panel is sized
+    // to what is left above the keyboard, so its header (and Close) stays on screen.
+    GeometryReader { proxy in
+      ZStack(alignment: .bottom) {
+        if controller.isOpen {
+          Color.black.opacity(0.4)
+            .ignoresSafeArea()
+            .onTapGesture { controller.close() }
+            .accessibilityHidden(true)
+            .transition(.opacity)
+          AskLociPanel(controller: controller, available: proxy.size.height, backdropGap: Self.backdropGap)
+            .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+        }
       }
+      .frame(width: proxy.size.width, height: proxy.size.height, alignment: .bottom)
     }
     .animation(reduceMotion ? LociTheme.reducedFade : LociTheme.defaultSpring, value: controller.isOpen)
   }
@@ -23,13 +31,19 @@ struct AskLociOverlay: View {
 
 private struct AskLociPanel: View {
   let controller: AskLociController
+  /// Height between the safe areas, keyboard included.
+  let available: CGFloat
+  let backdropGap: CGFloat
 
   private static let maxWidth: CGFloat = 560
   private static let answerHeightShare: CGFloat = 0.72
 
   var body: some View {
     VStack(spacing: 0) {
+      // The header and composer keep their height; the answers give way and scroll.
       AskLociHeader(controller: controller)
+        .fixedSize(horizontal: false, vertical: true)
+        .layoutPriority(1)
       if controller.turns.isEmpty {
         Text("Ask about your trips, your lists, or anywhere you're going.")
           .font(.museBody)
@@ -39,9 +53,11 @@ private struct AskLociPanel: View {
           .padding(.vertical, 12)
       } else {
         AskLociAnswers(controller: controller)
-          .containerRelativeFrame(.vertical) { height, _ in height * Self.answerHeightShare }
+          .frame(maxHeight: max(available * Self.answerHeightShare, 0))
       }
       AskLociComposer(controller: controller)
+        .fixedSize(horizontal: false, vertical: true)
+        .layoutPriority(1)
     }
     .background {
       // Down to the screen's edge, and behind the keyboard when it is up.
@@ -50,6 +66,8 @@ private struct AskLociPanel: View {
         .ignoresSafeArea(edges: .bottom)
     }
     .frame(maxWidth: Self.maxWidth)
+    // A cap, applied after the fill so a short panel stays short.
+    .frame(maxHeight: max(available - backdropGap, 0), alignment: .bottom)
     .accessibilityAddTraits(.isModal)
     .accessibilityAction(.escape) { controller.close() }
   }
