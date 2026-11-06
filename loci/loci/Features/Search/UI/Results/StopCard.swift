@@ -26,6 +26,8 @@ struct StopCard: View {
     if stop.rating > 0 { parts.append(String(localized: "Rated \(stop.rating.formatted(.number.precision(.fractionLength(1))))")) }
     if stop.showsMatchOnCard, let match = stop.matchLabel { parts.append(match) }
     if let meta = StopMeta.line(for: stop, destination: destination) { parts.append(meta) }
+    // The card is one element, so its access notes have to be in its label.
+    parts += stop.accessibilityNotes.bySeverity.prefix(2).map(\.spokenSummary)
     return parts.joined(separator: ", ")
   }
 
@@ -47,6 +49,9 @@ struct StopCard: View {
           }
           if let meta = StopMeta.line(for: stop, destination: destination) {
             Text(meta).font(.lociCaption(12)).foregroundStyle(Color.lociForest).lineLimit(isLarge ? 2 : 1)
+          }
+          if !stop.accessibilityNotes.isEmpty {
+            AccessibilityNotesList(notes: stop.accessibilityNotes, limit: 2).padding(.top, 4)
           }
         }
       }
@@ -230,6 +235,8 @@ struct DaySection: View {
   let sequence: [String: Int]
   let destination: SearchDestination
   let showsDayLabel: Bool
+  /// This day's walking legs, for a traveller with access needs.
+  var route: Loci_Chat_AccessibleRoutePayload?
   @Binding var selectedID: String?
   /// The "Not for me" action for a stop, where it can be waved away (a list,
   /// not an itinerary day); nil for a stop that offers none.
@@ -249,7 +256,9 @@ struct DaySection: View {
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
       }
+      if let route { RouteDaySummary(route: route) }
       ForEach(group.stops, id: \.stableID) { stop in
+        if let leg = route?.leg(arrivingAt: stop) { WalkingLegRow(leg: leg) }
         StopCard(
           stop: stop,
           index: sequence[stop.stableID] ?? 0,
@@ -262,6 +271,24 @@ struct DaySection: View {
           onOpen(stop)
         }
         .id(stop.stableID)
+      }
+    }
+  }
+}
+
+/// A day's walking total and any warning about it (over the daily limit).
+struct RouteDaySummary: View {
+  let route: Loci_Chat_AccessibleRoutePayload
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Label("About \(route.totalWalkMinutes) min of walking between stops", systemImage: "figure.walk")
+        .font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk)
+      ForEach(Array(route.warnings.enumerated()), id: \.offset) { _, warning in
+        Label(warning, systemImage: Loci_Poi_AccessibilityNoteSeverity.caution.symbol)
+          .font(.lociCaption(12)).foregroundStyle(Color.lociInk)
+          .symbolRenderingMode(.multicolor)
+          .accessibilityLabel("\(Loci_Poi_AccessibilityNoteSeverity.caution.spoken): \(warning)")
       }
     }
   }
