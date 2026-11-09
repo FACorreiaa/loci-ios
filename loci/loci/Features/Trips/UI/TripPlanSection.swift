@@ -18,13 +18,14 @@ struct TripPlanSection: View {
   @State private var searching: Set<String> = []
   @State private var searched: Set<String> = []
   @State private var search = FlightSearch()
-  @State private var links: [Loci_Trip_FlightLink] = []
+  @State private var formID = 0
   @State private var error: String?
 
   var body: some View {
     Section {
       datesRow
       ForEach(TripPlan.cities(of: trip), id: \.self) { city in stayRow(city) }
+      TripFindFlightsRow(trip: trip)
       ForEach(trip.flights, id: \.id) { flight in flightRow(flight) }
       flightForm
       if let error { Text(error).font(.lociCaption(13)).foregroundStyle(Color.lociDestructive) }
@@ -121,7 +122,10 @@ struct TripPlanSection: View {
       Text("\(flight.origin.name) → \(flight.destination.name) · \(flight.departDate)").font(.lociBody(15))
       HStack(spacing: 12) {
         ForEach(flight.links.filter { $0.url.hasPrefix("https://") }, id: \.url) { link in
-          if let url = URL(string: link.url) { Link(link.label, destination: url).font(.lociCaption(13)) }
+          if let url = URL(string: link.url) {
+            Link(link.label, destination: url).font(.lociCaption(13))
+              .simultaneousGesture(TapGesture().onEnded { FlightAnalytics.clicked(.trip, link, FlightSearch(flight)) })
+          }
         }
         Spacer()
         Button("Remove", role: .destructive) { onRemoveFlight(flight.id) }.buttonStyle(.borderless).font(.lociCaption(13))
@@ -130,53 +134,14 @@ struct TripPlanSection: View {
   }
 
   private var flightForm: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      TextField("From (city or airport)", text: $search.origin)
-      TextField("To", text: $search.destination)
-      DatePicker(
-        "Departs",
-        selection: Binding(get: { CalendarMath.parseDateKey(search.departDate) ?? start }, set: { search.departDate = CalendarMath.dateKey($0) }),
-        displayedComponents: .date
-      )
-      Toggle(
-        "Return flight",
-        isOn: Binding(
-          get: { search.returnDate != nil },
-          set: { search.returnDate = $0 ? (search.departDate.isEmpty ? CalendarMath.dateKey(end) : search.departDate) : nil }
-        )
-      )
-      if search.returnDate != nil {
-        DatePicker(
-          "Returns",
-          selection: Binding(
-            get: { CalendarMath.parseDateKey(search.returnDate ?? "") ?? end },
-            set: { search.returnDate = CalendarMath.dateKey($0) }
-          ),
-          displayedComponents: .date
-        )
-      }
-      Stepper("Travellers: \(search.passengers)", value: $search.passengers, in: 1...9)
-      HStack {
-        Button("Search flights") { Task { await buildLinks() } }.disabled(!search.isReady).buttonStyle(.borderless)
-        Spacer()
-        if !links.isEmpty {
-          Button("Save to trip") {
-            onAddFlight(search.flight)
-            links = []
-          }.buttonStyle(.borderless)
-        }
-      }
-      ForEach(links.filter { $0.url.hasPrefix("https://") }, id: \.url) { link in
-        if let url = URL(string: link.url) { Link(link.label, destination: url).font(.lociCaption(13)) }
-      }
-      Text("Prices are on the airline sites; Loci only saves your search.").font(.lociCaption(11)).foregroundStyle(Color.lociMutedInk)
-    }.font(.lociBody(15))
-  }
-
-  private func buildLinks() async {
-    do {
-      links = try await TripPlanAPI.flightLinks(search)
-      error = nil
-    } catch { self.error = error.message }
+    FlightSearchForm(source: .trip, search: $search, defaultDepart: start, defaultReturn: end) { built in
+      Button("Save to trip") {
+        onAddFlight(built.flight)
+        search = FlightSearch(departDate: search.departDate)
+        formID += 1
+      }.buttonStyle(.borderless)
+    }
+    // A fresh form after Save, so the saved search's links go with it.
+    .id(formID)
   }
 }
