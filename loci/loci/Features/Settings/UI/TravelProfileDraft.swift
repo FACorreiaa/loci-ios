@@ -76,6 +76,20 @@ struct TravelProfileDraft: Identifiable, Equatable {
   var seasons: Set<String> = ["spring", "summer"]
   var avoidPeakSeason = false
 
+  // Access needs. Health data (GDPR Art. 9): editable only once the server
+  // already holds consent or the traveller gives it here.
+  var accessibility = AccessibilityNeedsDraft()
+  /// The server already stores consented needs for this profile.
+  private(set) var hasStoredAccessibility = false
+  /// The traveller agreed, in this editor, to Loci storing their needs.
+  var accessibilityConsentGiven = false
+  /// The traveller asked to delete their stored needs on save.
+  private(set) var clearAccessibility = false
+  private var loadedAccessibility = AccessibilityNeedsDraft()
+
+  /// After a delete the fields lock again until the traveller consents anew.
+  var canEditAccessibility: Bool { (hasStoredAccessibility && !clearAccessibility) || accessibilityConsentGiven }
+
   // Kept from the server so an update does not blank what the form doesn't show.
   private var accommodationExtras = Loci_Profile_AccommodationPreferences()
   private var diningExtras = Loci_Profile_DiningPreferences()
@@ -100,6 +114,11 @@ struct TravelProfileDraft: Identifiable, Equatable {
     dietaryNeeds = profile.dietaryNeeds
     tagIDs = Set(profile.tags.map(\.id))
     interestIDs = Set(profile.interests.map(\.id))
+    if profile.hasAccessibilityNeeds, profile.accessibilityNeeds.hasConsentAt {
+      accessibility = AccessibilityNeedsDraft(profile.accessibilityNeeds)
+      loadedAccessibility = accessibility
+      hasStoredAccessibility = true
+    }
 
     if profile.hasAccommodationPreferences {
       let hotel = profile.accommodationPreferences
@@ -164,6 +183,14 @@ struct TravelProfileDraft: Identifiable, Equatable {
     return (min(a, b), max(a, b))
   }
 
+  /// Forget the needs: cleared in the form now, deleted on the server on save
+  /// together with the consent record, so saving needs again asks again.
+  mutating func deleteAccessibility() {
+    accessibility = AccessibilityNeedsDraft()
+    accessibilityConsentGiven = false
+    clearAccessibility = hasStoredAccessibility
+  }
+
   // MARK: - Requests
 
   func createRequest() -> Loci_Profile_CreateUserPreferenceProfileRequest {
@@ -186,6 +213,10 @@ struct TravelProfileDraft: Identifiable, Equatable {
     request.diningPreferences = dining
     request.activityPreferences = activity
     request.itineraryPreferences = itinerary
+    if accessibilityConsentGiven, accessibility.isActive {
+      request.accessibilityNeeds = accessibility.proto
+      request.accessibilityConsentGiven = true
+    }
     return request
   }
 
@@ -212,7 +243,29 @@ struct TravelProfileDraft: Identifiable, Equatable {
     request.diningPreferences = dining
     request.activityPreferences = activity
     request.itineraryPreferences = itinerary
+    applyAccessibility(to: &request)
     return request
+  }
+
+  /// Needs are sent only when they change: an absent message leaves the stored
+  /// needs alone. Emptying stored needs is the same as deleting them.
+  private func applyAccessibility(to request: inout Loci_Profile_UpdateUserPreferenceProfileRequest) {
+    // Fresh consent with needs wins, even after a delete in the same session:
+    // the server applies clear over needs, so the two are never sent together.
+    if accessibilityConsentGiven, accessibility.isActive {
+      request.accessibilityNeeds = accessibility.proto
+      request.accessibilityConsentGiven = true
+      return
+    }
+    if clearAccessibility || (hasStoredAccessibility && !accessibility.isActive) {
+      // `clear_accessibility_needs` is generated as `clearAccessibilityNeeds_p`:
+      // swift-protobuf already uses `clearAccessibilityNeeds()` to unset the
+      // `accessibility_needs` message.
+      if hasStoredAccessibility { request.clearAccessibilityNeeds_p = true }
+      return
+    }
+    guard hasStoredAccessibility, accessibility.isActive, accessibility != loadedAccessibility else { return }
+    request.accessibilityNeeds = accessibility.proto
   }
 
   private static func range(_ min: Double, _ max: Double) -> Loci_Common_RangeFilter {

@@ -51,6 +51,9 @@ nonisolated struct SearchState: Equatable, Sendable {
   var gastronomy: Loci_Gastronomy_CityGastronomy?
   /// Changes the planner proposes to the search's trip (ChatRequest.trip_id), in arrival order.
   var proposals: [Loci_Chat_ActionProposal] = []
+  /// Walking legs between a day's stops, keyed by plan day, for a traveller
+  /// with access needs (ACCESSIBLE_ROUTE, sent after the itinerary).
+  var accessibleRoutes: [Int: Loci_Chat_AccessibleRoutePayload] = [:]
 
   /// The newest event id: the `resume_token` for a reattach.
   var lastEventId: String?
@@ -172,7 +175,9 @@ nonisolated extension SearchState {
       lastEventId = event.eventID
     }
 
-    if applyMultiCity(event, payload) || applyGastronomy(payload) || applyTripAction(payload) { return nil }
+    if applyMultiCity(event, payload) || applyGastronomy(payload) || applyTripAction(payload) || applyAccessibleRoute(payload) {
+      return nil
+    }
 
     switch payload {
     case .start(let start):
@@ -224,8 +229,8 @@ nonisolated extension SearchState {
       savedTripID = Self.tripID(from: event) ?? savedTripID
       status = .completed
       return .completed
-    case .route, .gastronomy, .actionProposal:
-      break  // route, gastronomy and trip actions handled above
+    case .route, .gastronomy, .actionProposal, .accessibleRoute:
+      break  // route, gastronomy, trip actions and walking legs handled above
     }
     return nil
   }
@@ -263,6 +268,14 @@ nonisolated extension SearchState {
     if wrapper.hasProposal, !proposals.contains(where: { $0.id == wrapper.proposal.id }) {
       proposals.append(wrapper.proposal)
     }
+    return true
+  }
+
+  /// One day's walking legs. A later event for the same day replaces it, so a
+  /// resumed stream converges on the newest.
+  private mutating func applyAccessibleRoute(_ payload: Loci_Chat_StreamEvent.OneOf_Payload) -> Bool {
+    guard case .accessibleRoute(let route) = payload else { return false }
+    if route.day >= 1 { accessibleRoutes[Int(route.day)] = route }
     return true
   }
 
@@ -357,6 +370,7 @@ nonisolated extension Loci_Chat_StreamEvent.OneOf_Payload {
     case .route: "route"
     case .gastronomy: "gastronomy"
     case .actionProposal: "action_proposal"
+    case .accessibleRoute: "accessible_route"
     }
   }
 }

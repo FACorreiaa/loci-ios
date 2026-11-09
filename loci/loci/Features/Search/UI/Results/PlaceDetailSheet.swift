@@ -102,6 +102,9 @@ struct PlaceDetailView: View {
         if let notes = savedItem?.notes, !notes.isEmpty {
           section("Your notes") { Text(notes).font(.lociBody(15)).foregroundStyle(Color.lociInk) }
         }
+        if !stop.accessibilityNotes.isEmpty {
+          section("Access") { AccessibilityNotesList(notes: stop.accessibilityNotes) }
+        }
         if let facts, !facts.facts.isEmpty { PlaceFactsList(facts: facts) }
         // Field reports hang off a stored POI, the same rule as Add to list and Reviews.
         if ContributePayload.canReport(stop) {

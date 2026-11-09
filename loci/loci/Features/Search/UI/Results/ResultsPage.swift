@@ -143,6 +143,7 @@ struct ResultsPage: View {
         sequence: derived.sequence,
         destination: state.destination,
         showsDayLabel: showsDays,
+        route: showsDays ? state.accessibleRoutes[group.number] : nil,
         selectedID: $selectedID,
         dismissAction: dayDismiss,
       ) { detail = $0 }
