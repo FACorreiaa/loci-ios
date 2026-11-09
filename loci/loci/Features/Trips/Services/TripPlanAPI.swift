@@ -25,6 +25,32 @@ nonisolated enum TripPlanAPI {
       await TripAPI.client.buildFlightLinks(request: $0, headers: [:])
     }.links
   }
+
+  /// Airport autocomplete; empty under two characters.
+  static func searchAirports(_ query: String) async throws(TripRPCError) -> [Loci_Trip_FlightPlaceOption] {
+    let q = query.trimmingCharacters(in: .whitespaces)
+    guard q.count >= 2 else { return [] }
+    var request = Loci_Trip_SearchAirportsRequest()
+    request.query = q
+    return try await TripAPI.call("Could not search airports.", request) {
+      await TripAPI.client.searchAirports(request: $0, headers: [:])
+    }.options
+  }
+
+  /// The airport (or metro code) a city's flight search lands at, if any.
+  static func resolveDestination(city: String, countryCode: String? = nil, latitude: Double? = nil, longitude: Double? = nil)
+    async throws(TripRPCError) -> Loci_Trip_FlightPlaceOption?
+  {
+    var request = Loci_Trip_ResolveFlightDestinationRequest()
+    request.city = city
+    if let cc = countryCode, cc.count == 2 { request.countryCode = cc }
+    if let latitude { request.latitude = latitude }
+    if let longitude { request.longitude = longitude }
+    let response = try await TripAPI.call("Could not find the airport.", request) {
+      await TripAPI.client.resolveFlightDestination(request: $0, headers: [:])
+    }
+    return response.hasDestination ? response.destination : nil
+  }
 }
 
 /// One flight search from the Plan section's form.
@@ -35,9 +61,29 @@ nonisolated struct FlightSearch: Equatable, Sendable {
   var returnDate: String?  // YYYY-MM-DD
   var passengers = 1
   var cabin: Loci_Trip_FlightCabin = .unspecified
+  /// Set when the traveller picked an airport from the suggestions; typed
+  /// text has none, and the server then builds Google Flights only.
+  var originIATA: String?
+  var destinationIATA: String?
 
-  var originPlace: Loci_Trip_FlightPlace { var p = Loci_Trip_FlightPlace(); p.name = origin.trimmingCharacters(in: .whitespaces); return p }
-  var destinationPlace: Loci_Trip_FlightPlace { var p = Loci_Trip_FlightPlace(); p.name = destination.trimmingCharacters(in: .whitespaces); return p }
+  var originPlace: Loci_Trip_FlightPlace { Self.place(origin, originIATA) }
+  var destinationPlace: Loci_Trip_FlightPlace { Self.place(destination, destinationIATA) }
+
+  /// The code as the server's validator takes it (^[A-Z]{3}$), or nil.
+  static func validIATA(_ code: String?) -> String? {
+    guard let c = code?.trimmingCharacters(in: .whitespaces).uppercased(), c.count == 3,
+      c.allSatisfy({ $0.isASCII && $0.isUppercase })
+    else { return nil }
+    return c
+  }
+
+  private static func place(_ name: String, _ iata: String?) -> Loci_Trip_FlightPlace {
+    var p = Loci_Trip_FlightPlace()
+    p.name = name.trimmingCharacters(in: .whitespaces)
+    if let code = validIATA(iata) { p.iata = code }
+    return p
+  }
+
   var isReady: Bool {
     !origin.trimmingCharacters(in: .whitespaces).isEmpty && !destination.trimmingCharacters(in: .whitespaces).isEmpty
       && !departDate.isEmpty && (returnDate.map { $0 >= departDate } ?? true)
@@ -53,5 +99,30 @@ nonisolated struct FlightSearch: Equatable, Sendable {
     f.passengers = Int32(passengers)
     f.cabin = cabin
     return f
+  }
+}
+
+extension FlightSearch {
+  /// A sheet's starting search: the trip's dates when it has them, else
+  /// the date the Departs picker shows (today), so Search is enabled.
+  static func seeded(startDate: String?, endDate: String?, today: Date) -> FlightSearch {
+    var s = FlightSearch()
+    s.departDate = startDate.flatMap { $0.isEmpty ? nil : $0 } ?? CalendarMath.dateKey(today)
+    s.returnDate = endDate.flatMap { $0.isEmpty ? nil : $0 }
+    return s
+  }
+
+  /// The search a saved flight stands for (analytics on its links).
+  init(_ f: Loci_Trip_TripFlight) {
+    self.init(
+      origin: f.origin.name,
+      destination: f.destination.name,
+      departDate: f.departDate,
+      returnDate: f.hasReturnDate ? f.returnDate : nil,
+      passengers: Int(f.passengers),
+      cabin: f.cabin,
+      originIATA: f.origin.hasIata ? f.origin.iata : nil,
+      destinationIATA: f.destination.hasIata ? f.destination.iata : nil
+    )
   }
 }

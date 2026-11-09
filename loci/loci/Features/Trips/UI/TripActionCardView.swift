@@ -38,7 +38,10 @@ struct TripActionCardView: View {
         }
         if isFlight, case .flight(let flight)? = proposal.options.first?.choice {
           ForEach(flight.links.filter { $0.url.hasPrefix("https://") }, id: \.url) { link in
-            if let url = URL(string: link.url) { Link(link.label, destination: url) }
+            if let url = URL(string: link.url) {
+              Link(link.label, destination: url)
+                .simultaneousGesture(TapGesture().onEnded { FlightAnalytics.clicked(.chat, link, FlightSearch(flight)) })
+            }
           }
         }
         if case .failed(let text) = state {

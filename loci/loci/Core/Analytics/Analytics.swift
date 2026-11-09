@@ -64,6 +64,12 @@ enum AnalyticsEvent: String {
   case linkImported = "link_imported"
   /// The Discord invite was opened (`surface`: settings). Same name as web (footer | support).
   case discordLinkClicked = "discord_link_clicked"
+  /// The Find flights sheet opened. Properties: source, destination_iata?. Same names as web.
+  case flightSearchOpened = "flight_search_opened"
+  /// A flight search was built. Properties: source, origin_iata?, destination_iata?, has_return, passengers, cabin.
+  case flightSearchBuilt = "flight_search_built"
+  /// A partner flight link was opened. Properties: source, provider, origin_iata?, destination_iata?.
+  case flightLinkClicked = "flight_link_clicked"
 }
 
 @MainActor enum Analytics {

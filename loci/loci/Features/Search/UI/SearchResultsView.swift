@@ -165,6 +165,16 @@ struct SearchResultsView: View {
         if canSave {
           Button(saveStatus ?? "Save", systemImage: "bookmark") { Task { await save(state) } }.disabled(saveStatus != nil)
         }
+        if state.hasResult, let source = FlightSource(rawValue: state.destination.rawValue),
+          let city = state.cityData?.city ?? state.cityName ?? link.cityName, !city.isEmpty
+        {
+          FindFlightsButton(
+            source: source,
+            city: city,
+            latitude: state.cityData?.centerLatitude,
+            longitude: state.cityData?.centerLongitude
+          )
+        }
         if state.hasResult {
           ShareLink(item: ShareText.build(title: shareTitle(state), groups: state.dayGroups, description: state.cityData?.description_p)) {
             Label("Share", systemImage: "square.and.arrow.up")
