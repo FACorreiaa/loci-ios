@@ -58,3 +58,20 @@ struct FlightSearchIATATests {
     #expect(s.flight.origin.iata == "LIS")
   }
 }
+
+@MainActor struct FindFlightsSeedTests {
+  /// The Departs picker always shows a date; the search must hold the same
+  /// one, or "Search flights" stays disabled under a form that looks done.
+  @Test func anUndatedPageSeedsTheDateThePickerShows() throws {
+    let today = try #require(CalendarMath.parseDateKey("2026-11-09"))
+    let s = FlightSearch.seeded(startDate: nil, endDate: nil, today: today)
+    #expect(s.departDate == "2026-11-09")
+    #expect(s.returnDate == nil)
+  }
+
+  @Test func aDatedTripSeedsItsDates() {
+    let s = FlightSearch.seeded(startDate: "2026-12-04", endDate: "2026-12-08", today: Date())
+    #expect(s.departDate == "2026-12-04")
+    #expect(s.returnDate == "2026-12-08")
+  }
+}

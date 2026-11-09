@@ -103,6 +103,15 @@ nonisolated struct FlightSearch: Equatable, Sendable {
 }
 
 extension FlightSearch {
+  /// A sheet's starting search: the trip's dates when it has them, else
+  /// the date the Departs picker shows (today), so Search is enabled.
+  static func seeded(startDate: String?, endDate: String?, today: Date) -> FlightSearch {
+    var s = FlightSearch()
+    s.departDate = startDate.flatMap { $0.isEmpty ? nil : $0 } ?? CalendarMath.dateKey(today)
+    s.returnDate = endDate.flatMap { $0.isEmpty ? nil : $0 }
+    return s
+  }
+
   /// The search a saved flight stands for (analytics on its links).
   init(_ f: Loci_Trip_TripFlight) {
     self.init(

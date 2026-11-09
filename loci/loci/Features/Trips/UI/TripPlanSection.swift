@@ -25,7 +25,7 @@ struct TripPlanSection: View {
     Section {
       datesRow
       ForEach(TripPlan.cities(of: trip), id: \.self) { city in stayRow(city) }
-      TripFindFlightsRow(trip: trip)
+      TripFindFlightsRow(trip: trip, onSave: onAddFlight)
       ForEach(trip.flights, id: \.id) { flight in flightRow(flight) }
       flightForm
       if let error { Text(error).font(.lociCaption(13)).foregroundStyle(Color.lociDestructive) }

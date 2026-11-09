@@ -13,6 +13,9 @@ struct FindFlightsSheet: View {
   /// YYYY-MM-DD, from a dated trip.
   var startDate: String?
   var endDate: String?
+  /// Saves the search to the trip; only a trip passes it, so only there
+  /// does the sheet offer Save.
+  var onSave: ((Loci_Trip_TripFlight) -> Void)?
 
   @Environment(\.dismiss) private var dismiss
   @State private var search = FlightSearch()
@@ -22,7 +25,20 @@ struct FindFlightsSheet: View {
     NavigationStack {
       Form {
         if resolved {
-          FlightSearchForm(source: source, search: $search) { _ in EmptyView() }
+          FlightSearchForm(
+            source: source,
+            search: $search,
+            defaultDepart: CalendarMath.parseDateKey(search.departDate) ?? Date(),
+            defaultReturn: CalendarMath.parseDateKey(search.returnDate ?? "") ?? Date()
+          ) { built in
+            if let onSave {
+              Button("Save to trip") {
+                onSave(built.flight)
+                dismiss()
+              }
+              .buttonStyle(.borderless)
+            }
+          }
         } else {
           ProgressView("Finding the airport…")
         }
@@ -33,8 +49,7 @@ struct FindFlightsSheet: View {
     }
     .task {
       guard !resolved else { return }
-      search.departDate = startDate ?? ""
-      search.returnDate = endDate
+      search = FlightSearch.seeded(startDate: startDate, endDate: endDate, today: Date())
       let option = try? await TripPlanAPI.resolveDestination(city: city, latitude: latitude, longitude: longitude)
       if let option {
         search.destination = AirportField.label(option)
@@ -56,6 +71,7 @@ struct FindFlightsButton: View {
   var longitude: Double?
   var startDate: String?
   var endDate: String?
+  var onSave: ((Loci_Trip_TripFlight) -> Void)?
   @State private var open = false
 
   var body: some View {
@@ -67,7 +83,8 @@ struct FindFlightsButton: View {
           latitude: latitude,
           longitude: longitude,
           startDate: startDate,
-          endDate: endDate
+          endDate: endDate,
+          onSave: onSave
         )
       }
   }
@@ -77,6 +94,7 @@ struct FindFlightsButton: View {
 /// position and the trip's dates.
 struct TripFindFlightsRow: View {
   let trip: Loci_Trip_TripDraft
+  let onSave: (Loci_Trip_TripFlight) -> Void
 
   var body: some View {
     if let city = TripPlan.cities(of: trip).first {
@@ -87,7 +105,8 @@ struct TripFindFlightsRow: View {
         latitude: at?.latitude,
         longitude: at?.longitude,
         startDate: trip.startDate.isEmpty ? nil : trip.startDate,
-        endDate: trip.endDate.isEmpty ? nil : trip.endDate
+        endDate: trip.endDate.isEmpty ? nil : trip.endDate,
+        onSave: onSave
       )
     }
   }
