@@ -1,4 +1,9 @@
-Fixes for Ask Loci
-• After a typed question, the Ask Loci panel could fill the screen and hide its close button. It now stays above the keyboard, and a tap above it closes it.
-• Return on the keyboard sends, in Ask Loci and in the search box, instead of starting a new line.
-• A new question in Ask Loci scrolls into view.
+Plans that work for your access needs
+• Tell Loci how you get around in your travel profile: mobility, longest walk between stops, step-free routes, slopes, cobblestones, rest stops, accessible toilets, and sensory needs.
+• Itineraries respect those limits. Stops show access notes marked Barrier, Caution or Good to know, each labelled with where it comes from.
+• The walk between stops shows its time, and Loci suggests transit or a taxi when a walk is too long.
+• Storing access needs is off until you turn it on, and you can delete them at any time.
+
+Find flights
+• Search flights to a city from your results or your trip plan, with airport suggestions as you type.
+• Loci opens the search on a flight site, where the prices and booking are. Save the flight to your trip.
