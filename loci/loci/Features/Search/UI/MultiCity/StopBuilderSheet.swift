@@ -36,7 +36,7 @@ struct StopBuilderSheet: View {
               Stepper(value: Binding(get: { stop.nights ?? 2 }, set: { stop.nights = $0 }), in: 1...14) {
                 VStack(alignment: .leading) {
                   Text(stop.cityName).font(.lociBody())
-                  Text("\(stop.nights ?? 2) night\((stop.nights ?? 2) == 1 ? "" : "s")").font(.caption).foregroundStyle(.secondary)
+                  Text("^[\(stop.nights ?? 2) night](inflect: true)").font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
                 }
               }
             }
@@ -45,7 +45,7 @@ struct StopBuilderSheet: View {
           } header: {
             Text("In this order")
           } footer: {
-            Text("Travel between cities is an estimate — check times before you book.")
+            Text("Travel between cities is an estimate. Check times before you book.")
           }
         }
         Section {

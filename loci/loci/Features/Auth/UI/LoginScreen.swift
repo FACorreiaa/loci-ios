@@ -27,16 +27,23 @@ public struct LoginScreen: View {
           appleSignInButton
           googleSignInButton
         }.padding(.horizontal, 24).padding(.bottom, 32)
-      }.background(Color.lociPaper.ignoresSafeArea()).sheet(isPresented: $viewModel.showForgotPassword) {
-        ForgotPasswordSheet { viewModel.showForgotPassword = false }
-      }.sheet(item: $viewModel.pendingMFA) { _ in
-        MFACodeSheet(
-          isLoading: viewModel.isLoading,
-          errorMessage: viewModel.mfaErrorMessage,
-          onSubmit: { code, recoveryCode in viewModel.handleMFASubmit(code: code, recoveryCode: recoveryCode) },
-          onCancel: { viewModel.cancelMFA() }
-        )
-      }
+      }.background(Color.lociPaper.ignoresSafeArea())
+        // A failed sign-in is felt and spoken, not only shown above the form.
+        .sensoryFeedback(trigger: viewModel.errorMessage) { _, message in message == nil ? nil : .error }
+        .onChange(of: viewModel.errorMessage) { _, message in
+          if let message { AccessibilityNotification.Announcement(message).post() }
+        }
+        .sheet(isPresented: $viewModel.showForgotPassword) {
+          ForgotPasswordSheet { viewModel.showForgotPassword = false }
+        }
+        .sheet(item: $viewModel.pendingMFA) { _ in
+          MFACodeSheet(
+            isLoading: viewModel.isLoading,
+            errorMessage: viewModel.mfaErrorMessage,
+            onSubmit: { code, recoveryCode in viewModel.handleMFASubmit(code: code, recoveryCode: recoveryCode) },
+            onCancel: { viewModel.cancelMFA() }
+          )
+        }
     }
   }
 
@@ -66,9 +73,9 @@ public struct LoginScreen: View {
           viewModel.clearMessages()
         }
       } label: {
-        Text("Sign In").font(.subheadline.weight(.semibold)).foregroundStyle(viewModel.isSignup ? Color.lociMutedInk : Color.lociInk).frame(
+        Text("Sign in").font(.lociBody(15).weight(.semibold)).foregroundStyle(viewModel.isSignup ? Color.lociMutedInk : Color.lociInk).frame(
           maxWidth: .infinity
-        ).padding(.vertical, 10).background(
+        ).frame(minHeight: LociTheme.minTapTarget).background(
           ZStack {
             if !viewModel.isSignup {
               RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).fill(Color.lociCard).shadow(
@@ -88,9 +95,9 @@ public struct LoginScreen: View {
           viewModel.clearMessages()
         }
       } label: {
-        Text("Create Account").font(.subheadline.weight(.semibold)).foregroundStyle(viewModel.isSignup ? Color.lociInk : Color.lociMutedInk).frame(
+        Text("Create account").font(.lociBody(15).weight(.semibold)).foregroundStyle(viewModel.isSignup ? Color.lociInk : Color.lociMutedInk).frame(
           maxWidth: .infinity
-        ).padding(.vertical, 10).background(
+        ).frame(minHeight: LociTheme.minTapTarget).background(
           ZStack {
             if viewModel.isSignup {
               RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).fill(Color.lociCard).shadow(
@@ -109,16 +116,16 @@ public struct LoginScreen: View {
   @ViewBuilder private var feedbackMessages: some View {
     if let errorMessage = viewModel.errorMessage {
       HStack(spacing: 8) {
-        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Color.lociDestructive)
-        Text(errorMessage).font(.footnote).foregroundStyle(Color.lociDestructive)
+        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Color.lociDestructive).accessibilityHidden(true)
+        Text(errorMessage).font(.lociCaption(13)).foregroundStyle(Color.lociDestructive)
         Spacer()
       }.padding(12).background(Color.lociDestructive.opacity(0.08)).clipShape(.rect(cornerRadius: LociTheme.cornerRadius))
     }
 
     if let successMessage = viewModel.successMessage {
       HStack(spacing: 8) {
-        Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.lociForest)
-        Text(successMessage).font(.footnote).foregroundStyle(Color.lociForest)
+        Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.lociForest).accessibilityHidden(true)
+        Text(successMessage).font(.lociCaption(13)).foregroundStyle(Color.lociForest)
         Spacer()
       }.padding(12).background(Color.lociForest.opacity(0.08)).clipShape(.rect(cornerRadius: LociTheme.cornerRadius))
     }
@@ -127,7 +134,7 @@ public struct LoginScreen: View {
   @ViewBuilder private var oauthDivider: some View {
     HStack(spacing: 16) {
       Rectangle().fill(Color.lociBorder).frame(height: 1)
-      Text("or").font(.footnote).foregroundStyle(Color.lociMutedInk)
+      Text("or").font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk)
       Rectangle().fill(Color.lociBorder).frame(height: 1)
     }.padding(.vertical, 4)
   }
@@ -143,7 +150,7 @@ public struct LoginScreen: View {
         } label: {
           Color.clear.contentShape(Rectangle())
         }.accessibilityLabel("Sign in with Apple")
-      }.disabled(viewModel.isLoading)
+      }.disabled(viewModel.isLoading).opacity(viewModel.isLoading ? 0.5 : 1)
   }
 
   @ViewBuilder private var googleSignInButton: some View {
@@ -151,12 +158,12 @@ public struct LoginScreen: View {
       viewModel.performGoogleSignIn()
     } label: {
       HStack(spacing: 12) {
-        Image(systemName: "g.circle.fill").font(.system(size: 20, weight: .medium)).foregroundStyle(Color.lociCoral)
-        Text("Continue with Google").font(.body.weight(.semibold)).foregroundStyle(Color.lociInk)
-      }.frame(maxWidth: .infinity).frame(height: 50).background(Color.lociCard).clipShape(.rect(cornerRadius: LociTheme.cornerRadius)).overlay {
-        RoundedRectangle(cornerRadius: LociTheme.cornerRadius).stroke(Color.lociBorder.opacity(0.8), lineWidth: LociTheme.borderWidth)
+        Image(systemName: "g.circle.fill").font(.title3.weight(.medium)).foregroundStyle(Color.lociCoral)
+        Text("Continue with Google").font(.lociHeadline().weight(.semibold)).foregroundStyle(Color.lociInk)
+      }.frame(maxWidth: .infinity).frame(minHeight: 50).background(Color.lociCard).clipShape(.rect(cornerRadius: LociTheme.cornerRadius)).overlay {
+        RoundedRectangle(cornerRadius: LociTheme.cornerRadius).stroke(Color.lociBorder, lineWidth: LociTheme.borderWidth)
       }
-    }.disabled(viewModel.isLoading)
+    }.disabled(viewModel.isLoading).opacity(viewModel.isLoading ? 0.5 : 1)
   }
 }
 

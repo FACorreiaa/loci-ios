@@ -57,7 +57,8 @@ struct DiscoverView: View {
               Button("Try again") { Task { await load() } }.buttonStyle(.bordered).tint(Color.lociForest)
             }.frame(maxWidth: .infinity)
           } else {
-            ProgressView().frame(maxWidth: .infinity)
+            // The sections' shape while they load, not a spinner in empty space.
+            SkeletonCards()
           }
         }.padding(LociTheme.defaultPadding)
       }.background { Color.lociPaper.ignoresSafeArea() }.navigationTitle("Discover").appRouteDestinations().refreshable {
@@ -93,7 +94,7 @@ struct DiscoverView: View {
 
   private var hero: some View {
     VStack(alignment: .leading, spacing: 12) {
-      Text("Where to next?").font(.lociDisplay(30)).foregroundStyle(Color.lociInk)
+      Text("Where to next?").font(.lociDisplay(30)).foregroundStyle(Color.lociInk).accessibilityAddTraits(.isHeader)
       if !here.placeName.isEmpty { Text(here.placeName).font(.lociCaption(13)).foregroundStyle(Color.lociForest) }
       TextField("City (optional)", text: $city).font(.lociBody()).textContentType(.addressCity).padding(.horizontal, 14).padding(.vertical, 10)
         .background(Color.lociCard, in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous)).overlay {
@@ -164,23 +165,28 @@ struct DiscoverView: View {
     }.buttonStyle(.plain)
   }
 
+  /// A section heading: ink, and a heading to VoiceOver's rotor.
+  private func sectionTitle(_ title: LocalizedStringKey) -> some View {
+    Text(title).font(.lociHeadline()).foregroundStyle(Color.lociInk).accessibilityAddTraits(.isHeader)
+  }
+
   private var examplesSection: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("Try one").font(.lociHeadline())
+      sectionTitle("Try one")
       ForEach(Self.examplePrompts, id: \.self) { prompt in
         Button {
           composerSeed = prompt
         } label: {
           Label(prompt, systemImage: "sparkle").font(.lociBody(15)).foregroundStyle(Color.lociInk).frame(maxWidth: .infinity, alignment: .leading)
             .lociCard(padding: 12)
-        }.buttonStyle(.plain)
+        }.buttonStyle(.plain).accessibilityHint("Fills the search box")
       }
     }
   }
 
   private var quickCategoriesSection: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("Quick categories").font(.lociHeadline())
+      sectionTitle("Quick categories")
       ScrollView(.horizontal) {
         HStack(spacing: 8) {
           ForEach(Self.quickCategories, id: \.name) { category in
@@ -191,19 +197,26 @@ struct DiscoverView: View {
                 Color.lociSage,
                 in: Capsule()
               ).foregroundStyle(Color.lociInk)
+                // The capsule keeps its size; the touch area is the 44pt minimum.
+                .frame(minHeight: LociTheme.minTapTarget).contentShape(.rect)
             }
+            .buttonStyle(PressScaleButtonStyle())
+            .accessibilityHint("Fills the search box")
           }
         }
+        .padding(.horizontal, LociTheme.defaultPadding)
       }
       .scrollIndicators(.hidden)
+      // Edge to edge under the screen margin, as the In season strip runs.
+      .padding(.horizontal, -LociTheme.defaultPadding)
     }
   }
 
   @ViewBuilder private func trendingSection(_ trending: [Loci_Discover_TrendingDiscovery]) -> some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("Trending today").font(.lociHeadline())
+      sectionTitle("Trending today")
       if trending.isEmpty {
-        Text("No trending discoveries yet today").foregroundStyle(Color.lociMutedInk)
+        Text("No trending discoveries yet today").font(.lociBody(15)).foregroundStyle(Color.lociMutedInk)
       } else {
         ForEach(trending, id: \.cityName) { item in
           Button {
@@ -216,6 +229,8 @@ struct DiscoverView: View {
               Text("^[\(item.searchCount) search](inflect: true)").lociCoordStyle(10)
             }.lociCard(padding: 12)
           }
+          .buttonStyle(PressScaleButtonStyle())
+          .accessibilityHint("Fills the city field")
         }
       }
     }
@@ -223,9 +238,9 @@ struct DiscoverView: View {
 
   @ViewBuilder private func featuredSection(_ featured: [Loci_Discover_FeaturedCollection]) -> some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("Featured collections").font(.lociHeadline())
+      sectionTitle("Featured collections")
       if featured.isEmpty {
-        Text("No featured collections available").foregroundStyle(Color.lociMutedInk)
+        Text("No featured collections available").font(.lociBody(15)).foregroundStyle(Color.lociMutedInk)
       } else {
         ScrollView(.horizontal) {
           HStack(spacing: 12) {
@@ -239,10 +254,14 @@ struct DiscoverView: View {
                   Text("^[\(item.itemCount) place](inflect: true)").lociCoordStyle(10)
                 }.frame(width: 160, alignment: .leading).lociCard(padding: 14)
               }
+              .buttonStyle(PressScaleButtonStyle())
+              .accessibilityHint("Fills the search box")
             }
           }
+          .padding(.horizontal, LociTheme.defaultPadding)
         }
         .scrollIndicators(.hidden)
+        .padding(.horizontal, -LociTheme.defaultPadding)
       }
     }
   }
@@ -250,7 +269,7 @@ struct DiscoverView: View {
   @ViewBuilder private func recentSection(_ sessions: [Loci_Chat_ChatSession]) -> some View {
     if !sessions.isEmpty {
       VStack(alignment: .leading, spacing: 8) {
-        Text("Your recent discoveries").font(.lociHeadline())
+        sectionTitle("Your recent discoveries")
         ForEach(sessions, id: \.id) { session in
           NavigationLink(value: AssistantView.link(for: session)) {
             SessionRow(session: session).frame(maxWidth: .infinity, alignment: .leading).lociCard(padding: 12)
@@ -275,7 +294,8 @@ struct DiscoverView: View {
     } catch {
       // A refresh that fails keeps the page already shown.
       loadFailed = page == nil
-      self.error = error.userMessage
+      // A first load that fails says so in the page, with "Try again"; the alert is for a refresh.
+      if page != nil { self.error = error.userMessage }
     }
   }
 }

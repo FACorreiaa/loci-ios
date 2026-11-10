@@ -29,12 +29,12 @@ public struct SignInView: View {
         Button {
           viewModel.showForgotPassword = true
         } label: {
-          Text("Forgot Password?").font(.caption.weight(.medium)).foregroundStyle(Color.lociCoral)
+          Text("Forgot password?").font(.lociCaption().weight(.medium)).foregroundStyle(Color.lociCoral)
             .frame(minHeight: LociTheme.minTapTarget).contentShape(.rect)
         }
       }
 
-      LociButton(title: "Sign In", style: .primary, isLoading: viewModel.isLoading) { viewModel.performAction() }.padding(.top, 8)
+      LociButton(title: "Sign in", style: .primary, isLoading: viewModel.isLoading) { viewModel.performAction() }.padding(.top, 8)
     }
   }
 }

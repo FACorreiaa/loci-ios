@@ -23,7 +23,7 @@ public struct LociButton: View {
     Button(action: action) {
       HStack(spacing: 8) {
         if isLoading { ProgressView().tint(textColor).scaleEffect(0.9) }
-        Text(title).font(.headline.weight(.semibold)).foregroundStyle(textColor)
+        Text(title).font(.lociHeadline().weight(.semibold)).foregroundStyle(textColor)
       }.frame(maxWidth: .infinity).padding(.vertical, 14).background(backgroundColor).clipShape(.rect(cornerRadius: LociTheme.cornerRadius)).overlay {
         RoundedRectangle(cornerRadius: LociTheme.cornerRadius).stroke(borderColor, lineWidth: LociTheme.borderWidth)
       }

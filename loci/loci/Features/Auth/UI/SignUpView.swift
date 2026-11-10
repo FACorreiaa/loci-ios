@@ -28,7 +28,7 @@ public struct SignUpView: View {
       )
 
       LociTextField(
-        title: "Confirm Password",
+        title: "Confirm password",
         placeholder: "Repeat your password",
         systemImage: "lock.shield.fill",
         text: $viewModel.confirmPassword,
@@ -36,7 +36,7 @@ public struct SignUpView: View {
         textContentType: .newPassword
       )
 
-      LociButton(title: "Create Account", style: .primary, isLoading: viewModel.isLoading) { viewModel.performAction() }.padding(.top, 8)
+      LociButton(title: "Create account", style: .primary, isLoading: viewModel.isLoading) { viewModel.performAction() }.padding(.top, 8)
     }
   }
 }

@@ -10,11 +10,10 @@ struct StopPicker: View {
       HStack(spacing: 8) {
         chip("All days", selected: selection == nil) { selection = nil }
         ForEach(stops, id: \.index) { stop in
-          Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.secondary).accessibilityHidden(true)
+          Image(systemName: "arrow.right").font(.caption2).foregroundStyle(Color.lociMutedInk).accessibilityHidden(true)
           chip(MultiCityFormat.chip(stop), selected: selection == stop.index, stop: stop) { selection = stop.index }
         }
       }
-      .padding(.vertical, 2)
     }
     .scrollIndicators(.hidden)
   }
@@ -22,7 +21,7 @@ struct StopPicker: View {
   private func chip(_ title: String, selected: Bool, stop: StopResult? = nil, action: @escaping () -> Void) -> some View {
     Button(action: action) {
       HStack(spacing: 6) {
-        Text(title).font(.subheadline.weight(.medium))
+        Text(title).font(.lociBody(15).weight(.medium))
         if let stop, stop.error != nil {
           Image(systemName: "exclamationmark.triangle.fill").font(.caption).accessibilityLabel("This city failed")
         } else if let stop, stop.state.phase != .done, !stop.state.hasResult {
@@ -31,8 +30,10 @@ struct StopPicker: View {
       }
       .padding(.horizontal, 12).padding(.vertical, 7)
       .background(selected ? Color.lociForest : Color.lociCard, in: Capsule())
-      .foregroundStyle(selected ? Color.lociPaper : Color.primary)
-      .overlay { Capsule().stroke(Color.lociBorder, lineWidth: selected ? 0 : 1) }
+      .foregroundStyle(selected ? Color.lociOnForest : Color.lociInk)
+      .overlay { Capsule().stroke(Color.lociBorder, lineWidth: selected ? 0 : LociTheme.borderWidth) }
+      // The capsule keeps its size; the touch area is the 44pt minimum.
+      .frame(minHeight: LociTheme.minTapTarget).contentShape(.rect)
     }
     .buttonStyle(.plain)
     .accessibilityAddTraits(selected ? .isSelected : [])

@@ -60,28 +60,27 @@ struct HereBriefSection: View {
         Text(model.placeName.isEmpty ? "Here now" : "Here now · \(model.placeName)")
           .font(.lociHeadline())
           .foregroundStyle(Color.lociInk)
+          .accessibilityAddTraits(.isHeader)
         today(brief)
         if let goScore = model.goScore { GoScoreCard(model: goScore, cityName: model.goScoreCity) }
         list("Around you", brief.local)
         list("Getting around", brief.disruption)
         list("What's on", brief.whatsOn)
         if brief.stale {
-          Text("Some sources delayed").font(.lociCaption(11)).foregroundStyle(.secondary)
+          Text("Some sources delayed").font(.lociCaption(11)).foregroundStyle(Color.lociMutedInk)
         }
       }
-      .padding(16)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(Color.lociCard, in: RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous))
-      .overlay { RoundedRectangle(cornerRadius: LociTheme.cornerRadius, style: .continuous).stroke(Color.lociBorder) }
+      .lociCard()
     }
   }
 
   @ViewBuilder private func today(_ brief: Loci_Localcontext_HereBrief) -> some View {
     if let t = brief.weather.first {
       HStack(alignment: .firstTextBaseline, spacing: 8) {
-        Text("\(Int(t.highC.rounded()))° / \(Int(t.lowC.rounded()))°").font(.lociBody()).monospacedDigit()
+        Text("\(Int(t.highC.rounded()))° / \(Int(t.lowC.rounded()))°").font(.lociBody()).monospacedDigit().foregroundStyle(Color.lociInk)
         Text(brief.weatherIsEstimated ? "\(t.condition) · estimated" : t.condition)
-          .font(.lociCaption(13)).foregroundStyle(.secondary)
+          .font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk)
       }
     }
     ForEach(Array(brief.alerts.prefix(3)), id: \.self) { alert in
@@ -96,17 +95,19 @@ struct HereBriefSection: View {
   @ViewBuilder private func list(_ title: String, _ items: [Loci_Localcontext_NewsTickerItem]) -> some View {
     if !items.isEmpty {
       VStack(alignment: .leading, spacing: 8) {
-        Text(title.uppercased()).font(.lociCaption(11)).tracking(1.2).foregroundStyle(.secondary)
+        Text(title).lociCoordStyle().accessibilityAddTraits(.isHeader)
         ForEach(items.prefix(3), id: \.id) { item in
           Button {
             if let url = URL(string: item.url) { openURL(url) }
           } label: {
             VStack(alignment: .leading, spacing: 2) {
               Text(item.title).font(.lociBody()).foregroundStyle(Color.lociInk).lineLimit(2).multilineTextAlignment(.leading)
-              Text(item.source).font(.lociCaption(11)).foregroundStyle(.secondary)
+              Text(item.source).font(.lociCaption(11)).foregroundStyle(Color.lociMutedInk)
             }
           }
           .buttonStyle(.plain)
+          .accessibilityRemoveTraits(.isButton)
+          .accessibilityAddTraits(.isLink)
         }
       }
     }

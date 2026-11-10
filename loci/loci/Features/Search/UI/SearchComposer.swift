@@ -6,7 +6,7 @@ import SwiftUI
 /// session, `onStarted` gets the link to push.
 struct SearchComposer: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  var placeholder = "Ask Loci — “3 days in Lisbon with kids”"
+  var placeholder = "Ask Loci: “3 days in Lisbon with kids”"
   /// Text another control puts in the box (a category chip); cleared once taken.
   var seed: Binding<String>?
   var cityName: String?
@@ -40,6 +40,7 @@ struct SearchComposer: View {
 
   private var isStreaming: Bool { controller.state.isActive }
   private var isDictating: Bool { dictation.state != .idle }
+  private var canSend: Bool { !isDictating && !text.trimmingCharacters(in: .whitespaces).isEmpty }
   private var fieldRadius: CGFloat { style == .muse ? LociTheme.Muse.bubbleRadius : LociTheme.cornerRadius }
 
   var body: some View {
@@ -85,8 +86,10 @@ struct SearchComposer: View {
       } else {
         Button("Send", systemImage: "arrow.up") { send() }
           .labelStyle(.iconOnly).frame(width: LociTheme.minTapTarget, height: LociTheme.minTapTarget)
-          .background(Color.lociForest, in: Circle()).foregroundStyle(Color.lociPaper)
-          .disabled(isDictating || text.trimmingCharacters(in: .whitespaces).isEmpty)
+          .background(Color.lociForest, in: Circle()).foregroundStyle(Color.lociOnForest)
+          .disabled(!canSend)
+          // The fill sits outside the button's label, so the system does not dim it.
+          .opacity(canSend ? 1 : 0.4)
       }
     }
     .onChange(of: focusRequest) { isFocused = true }
