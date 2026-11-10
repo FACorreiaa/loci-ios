@@ -34,15 +34,16 @@ public struct LoginScreen: View {
           if let message { AccessibilityNotification.Announcement(message).post() }
         }
         .sheet(isPresented: $viewModel.showForgotPassword) {
-        ForgotPasswordSheet { viewModel.showForgotPassword = false }
-      }.sheet(item: $viewModel.pendingMFA) { _ in
-        MFACodeSheet(
-          isLoading: viewModel.isLoading,
-          errorMessage: viewModel.mfaErrorMessage,
-          onSubmit: { code, recoveryCode in viewModel.handleMFASubmit(code: code, recoveryCode: recoveryCode) },
-          onCancel: { viewModel.cancelMFA() }
-        )
-      }
+          ForgotPasswordSheet { viewModel.showForgotPassword = false }
+        }
+        .sheet(item: $viewModel.pendingMFA) { _ in
+          MFACodeSheet(
+            isLoading: viewModel.isLoading,
+            errorMessage: viewModel.mfaErrorMessage,
+            onSubmit: { code, recoveryCode in viewModel.handleMFASubmit(code: code, recoveryCode: recoveryCode) },
+            onCancel: { viewModel.cancelMFA() }
+          )
+        }
     }
   }
 

@@ -39,8 +39,8 @@ public struct LociTextField: View {
         Image(systemName: systemImage).foregroundStyle(Color.lociMutedInk).frame(width: 20).accessibilityHidden(true)
 
         if isSecure && !isShowingPassword {
-          SecureField(placeholder, text: $text).font(.lociBody()).textContentType(textContentType).autocorrectionDisabled().textInputAutocapitalization(.never)
-            .focused($isFocused).accessibilityLabel(title)
+          SecureField(placeholder, text: $text).font(.lociBody()).textContentType(textContentType).autocorrectionDisabled()
+            .textInputAutocapitalization(.never).focused($isFocused).accessibilityLabel(title)
         } else {
           TextField(placeholder, text: $text).font(.lociBody()).keyboardType(keyboardType).textContentType(textContentType).autocorrectionDisabled()
             .textInputAutocapitalization(.never).focused($isFocused).accessibilityLabel(title)
