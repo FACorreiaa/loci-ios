@@ -9,11 +9,13 @@ struct ResultsHeader: View {
   let fallbackCityName: String?
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var typeSize
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
       VStack(alignment: .leading, spacing: 2) {
         Text(city?.city ?? fallbackCityName ?? "Your trip").font(.lociDisplay(28)).foregroundStyle(Color.lociInk)
+          .accessibilityAddTraits(.isHeader)
         if let city, !city.country.isEmpty {
           Text([city.stateProvince, city.country].filter { !$0.isEmpty }.joined(separator: ", ")).lociCoordStyle()
         }
@@ -29,11 +31,12 @@ struct ResultsHeader: View {
   }
 
   private var tiles: some View {
-    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-      CityTile(kicker: "Pop", value: city?.population ?? "", symbol: "person.2")
-      CityTile(kicker: "Area", value: city?.area ?? "", symbol: "square.dashed")
-      CityTile(kicker: "Lang", value: city?.language ?? "", symbol: "character.bubble")
-      CityTile(kicker: "Weather", value: city?.weather ?? "", symbol: "cloud.sun")
+    // One column at accessibility sizes, where half a row truncates every value.
+    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 8) {
+      CityTile(kicker: "Pop", spoken: "Population", value: city?.population ?? "", symbol: "person.2")
+      CityTile(kicker: "Area", spoken: "Area", value: city?.area ?? "", symbol: "square.dashed")
+      CityTile(kicker: "Lang", spoken: "Language", value: city?.language ?? "", symbol: "character.bubble")
+      CityTile(kicker: "Weather", spoken: "Weather", value: city?.weather ?? "", symbol: "cloud.sun")
     }
     .redacted(reason: city == nil ? .placeholder : [])
     // A container: the label names the grid without overriding every tile.
@@ -44,6 +47,8 @@ struct ResultsHeader: View {
 
 private struct CityTile: View {
   let kicker: String
+  /// The kicker in full, for VoiceOver ("Pop" is read as the word).
+  let spoken: String
   let value: String
   let symbol: String
 
@@ -58,7 +63,8 @@ private struct CityTile: View {
     }
     .padding(10)
     .background(Color.lociMuted, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-    .accessibilityElement(children: .combine)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("\(spoken): \(value.isEmpty ? "not available" : value)")
   }
 }
 
@@ -138,7 +144,10 @@ private struct AlertRow: View {
 
   var body: some View {
     HStack(alignment: .top, spacing: 8) {
-      Circle().fill(LocalAlertStyle.color(severity: alert.severity)).frame(width: 8, height: 8).padding(.top, 5)
+      // Severity reads from the shape as well as the colour, as in Here now.
+      Image(systemName: alert.severity >= 0.7 ? "exclamationmark.octagon.fill" : "exclamationmark.triangle")
+        .font(.lociCaption(12)).foregroundStyle(LocalAlertStyle.color(severity: alert.severity)).padding(.top, 2)
+        .accessibilityHidden(true)
       VStack(alignment: .leading, spacing: 1) {
         Text(alert.title).font(.lociCaption(13)).foregroundStyle(Color.lociInk)
         if !alert.detail.isEmpty { Text(alert.detail).font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk).lineLimit(2) }

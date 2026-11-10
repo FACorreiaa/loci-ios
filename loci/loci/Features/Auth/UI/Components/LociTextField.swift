@@ -33,16 +33,16 @@ public struct LociTextField: View {
   public var body: some View {
     VStack(alignment: .leading, spacing: 6) {
       // The field carries the title as its label, so VoiceOver doesn't read it twice.
-      Text(title).font(.caption.weight(.medium)).foregroundStyle(Color.lociMutedInk).accessibilityHidden(true)
+      Text(title).font(.lociCaption().weight(.medium)).foregroundStyle(Color.lociMutedInk).accessibilityHidden(true)
 
       HStack(spacing: 12) {
         Image(systemName: systemImage).foregroundStyle(Color.lociMutedInk).frame(width: 20).accessibilityHidden(true)
 
         if isSecure && !isShowingPassword {
-          SecureField(placeholder, text: $text).textContentType(textContentType).autocorrectionDisabled().textInputAutocapitalization(.never)
+          SecureField(placeholder, text: $text).font(.lociBody()).textContentType(textContentType).autocorrectionDisabled().textInputAutocapitalization(.never)
             .focused($isFocused).accessibilityLabel(title)
         } else {
-          TextField(placeholder, text: $text).keyboardType(keyboardType).textContentType(textContentType).autocorrectionDisabled()
+          TextField(placeholder, text: $text).font(.lociBody()).keyboardType(keyboardType).textContentType(textContentType).autocorrectionDisabled()
             .textInputAutocapitalization(.never).focused($isFocused).accessibilityLabel(title)
         }
 

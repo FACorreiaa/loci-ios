@@ -65,7 +65,7 @@ struct SearchResultsView: View {
           actions(state)
           MuseThreadTail(thread: thread, sessionId: state.sessionId ?? sessionId)
         } else if isRestoring || awaitingRerun {
-          ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
+          SkeletonCards().padding(.top, 12)
         } else {
           unavailable
         }
@@ -161,9 +161,11 @@ struct SearchResultsView: View {
   @ViewBuilder private func actions(_ state: SearchState) -> some View {
     let canSave = !isLive && state.hasResult
     if canSave || state.hasResult {
-      HStack(spacing: 8) {
+      // Up to four pills: side by side, stacked at accessibility text sizes.
+      AdaptiveStack(spacing: 8) {
         if canSave {
-          Button(saveStatus ?? "Save", systemImage: "bookmark") { Task { await save(state) } }.disabled(saveStatus != nil)
+          Button(saveStatus ?? "Save", systemImage: saveStatus == nil ? "bookmark" : "bookmark.fill") { Task { await save(state) } }
+            .disabled(saveStatus != nil)
         }
         if state.hasResult, let source = FlightSource(rawValue: state.destination.rawValue),
           let city = state.cityData?.city ?? state.cityName ?? link.cityName, !city.isEmpty
@@ -193,6 +195,7 @@ struct SearchResultsView: View {
       }
       .buttonStyle(MusePillButtonStyle())
       .padding(.leading, 4)
+      .sensoryFeedback(.success, trigger: saveStatus)
     }
   }
 

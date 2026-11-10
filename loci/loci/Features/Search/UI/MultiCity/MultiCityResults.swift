@@ -14,17 +14,17 @@ struct MultiCityResults: View {
       VStack(alignment: .leading, spacing: 12) {
         StopPicker(stops: state.stops, selection: $selection)
         if let outline = state.route?.outline, !outline.isEmpty {
-          Text(outline).font(.caption).foregroundStyle(.secondary)
+          Text(outline).font(.lociCaption()).foregroundStyle(Color.lociMutedInk)
         }
         if let dropped = state.route?.dropped, !dropped.isEmpty {
           Text("Left out: \(dropped.map { "\($0.cityName) (\($0.reason))" }.joined(separator: "; "))")
-            .font(.caption2).foregroundStyle(.secondary)
+            .font(.lociCaption(11)).foregroundStyle(Color.lociMutedInk)
         }
         if let index = selection, let stop = state.stops.first(where: { $0.index == index }) {
           city(stop)
         } else {
           ForEach(state.stops, id: \.index) { stop in
-            Text(stop.cityName).font(.title3.weight(.semibold)).padding(.top, 8)
+            Text(stop.cityName).font(.lociTitle(20)).foregroundStyle(Color.lociInk).padding(.top, 8).accessibilityAddTraits(.isHeader)
             city(stop)
             if let leg = legAfter(stop) { LegRowView(leg: leg) }
           }

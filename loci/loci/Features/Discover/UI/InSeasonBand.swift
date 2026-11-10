@@ -32,7 +32,7 @@ struct InSeasonBand: View {
         Text("In season · \(InSeason.monthLabel())").lociCoordStyle(10)
         if reduceMotion || voiceOver || !InSeason.needsMarquee(count: items.count) {
           ScrollView(.horizontal) {
-            HStack(spacing: 8) { ForEach(items) { chip($0) } }.padding(.vertical, 4).padding(.horizontal, LociTheme.defaultPadding)
+            HStack(spacing: 8) { ForEach(items) { chip($0) } }.padding(.horizontal, LociTheme.defaultPadding)
           }
           .scrollIndicators(.hidden)
           .padding(.horizontal, -LociTheme.defaultPadding)
@@ -87,6 +87,8 @@ struct InSeasonBand: View {
       .padding(.vertical, 8)
       .background(Color.lociCard, in: Capsule())
       .overlay(Capsule().stroke(Color.lociBorder, lineWidth: LociTheme.borderWidth))
+      // The capsule keeps its size; the touch area is the 44pt minimum.
+      .frame(minHeight: LociTheme.minTapTarget).contentShape(.rect)
     }
     .buttonStyle(PressScaleButtonStyle())
     .accessibilityLabel("Plan \(item.city): \(item.hook)")

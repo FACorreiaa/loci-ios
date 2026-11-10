@@ -249,9 +249,9 @@ struct DaySection: View {
     VStack(alignment: .leading, spacing: 8) {
       if showsDayLabel {
         HStack(spacing: 8) {
-          Circle().fill(color).frame(width: 10, height: 10)
+          Circle().fill(color).frame(width: 10, height: 10).accessibilityHidden(true)
           Text("Day \(group.number)").font(.lociHeadline(15)).foregroundStyle(Color.lociInk)
-          Text("\(group.stops.count) \(group.stops.count == 1 ? "stop" : "stops")").lociCoordStyle(10)
+          Text("^[\(group.stops.count) stop](inflect: true)").lociCoordStyle(10)
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
