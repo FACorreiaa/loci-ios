@@ -4,8 +4,7 @@ import Testing
 @testable import loci
 
 // The same cases run in loci-client (src/lib/mascot-motion.test.ts), from a
-// byte-identical copy of design/mascot-motion.fixtures.json. Debug and Beta
-// only, like the driver.
+// byte-identical copy of design/mascot-motion.fixtures.json.
 
 enum MascotFixtureValue: Decodable {
   case number(Double)

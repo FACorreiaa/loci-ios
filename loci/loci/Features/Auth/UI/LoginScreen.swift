@@ -6,11 +6,8 @@ public struct LoginScreen: View {
   @Namespace private var animationNamespace
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-  #if DEBUG || BETA
-    /// Where a finger is over the 3D mascot (BRD-001, beta only).
-    @State private var mascotPointer: CGPoint?
-  #endif
+  /// Where a finger is over the 3D mascot (BRD-001).
+  @State private var mascotPointer: CGPoint?
 
   public init(onAuthenticated: @escaping () -> Void = {}) { _viewModel = State(initialValue: LoginViewModel(onAuthenticated: onAuthenticated)) }
 
@@ -56,15 +53,10 @@ public struct LoginScreen: View {
 
   @ViewBuilder private var headerView: some View {
     VStack(spacing: 12) {
-      #if DEBUG || BETA
-        // Beta only (BRD-001): the 3D mascot above a smaller lockup. Release
-        // compiles the #else branch and ships no 3D file at all.
-        Mascot3DView(pointer: mascotPointer).frame(height: 168).padding(.top, 16)
-          .mascotFollows($mascotPointer)
-        lockup.frame(height: 88)
-      #else
-        lockup.frame(height: 132).padding(.top, 16)
-      #endif
+      // The 3D mascot above a smaller lockup (BRD-001).
+      Mascot3DView(pointer: mascotPointer).frame(height: 168).padding(.top, 16)
+        .mascotFollows($mascotPointer)
+      lockup.frame(height: 88)
 
       Text("Plan a trip in one sentence, walk it stop by stop.").font(.lociBody(15)).foregroundStyle(Color.lociMutedInk)
         .multilineTextAlignment(.center)

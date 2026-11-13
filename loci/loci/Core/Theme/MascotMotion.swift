@@ -10,9 +10,6 @@ import Foundation
 // Every value is an offset from the rest pose in `mascot-rig.json`. Lengths are
 // in mascot heights (the model is one unit tall). Rotation order is YXZ — yaw,
 // then pitch, then roll — on both platforms.
-//
-// Debug and Beta only: Release excludes this file (EXCLUDED_SOURCE_FILE_NAMES),
-// proven by scripts/verify-release-no-mascot3d.sh.
 
 nonisolated enum MascotEasing: String, Decodable, Sendable {
   case sine

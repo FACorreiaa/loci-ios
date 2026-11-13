@@ -2,17 +2,14 @@ import RealityKit
 import SwiftUI
 import UIKit
 
-/// The Loci mascot in 3D (BRD-001: a beta-only experiment; loci-client DESIGN.md and
+/// The Loci mascot in 3D (BRD-001; loci-client DESIGN.md and
 /// docs/MASCOT_3D.md). It breathes, its amber rings pulse, it blinks, and it turns toward a finger
 /// or pointer over it. The arithmetic is `MascotMotion`, held to the web's answers by shared
 /// fixtures.
 ///
-/// The still is rendered from the same model at its rest pose
-/// (loci-client tools/brand/mascot-still.mjs). It shows until the model's first frame, and stays
-/// under Reduce Motion, in Low Power Mode, and when the model or its data cannot be read.
-///
-/// Debug and Beta only: Release excludes this file and its resources
-/// (EXCLUDED_SOURCE_FILE_NAMES), proven by scripts/verify-release-no-mascot3d.sh.
+/// The still is rendered by RealityKit from the same model at its rest pose
+/// (scripts/render-mascot-still.sh). It shows until the model's first frame, and stays under
+/// Reduce Motion, in Low Power Mode, and when the model or its data cannot be read.
 struct Mascot3DView: View {
   /// Where a finger or pointer is, in global coordinates. Nil: the mascot looks ahead.
   var pointer: CGPoint?
@@ -76,6 +73,8 @@ extension View {
 /// whatever SwiftUI draws behind it.
 private struct MascotScene: View {
   let stage: MascotStage
+  /// Held at the rest pose: no frame updates (the still capture).
+  var frozen = false
 
   var body: some View {
     RealityView { content in
@@ -85,11 +84,31 @@ private struct MascotScene: View {
       for entity in stage.rig {
         content.add(entity)
       }
+      guard !frozen else { return }
       stage.updates = content.subscribe(to: SceneEvents.Update.self) { event in
         stage.step(event.deltaTime)
       }
     }
     .allowsHitTesting(false)
+  }
+}
+
+/// The mascot at its rest pose, 240 × 320 points (720 × 960 pixels at 3x) in the middle of the
+/// screen, over a flat colour. scripts/render-mascot-still.sh photographs it over black and over
+/// white and recovers the transparency from the difference. Reached only through DesignPreview,
+/// which is Debug only.
+struct MascotStillCapture: View {
+  let background: Color
+  @State private var stage = MascotStage()
+
+  var body: some View {
+    ZStack {
+      background.ignoresSafeArea()
+      MascotScene(stage: stage, frozen: true).frame(width: 240, height: 320)
+    }
+    // Centred on the whole screen, not the safe area, so the script can find it.
+    .ignoresSafeArea()
+    .statusBarHidden()
   }
 }
 
