@@ -1,0 +1,349 @@
+{
+  "about": "Shared fixtures for the 3D mascot motion drivers (BRD-001). Both clients iterate every case against design/mascot-motion.json and must match to 1e-6. Expected values were computed once from the spec, not from either client. Semantics: ease(sine) = (1 - cos(pi x)) / 2 with x clamped to [0,1]; sampleTrack wraps t into [0,1) of the period and eases between neighbouring keyframes; blinkScale(s) is the eye scaleY s seconds into a blink (open outside it); blinkWait(r) maps r in [0,1] to the interval; lookToward clamps x, y to [-1,1] (y positive = up, pitch positive = looks up); approach is exponential with time constant tau (tau <= 0 snaps).",
+  "cases": [
+    {
+      "fn": "ease",
+      "args": {
+        "easing": "sine",
+        "x": 0
+      },
+      "expect": 0.0
+    },
+    {
+      "fn": "ease",
+      "args": {
+        "easing": "sine",
+        "x": 0.25
+      },
+      "expect": 0.146446609
+    },
+    {
+      "fn": "ease",
+      "args": {
+        "easing": "sine",
+        "x": 0.5
+      },
+      "expect": 0.5
+    },
+    {
+      "fn": "ease",
+      "args": {
+        "easing": "sine",
+        "x": 1
+      },
+      "expect": 1.0
+    },
+    {
+      "fn": "ease",
+      "args": {
+        "easing": "sine",
+        "x": 1.5
+      },
+      "expect": 1.0
+    },
+    {
+      "fn": "ease",
+      "args": {
+        "easing": "linear",
+        "x": 0.3
+      },
+      "expect": 0.3
+    },
+    {
+      "fn": "sampleTrack",
+      "args": {
+        "state": "standing",
+        "track": 0,
+        "t": 0
+      },
+      "expect": 0.0
+    },
+    {
+      "fn": "sampleTrack",
+      "args": {
+        "state": "standing",
+        "track": 0,
+        "t": 1
+      },
+      "expect": 0.0035
+    },
+    {
+      "fn": "sampleTrack",
+      "args": {
+        "state": "standing",
+        "track": 0,
+        "t": 2
+      },
+      "expect": 0.007
+    },
+    {
+      "fn": "sampleTrack",
+      "args": {
+        "state": "standing",
+        "track": 0,
+        "t": 3
+      },
+      "expect": 0.0035
+    },
+    {
+      "fn": "sampleTrack",
+      "args": {
+        "state": "standing",
+        "track": 0,
+        "t": 4
+      },
+      "expect": 0.0
+    },
+    {
+      "fn": "sampleTrack",
+      "args": {
+        "state": "standing",
+        "track": 0,
+        "t": 5
+      },
+      "expect": 0.0035
+    },
+    {
+      "fn": "sampleTrack",
+      "args": {
+        "state": "standing",
+        "track": 0,
+        "t": -1
+      },
+      "expect": 0.0035
+    },
+    {
+      "fn": "sampleTrack",
+      "args": {
+        "state": "standing",
+        "track": 1,
+        "t": 0
+      },
+      "expect": 0.7
+    },
+    {
+      "fn": "sampleTrack",
+      "args": {
+        "state": "standing",
+        "track": 1,
+        "t": 0.8
+      },
+      "expect": 0.925
+    },
+    {
+      "fn": "sampleTrack",
+      "args": {
+        "state": "standing",
+        "track": 1,
+        "t": 1.6
+      },
+      "expect": 1.15
+    },
+    {
+      "fn": "sampleTrack",
+      "args": {
+        "state": "standing",
+        "track": 1,
+        "t": 3.2
+      },
+      "expect": 0.7
+    },
+    {
+      "fn": "sampleTrack",
+      "args": {
+        "state": "standing",
+        "track": 2,
+        "t": 1.6
+      },
+      "expect": 1.1
+    },
+    {
+      "fn": "blinkSeconds",
+      "args": {},
+      "expect": 0.27
+    },
+    {
+      "fn": "blinkScale",
+      "args": {
+        "s": -0.1
+      },
+      "expect": 1
+    },
+    {
+      "fn": "blinkScale",
+      "args": {
+        "s": 0
+      },
+      "expect": 1.0
+    },
+    {
+      "fn": "blinkScale",
+      "args": {
+        "s": 0.04
+      },
+      "expect": 0.55
+    },
+    {
+      "fn": "blinkScale",
+      "args": {
+        "s": 0.08
+      },
+      "expect": 0.1
+    },
+    {
+      "fn": "blinkScale",
+      "args": {
+        "s": 0.1
+      },
+      "expect": 0.1
+    },
+    {
+      "fn": "blinkScale",
+      "args": {
+        "s": 0.13
+      },
+      "expect": 0.1
+    },
+    {
+      "fn": "blinkScale",
+      "args": {
+        "s": 0.2
+      },
+      "expect": 0.55
+    },
+    {
+      "fn": "blinkScale",
+      "args": {
+        "s": 0.27
+      },
+      "expect": 1
+    },
+    {
+      "fn": "blinkScale",
+      "args": {
+        "s": 1
+      },
+      "expect": 1
+    },
+    {
+      "fn": "blinkWait",
+      "args": {
+        "r": 0
+      },
+      "expect": 4.0
+    },
+    {
+      "fn": "blinkWait",
+      "args": {
+        "r": 0.5
+      },
+      "expect": 5.5
+    },
+    {
+      "fn": "blinkWait",
+      "args": {
+        "r": 1
+      },
+      "expect": 7.0
+    },
+    {
+      "fn": "blinkWait",
+      "args": {
+        "r": 2
+      },
+      "expect": 7.0
+    },
+    {
+      "fn": "lookToward",
+      "args": {
+        "x": 0,
+        "y": 0
+      },
+      "expect": {
+        "yawDegrees": 0,
+        "pitchDegrees": 0,
+        "eyeX": 0.0,
+        "eyeY": 0.0
+      }
+    },
+    {
+      "fn": "lookToward",
+      "args": {
+        "x": 1,
+        "y": 1
+      },
+      "expect": {
+        "yawDegrees": 10,
+        "pitchDegrees": 5,
+        "eyeX": 0.012,
+        "eyeY": 0.012
+      }
+    },
+    {
+      "fn": "lookToward",
+      "args": {
+        "x": -0.5,
+        "y": 0.25
+      },
+      "expect": {
+        "yawDegrees": -5.0,
+        "pitchDegrees": 1.25,
+        "eyeX": -0.006,
+        "eyeY": 0.003
+      }
+    },
+    {
+      "fn": "lookToward",
+      "args": {
+        "x": 3,
+        "y": -2
+      },
+      "expect": {
+        "yawDegrees": 10,
+        "pitchDegrees": -5,
+        "eyeX": 0.012,
+        "eyeY": -0.012
+      }
+    },
+    {
+      "fn": "approach",
+      "args": {
+        "current": 0,
+        "target": 1,
+        "dt": 0.25,
+        "tau": 0.25
+      },
+      "expect": 0.632120559
+    },
+    {
+      "fn": "approach",
+      "args": {
+        "current": 0,
+        "target": 1,
+        "dt": 10,
+        "tau": 0.25
+      },
+      "expect": 1.0
+    },
+    {
+      "fn": "approach",
+      "args": {
+        "current": 0.5,
+        "target": 0.5,
+        "dt": 0.1,
+        "tau": 0.25
+      },
+      "expect": 0.5
+    },
+    {
+      "fn": "approach",
+      "args": {
+        "current": 0,
+        "target": 1,
+        "dt": 0.1,
+        "tau": 0
+      },
+      "expect": 1
+    }
+  ]
+}

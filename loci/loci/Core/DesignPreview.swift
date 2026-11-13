@@ -148,6 +148,9 @@ enum DesignPreview: String {
   case askLociListening, askLociTranscribing
   /// An answer in progress, and one finished with each kind of card.
   case askLociThinking, askLociCards
+  /// The 3D mascot frozen at its rest pose on black, and on white: what
+  /// scripts/render-mascot-still.sh photographs to make the first-paint still.
+  case mascotStillBlack, mascotStillWhite
 
   static var requested: DesignPreview? {
     #if DEBUG
@@ -162,6 +165,8 @@ enum DesignPreview: String {
   @ViewBuilder var body: some View {
     switch self {
     case .inSeason: InSeasonPreview()
+    case .mascotStillBlack: MascotStillCapture(background: .black)
+    case .mascotStillWhite: MascotStillCapture(background: .white)
     case .askLociTabs: MainTabView()
     case .askLociEmpty: AskLociPreview()
     case .askLociListening: AskLociPreview(mic: .recording)

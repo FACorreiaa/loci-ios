@@ -180,3 +180,35 @@ jobs:
           path: build/TestResults.xcresult
           if-no-files-found: ignore
           retention-days: 7
+
+  # BRD-001: the mascot's motion data, fixtures and rig are copies of
+  # loci-client design/. Needs the LOCI_CLIENT_READ_TOKEN secret (read access
+  # to FACorreiaa/loci-client); fails loudly without it rather than skipping.
+  mascot-motion-guard:
+    name: Mascot motion drift guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Require the loci-client read token
+        env:
+          TOKEN: ${{ secrets.LOCI_CLIENT_READ_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::LOCI_CLIENT_READ_TOKEN is not set; the mascot drift guard cannot read loci-client design/."
+            exit 1
+          fi
+
+      - name: Checkout loci-client design/
+        uses: actions/checkout@v4
+        with:
+          repository: FACorreiaa/loci-client
+          token: ${{ secrets.LOCI_CLIENT_READ_TOKEN }}
+          path: loci-client
+          sparse-checkout: design
+          sparse-checkout-cone-mode: false
+
+      - name: Compare copies
+        run: scripts/mascot-motion-guard.sh loci-client/design

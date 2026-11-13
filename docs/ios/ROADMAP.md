@@ -21,6 +21,9 @@ Decisions: local notifications only (no device-token RPC exists; "no new endpoin
 
 Done when a device build can sign in, search, stream, map, edit a trip and resume from a notification. **Not yet verified against the live API** — nothing has been run signed-in.
 
+## Experiments
+- **BRD-001 3D mascot.** `LoginScreen` shows the mascot in 3D in every build (owner, 2026-11-13; planned as Beta-only). Status, Done when and the owner's verdict: loci-client `BACKLOG.md`. Mechanics: `ARCHITECTURE.md` §3.
+
 ## Server work that unlocks Phase 2 (not iOS UI)
 - Device-token RPC + APNs sender on COMPLETE/ERROR. Owned by session loci-3a (web + server push). Tentative contract: payload keys `sessionId`, `cityName`, `domain`; one register RPC with a platform enum, `APNS` reserved. The iOS notification `userInfo` already uses those keys.
 - StreamChat resume bugs, also loci-3a: replay does not follow a live generation; several events share one `event_id`; the resume buffer is per pod.
