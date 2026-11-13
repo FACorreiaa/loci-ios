@@ -7,6 +7,11 @@ public struct LoginScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+  #if DEBUG || BETA
+    /// Where a finger is over the 3D mascot (BRD-001, beta only).
+    @State private var mascotPointer: CGPoint?
+  #endif
+
   public init(onAuthenticated: @escaping () -> Void = {}) { _viewModel = State(initialValue: LoginViewModel(onAuthenticated: onAuthenticated)) }
 
   public var body: some View {
@@ -51,15 +56,27 @@ public struct LoginScreen: View {
 
   @ViewBuilder private var headerView: some View {
     VStack(spacing: 12) {
-      // The lockup carries the name and "Explore your way"; its letters are
-      // drawn, so VoiceOver gets them from the label.
-      Image("LociLockup").resizable().scaledToFit().frame(height: 132).padding(.top, 16)
-        .accessibilityLabel("Loci. Explore your way.")
-        .accessibilityAddTraits(.isHeader)
+      #if DEBUG || BETA
+        // Beta only (BRD-001): the 3D mascot above a smaller lockup. Release
+        // compiles the #else branch and ships no 3D file at all.
+        Mascot3DView(pointer: mascotPointer).frame(height: 168).padding(.top, 16)
+          .mascotFollows($mascotPointer)
+        lockup.frame(height: 88)
+      #else
+        lockup.frame(height: 132).padding(.top, 16)
+      #endif
 
       Text("Plan a trip in one sentence, walk it stop by stop.").font(.lociBody(15)).foregroundStyle(Color.lociMutedInk)
         .multilineTextAlignment(.center)
     }
+  }
+
+  /// The lockup carries the name and "Explore your way"; its letters are
+  /// drawn, so VoiceOver gets them from the label.
+  private var lockup: some View {
+    Image("LociLockup").resizable().scaledToFit()
+      .accessibilityLabel("Loci. Explore your way.")
+      .accessibilityAddTraits(.isHeader)
   }
 
   /// Opacity-only when Reduce Motion is on; the transitions above drop their slide to match.

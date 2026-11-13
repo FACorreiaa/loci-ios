@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "about": "Loci 3D mascot motion (BRD-001). Canonical copy: loci-client/design/. Every value is an offset from the rest pose in tools/brand/out/mascot-3d/mascot-rig.json; lengths are in mascot heights (the model is 1 unit tall). Keyframe t is a fraction of periodSeconds. Copies must stay byte-identical: scripts/brand-guard.sh (web) and scripts/mascot-motion-guard.sh (iOS).",
+  "states": {
+    "standing": {
+      "kind": "loop",
+      "tracks": [
+        {
+          "joint": "Body",
+          "property": "translateY",
+          "periodSeconds": 4,
+          "easing": "sine",
+          "keyframes": [
+            {
+              "t": 0,
+              "v": 0
+            },
+            {
+              "t": 0.5,
+              "v": 0.007
+            },
+            {
+              "t": 1,
+              "v": 0
+            }
+          ]
+        },
+        {
+          "material": "glow",
+          "property": "emissiveScale",
+          "periodSeconds": 3.2,
+          "easing": "sine",
+          "keyframes": [
+            {
+              "t": 0,
+              "v": 0.7
+            },
+            {
+              "t": 0.5,
+              "v": 1.15
+            },
+            {
+              "t": 1,
+              "v": 0.7
+            }
+          ]
+        },
+        {
+          "material": "glow_pale",
+          "property": "emissiveScale",
+          "periodSeconds": 3.2,
+          "easing": "sine",
+          "keyframes": [
+            {
+              "t": 0,
+              "v": 0.85
+            },
+            {
+              "t": 0.5,
+              "v": 1.1
+            },
+            {
+              "t": 1,
+              "v": 0.85
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "blink": {
+    "joints": ["EyeL", "EyeR"],
+    "property": "scaleY",
+    "open": 1,
+    "shut": 0.1,
+    "intervalSeconds": [4, 7],
+    "closeSeconds": 0.08,
+    "holdSeconds": 0.05,
+    "openSeconds": 0.14
+  },
+  "lookAt": {
+    "joint": "Mascot",
+    "eyes": ["EyeL", "EyeR"],
+    "bodyYawDegrees": 10,
+    "bodyPitchDegrees": 5,
+    "eyeOffset": 0.012,
+    "timeConstantSeconds": 0.25
+  }
+}
