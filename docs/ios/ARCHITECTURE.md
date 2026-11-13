@@ -199,6 +199,46 @@ sources << project.main_group.new_file(SHARED_FILE)
 The extension cannot see `LociTheme`, so `NearbyWalkLiveActivity.swift` carries
 its own four-colour `Palette` (NATIVE_DESIGN light values).
 
+### The 3D mascot is Debug and Beta only (BRD-001)
+
+The 3D mascot on `LoginScreen` is an experiment the owner judges on a Beta
+TestFlight build before anything reaches the App Store. Rules and the motion
+data live in loci-client (`DESIGN.md`, `docs/MASCOT_3D.md`, `BACKLOG.md`
+BRD-001); this app holds copies.
+
+- The project-level **Beta** configuration sets
+  `SWIFT_ACTIVE_COMPILATION_CONDITIONS = "BETA $(inherited)"`, so
+  `#if DEBUG || BETA` is true in Debug and Beta and false in Release.
+  `LoginScreen` shows `Mascot3DView` above a smaller lockup under that
+  condition, and the original lockup otherwise.
+- The **Release** configurations of the app and `lociTests` set
+  `EXCLUDED_SOURCE_FILE_NAMES` to the mascot's Swift files, `Mascot.usdz`,
+  the three JSON files and the still. That works because the targets use
+  synchronized folders: the setting removes the files from every build phase.
+- `scripts/verify-release-no-mascot3d.sh` proves it. It builds Release and
+  Beta for the simulator and looks for each file and for the type names
+  (`Mascot3DView`, `MascotStage`, `MascotMotion`) in the binary. Release must
+  have none; Beta must have all, so the check cannot pass by looking in the
+  wrong place. CI runs it when the theme, the resources or the project change.
+- Data: `loci/loci/Resources/Mascot3D/` holds byte-identical copies of
+  loci-client `design/mascot-motion.json`, `mascot-motion.fixtures.json` and
+  `mascot-rig.json`, plus `Mascot.usdz` and the still
+  (`mascot-3d-still.png`), both built in loci-client
+  (`tools/brand/mascot_3d.py`, `tools/brand/mascot-still.mjs`).
+  `scripts/sync-mascot-motion.sh` copies them; `scripts/mascot-motion-guard.sh`
+  fails CI on drift (CI reads loci-client with the `LOCI_CLIENT_READ_TOKEN`
+  secret).
+- `MascotMotion.swift` is the pure driver; `lociTests/MascotMotionTests.swift`
+  runs the same fixture cases as the web's `mascot-motion.test.ts`.
+- `Mascot3DView.swift`: a `RealityView` with `content.camera = .virtual` (no
+  AR), clear over SwiftUI. The still shows until the first frame, and stays
+  under Reduce Motion, Low Power Mode (observed live) and a failed load. A
+  finger or pointer is followed only over the mascot, so the form is
+  untouched. Lights are `lociLantern` and `lociHolo` resolved to their dark
+  values, as on the web.
+- There is no Mac target. If "Designed for iPad" is ever offered on Mac, the
+  Beta build's `RealityView` runs there unchanged.
+
 ### CI, release, seed signing
 
 - `ci.yml`: a `lint` job (SwiftLint 0.65.1) and a `test` job that resolves
@@ -1616,6 +1656,11 @@ tests are not in CI.
 
 ## 12. Decisions and their reasons
 
+- **The 3D mascot ships to Beta only** (BRD-001, owner 2026-11-13). It is
+  compiled out of Release and its files are excluded, with a script proving
+  both, until the owner's device verdict is recorded in loci-client
+  `BACKLOG.md`. Copied from Aaru BRD-011 (`Owl3DView.swift`), which made the
+  same RealityView choice.
 - **Local notifications only.** There is no device-token RPC in the proto the
   app was built against and the phase rule is "no new endpoints", so the
   search-finished alert is a `UNNotificationRequest` posted by the app itself.
