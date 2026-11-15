@@ -28,6 +28,9 @@ struct TodayControls: View {
   let day: Loci_Trip_TripDay
   var showsOpen = false
   private let controller = TripDayActivityController.shared
+  /// The iPhone app running on an Apple silicon Mac: there is no Lock Screen
+  /// to follow a day from, so the band lists the stops and offers no start.
+  private static let runsOnMac = ProcessInfo.processInfo.isiOSAppOnMac
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -36,13 +39,13 @@ struct TodayControls: View {
           if showsOpen { NavigationLink(value: AppRoute.trip(id: trip.id)) { Label("Open today", systemImage: "arrow.right.circle") } }
           Button("Next", systemImage: "forward.end") { Task { await controller.advance() } }
           Button("Done", systemImage: "checkmark") { Task { await controller.end() } }
-        } else {
+        } else if !Self.runsOnMac {
           Button("Start today", systemImage: "play.fill") { Task { await controller.start(trip: trip, day: day) } }
             .disabled(!controller.liveActivitiesEnabled)
         }
       }
       .buttonStyle(MusePillButtonStyle())
-      if !controller.liveActivitiesEnabled {
+      if !controller.liveActivitiesEnabled, !Self.runsOnMac {
         Text("Turn on Live Activities for Loci in Settings to follow the day from the Lock Screen.")
           .font(.lociCaption(11)).foregroundStyle(Color.lociMutedInk)
       } else if !controller.isRunning, let startError = controller.startError {
