@@ -7,3 +7,6 @@ Plans that work for your access needs
 Find flights
 • Search flights to a city from your results or your trip plan, with airport suggestions as you type.
 • Loci opens the search on a flight site, where the prices and booking are. Save the flight to your trip.
+
+Loci on a Mac
+• Loci now asks for location and microphone access on Apple silicon Macs, so Near me can find where you are.
