@@ -39,7 +39,7 @@ struct MultiCityResults: View {
     if let error = stop.error {
       FailureRail(message: error, canRetry: true) { onRerun("\(state.query) in \(stop.cityName)") }
     } else {
-      ResultsPage(state: stop.state, onRerun: onRerun)
+      ResultsPage(state: stop.state, onRerun: onRerun, editsTrip: false)
     }
   }
 

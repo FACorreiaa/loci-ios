@@ -11,9 +11,12 @@ struct StopCard: View {
   var isSelected = false
   /// "Not for me". Offered only where the page can take the card away.
   var onDismiss: (() -> Void)?
+  /// Links and edits for a stop on an itinerary page; nil elsewhere.
+  var menu: StopMenu?
   var onSelect: () -> Void = {}
 
   @Environment(\.dynamicTypeSize) private var typeSize
+  @Environment(\.openURL) private var openURL
   @State private var showingMatch = false
 
   /// At accessibility sizes the photo sits above the text, which gets the full width and more lines.
@@ -66,6 +69,20 @@ struct StopCard: View {
     .contextMenu {
       if let onDismiss {
         Button("Not for me", systemImage: "hand.thumbsdown", action: onDismiss)
+      }
+      if let menu { menu.items(openURL: openURL) }
+    }
+    // The long-press menu is easy to miss, so the same items sit under a
+    // visible button below the card.
+    .safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 2) {
+      if let menu {
+        Menu {
+          menu.items(openURL: openURL)
+        } label: {
+          Label("More for \(stop.name)", systemImage: "ellipsis").labelStyle(.iconOnly)
+            .font(.lociCaption(13).weight(.semibold)).foregroundStyle(Color.lociForest)
+            .frame(minWidth: 44, minHeight: 32)
+        }
       }
     }
     .accessibilityLabel(accessibilitySummary)
@@ -241,6 +258,10 @@ struct DaySection: View {
   /// The "Not for me" action for a stop, where it can be waved away (a list,
   /// not an itinerary day); nil for a stop that offers none.
   var dismissAction: ((Loci_Poi_POIDetailedInfo) -> (() -> Void)?)?
+  /// An itinerary stop's links and edits.
+  var menu: ((Loci_Poi_POIDetailedInfo) -> StopMenu?)?
+  /// Drawn under the day's stops: suggestions and "Add a place".
+  var footer: AnyView?
   var onOpen: (Loci_Poi_POIDetailedInfo) -> Void
 
   private var color: Color { showsDayLabel ? LociTheme.dayColor(group.number) : LociTheme.listColor }
@@ -266,12 +287,14 @@ struct DaySection: View {
           destination: destination,
           isSelected: selectedID == stop.stableID,
           onDismiss: dismissAction?(stop),
+          menu: menu?(stop),
         ) {
           selectedID = stop.stableID
           onOpen(stop)
         }
         .id(stop.stableID)
       }
+      if let footer { footer }
     }
   }
 }

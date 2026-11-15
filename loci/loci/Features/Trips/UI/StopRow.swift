@@ -50,9 +50,12 @@ struct StopRow: View {
 struct PlacePicker: View {
   let cityName: String
   let onSelect: (Loci_Poi_POIDetailedInfo) -> Void
+  /// Offers what was typed as a stop of its own, for a place Loci lacks.
+  var onAddUnknown: ((String) -> Void)?
 
   @Environment(\.dismiss) private var dismiss
   @State private var query = ""
+  @State private var searched = ""
   @State private var results: [Loci_Poi_POIDetailedInfo] = []
   @State private var isSearching = false
   @State private var error: String?
@@ -71,6 +74,12 @@ struct PlacePicker: View {
             }
           }
         }
+        if let onAddUnknown, !searched.isEmpty, !isSearching {
+          Button("Add “\(searched)” as a plain stop", systemImage: "plus") {
+            onAddUnknown(searched)
+            dismiss()
+          }
+        }
       }
       .overlay { if isSearching { ProgressView() } }
       .searchable(text: $query, prompt: cityName.isEmpty ? "Search places" : "Search places in \(cityName)")
@@ -87,7 +96,10 @@ struct PlacePicker: View {
     let text = query.trimmingCharacters(in: .whitespaces)
     guard !text.isEmpty else { return }
     isSearching = true
-    defer { isSearching = false }
+    defer {
+      isSearching = false
+      searched = text
+    }
     var request = Loci_Poi_SearchPOIRequest()
     request.query = text
     request.cityName = cityName
