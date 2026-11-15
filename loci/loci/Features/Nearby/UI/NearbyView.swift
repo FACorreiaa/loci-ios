@@ -216,7 +216,8 @@ struct NearbyList: View {
   var body: some View {
     ScrollViewReader { proxy in
       List {
-        WalkRow(walk: walk, places: places, radiusKm: radiusKm)
+        // A Mac counts no steps and is not carried past places, so no walk there.
+        if !ProcessInfo.processInfo.isiOSAppOnMac { WalkRow(walk: walk, places: places, radiusKm: radiusKm) }
         if isSearching, places.isEmpty {
           HStack {
             ProgressView()
