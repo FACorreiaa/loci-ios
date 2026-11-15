@@ -12,6 +12,9 @@ nonisolated struct ImportedPlace: Identifiable, Hashable, Sendable {
   let poiName: String?
   let address: String?
   let category: String?
+  /// Where the link put it, when it said: a pasted map pin carries one.
+  var latitude: Double?
+  var longitude: Double?
 
   var canSave: Bool { poiID != nil }
 
@@ -53,6 +56,8 @@ nonisolated struct LinkImportResult: Equatable, Sendable {
         poiName: place.hasPoiName && !place.poiName.isEmpty ? place.poiName : nil,
         address: place.hasAddress && !place.address.isEmpty ? place.address : nil,
         category: place.hasCategory && !place.category.isEmpty ? place.category : nil,
+        latitude: place.hasLatitude ? place.latitude : nil,
+        longitude: place.hasLongitude ? place.longitude : nil,
       )
     }
   }

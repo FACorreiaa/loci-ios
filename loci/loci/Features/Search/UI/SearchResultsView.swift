@@ -94,7 +94,15 @@ struct SearchResultsView: View {
     }
     .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
     .navigationTitle(link.destination.title)
-    .askLociContext(AskLociScreen(screen: "results_\(link.destination.rawValue)", city: state?.cityName ?? link.cityName))
+    // With the trip named, Ask Loci proposes changes to it ("add a coffee
+    // stop on day 2") rather than answering in general.
+    .askLociContext(
+      AskLociScreen(
+        screen: "results_\(link.destination.rawValue)",
+        city: state?.cityName ?? link.cityName,
+        trips: [state?.savedTripID].compactMap { $0 }
+      )
+    )
     .toolbarVisibility(.hidden, for: .navigationBar)
     .interactivePopEnabled()
     .errorAlert($exportError)

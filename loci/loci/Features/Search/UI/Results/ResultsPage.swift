@@ -8,6 +8,9 @@ import SwiftUI
 struct ResultsPage: View {
   let state: SearchState
   var onRerun: (String) -> Void = { _ in }
+  /// False for one city of a multi-city trip: its trip spans every city, so
+  /// that page stays as generated and the trip is edited from Trips.
+  var editsTrip = true
 
   /// Scroll anchors, used by the design preview.
   enum Anchor {
@@ -24,6 +27,13 @@ struct ResultsPage: View {
   @State private var editingTrip = false
   /// Places waved away with "Not for me" on this page (stable ids).
   @State private var dismissed: Set<String> = []
+  /// The trip the server saved for this itinerary: once found, the page is a
+  /// view of it, and edits made here are edits to it.
+  @State private var edit = TripEditSession()
+  @State private var eatingNear: Loci_Poi_POIDetailedInfo?
+  @State private var searchingFor: TripDayRef?
+  @State private var pastingFor: TripDayRef?
+  @Environment(\.scenePhase) private var scenePhase
 
   /// The lists derived from the places, built once per body: each is a pass
   /// over every stop, and the page reads them many times.
@@ -34,7 +44,13 @@ struct ResultsPage: View {
     let mapData: ResultsMapData
     /// "More to explore" numbers on from the last numbered stop.
     let extrasStart: Int
+    /// Set when the days come from the trip rather than the generation.
+    var backed: TripBackedDays?
   }
+
+  /// The page follows the trip only for a finished single itinerary.
+  private var followsTrip: Bool { editsTrip && showsDays && !state.isActive && !state.isMultiCity }
+  private var tripKey: String { followsTrip ? "\(state.savedTripID ?? "")|\(state.sessionId ?? "")" : "" }
 
   private var showsDays: Bool { state.destination == .itinerary }
 
@@ -61,7 +77,13 @@ struct ResultsPage: View {
   private var arrival: AnyTransition { reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity) }
 
   private func derive() -> Derived {
-    let kept = ResultsDismissal.apply(groups: state.dayGroups, extras: state.extras, dismissed: dismissed, showsDays: showsDays)
+    let backed = followsTrip ? edit.trip.map { TripBackedDays.build(trip: $0, generated: state.places + state.extras) } : nil
+    let kept = ResultsDismissal.apply(
+      groups: backed?.groups ?? state.dayGroups,
+      extras: backed?.extras ?? state.extras,
+      dismissed: dismissed,
+      showsDays: showsDays
+    )
     let groups = kept.groups
     let extras = kept.extras
     let sequence = DayGrouping.sequence(groups)
@@ -70,8 +92,117 @@ struct ResultsPage: View {
       extras: extras,
       sequence: sequence,
       mapData: ResultsMapData(groups: groups, extras: extras, sequence: sequence, showsDays: showsDays, alerts: side.localContext?.alerts ?? []),
-      extrasStart: (sequence.values.max() ?? 0) + 1
+      extrasStart: (sequence.values.max() ?? 0) + 1,
+      backed: backed
     )
+  }
+
+  // MARK: - The trip behind the page
+
+  /// Links for every itinerary stop; edits only where the trip is the viewer's own.
+  private func menu(for stop: Loci_Poi_POIDetailedInfo, in derived: Derived) -> StopMenu? {
+    guard showsDays else { return nil }
+    var menu = StopMenu()
+    menu.googleURL = GoogleMapsRoute.placeURL(name: stop.name, city: cityName)
+    menu.onGoogle = { Analytics.capture(.itineraryGoogleLinkOpened, ["source": "stop_card"]) }
+    menu.onEatNearby = { eatingNear = stop }
+    guard edit.canEdit, !edit.isBusy, let backed = derived.backed, let ref = backed.refs[stop.stableID] else { return menu }
+    if ref.index > 0 { menu.onMoveUp = { change("move") { await edit.nudge(stopID: ref.stopID, up: true) } } }
+    if ref.index < ref.count - 1 { menu.onMoveDown = { change("move") { await edit.nudge(stopID: ref.stopID, up: false) } } }
+    menu.moveTargets = backed.days.filter { $0.id != ref.dayID }.map { day in
+      StopMenu.MoveTarget(id: day.id, label: "Day \(day.number)") {
+        change("move_day") { await edit.move(stopID: ref.stopID, toDayID: day.id) }
+      }
+    }
+    menu.onRemove = { change("remove") { await edit.remove(stopID: ref.stopID) } }
+    return menu
+  }
+
+  private func change(_ action: String, _ run: @escaping () async -> Bool) {
+    Task {
+      let stuck = await run()
+      if stuck { Analytics.capture(.itineraryStopEdited, ["action": action]) }
+    }
+  }
+
+  private func add(_ stop: Loci_Trip_TripStop, to dayID: String, after stopID: String? = nil, method: String) async -> Bool {
+    let stuck = await edit.add(stop, dayID: dayID, afterStopID: stopID)
+    if stuck { Analytics.capture(.itineraryStopAdded, ["method": method, "known_place": !stop.poiID.isEmpty]) }
+    return stuck
+  }
+
+  /// Suggestions and "Add a place" under a day the viewer can edit.
+  private func dayFooter(_ group: DayGroup, in derived: Derived) -> AnyView? {
+    guard edit.canEdit, let backed = derived.backed, let day = backed.days.first(where: { $0.number == group.number }) else { return nil }
+    let onTrip = backed.groups.flatMap(\.stops)
+    return AnyView(
+      VStack(alignment: .leading, spacing: 8) {
+        DaySuggestionsRow(
+          dayNumber: day.number,
+          dayStops: group.stops,
+          onTrip: onTrip,
+          extras: backed.extras,
+          isBusy: edit.isBusy
+        ) { place, fromExtras in
+          Task {
+            let stop = TripEdits.stop(from: place)
+            let stuck = await edit.add(stop, dayID: day.id)
+            if stuck {
+              Analytics.capture(
+                .itineraryStopAdded,
+                ["method": "suggestion", "known_place": !stop.poiID.isEmpty, "source": fromExtras ? "extras" : "nearby"]
+              )
+            }
+          }
+        }
+        Menu {
+          Button("Search by name", systemImage: "magnifyingglass") { searchingFor = day }
+          Button("Paste a link", systemImage: "link") { pastingFor = day }
+        } label: {
+          Label("Add a place to day \(day.number)", systemImage: "plus")
+        }
+        .buttonStyle(MusePillButtonStyle())
+        .disabled(edit.isBusy)
+      }
+    )
+  }
+
+  private var notice: Binding<String?> { Binding(get: { edit.notice }, set: { edit.notice = $0 }) }
+
+  private func loadTrip() async {
+    // Signed out there is no trip to find, and the page stays as generated.
+    guard !tripKey.isEmpty, await AuthSessionManager.shared.currentUserID != nil else { return }
+    await edit.load(tripID: state.savedTripID, sessionID: state.sessionId)
+  }
+
+  /// Someone else may have changed the trip meanwhile: a co-planner, the web,
+  /// Telegram.
+  private func refreshTrip(_ phase: ScenePhase) {
+    guard phase == .active, let trip = edit.trip, !edit.isBusy else { return }
+    Task { await edit.load(tripID: trip.id, sessionID: nil) }
+  }
+
+  private func eatSheet(_ anchor: Loci_Poi_POIDetailedInfo, _ derived: Derived) -> some View {
+    let ref = edit.canEdit ? derived.backed?.refs[anchor.stableID] : nil
+    var onAdd: ((Loci_Poi_POIDetailedInfo) async -> Bool)?
+    if let ref {
+      onAdd = { place in await add(TripEdits.stop(from: place), to: ref.dayID, after: ref.stopID, method: "eat_nearby") }
+    }
+    return EatNearbySheet(anchor: anchor, cityName: cityName, onTrip: derived.groups.flatMap(\.stops), onAdd: onAdd)
+  }
+
+  private func searchSheet(_ day: TripDayRef) -> some View {
+    PlacePicker(
+      cityName: cityName,
+      onSelect: { place in Task { _ = await add(TripEdits.stop(from: place), to: day.id, method: "search") } },
+      onAddUnknown: { name in Task { _ = await add(TripEdits.stop(named: name), to: day.id, method: "named") } }
+    )
+  }
+
+  private func pasteSheet(_ day: TripDayRef) -> some View {
+    PasteLinkSheet(cityName: cityName, dayNumber: day.number) { place in
+      await add(TripEdits.stop(from: place), to: day.id, method: "link")
+    }
   }
 
   var body: some View {
@@ -92,11 +223,18 @@ struct ResultsPage: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .animation(reduceMotion ? LociTheme.reducedFade : LociTheme.resultArrive, value: state.hasResult)
+    .animation(reduceMotion ? LociTheme.reducedFade : LociTheme.defaultSpring, value: edit.trip?.version)
     .task(id: contextKey) {
       guard let city = state.cityData, city.hasCenterLatitude, city.hasCenterLongitude else { return }
       await side.loadContext(latitude: city.centerLatitude, longitude: city.centerLongitude)
     }
     .sheet(item: $detail) { stop in PlaceDetailSheet(stop: stop, destination: state.destination, cityName: cityName) }
+    .task(id: tripKey) { await loadTrip() }
+    .onChange(of: scenePhase) { _, phase in refreshTrip(phase) }
+    .errorAlert(notice)
+    .sheet(item: $eatingNear) { eatSheet($0, derived) }
+    .sheet(item: $searchingFor) { searchSheet($0) }
+    .sheet(item: $pastingFor) { pasteSheet($0) }
     .onChange(of: detail?.stableID) { _, opened in
       guard opened != nil, let stop = detail else { return }
       OutcomeAPI.send(stop.outcome(.opened))
@@ -121,7 +259,10 @@ struct ResultsPage: View {
 
   @ViewBuilder private func results(_ derived: Derived) -> some View {
     let groups = derived.groups
-    let visibleGroups = showAllDays ? groups : Array(groups.prefix(DayGrouping.initialDays))
+    // A page that follows its trip shows every day: a stop moved to day 3
+    // must not vanish behind "Show the rest".
+    let unfolded = showAllDays || derived.backed != nil
+    let visibleGroups = unfolded ? groups : Array(groups.prefix(DayGrouping.initialDays))
     let hiddenDays = max(groups.count - DayGrouping.initialDays, 0)
     let dayDismiss: ((Loci_Poi_POIDetailedInfo) -> (() -> Void)?)? = showsDays ? nil : { stop in dismissHandler(stop) }
     if !title.isEmpty || !summary.isEmpty {
@@ -146,10 +287,12 @@ struct ResultsPage: View {
         route: showsDays ? state.accessibleRoutes[group.number] : nil,
         selectedID: $selectedID,
         dismissAction: dayDismiss,
+        menu: { menu(for: $0, in: derived) },
+        footer: dayFooter(group, in: derived),
       ) { detail = $0 }
         .id(group.number == 1 ? Anchor.days : "results-day-\(group.number)")
     }
-    if !showAllDays, hiddenDays > 0 {
+    if !unfolded, hiddenDays > 0 {
       Button("Show the rest of the trip (\(hiddenDays) more \(hiddenDays == 1 ? "day" : "days"))", systemImage: "chevron.down") {
         withAnimation(reduceMotion ? LociTheme.reducedFade : LociTheme.defaultSpring) { showAllDays = true }
       }

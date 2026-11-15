@@ -220,8 +220,13 @@ struct PlaceDetailView: View {
       if GoogleMapsRoute.hasCoordinate(stop) {
         Button("Apple Maps", systemImage: "map") { openInAppleMaps() }
       }
-      if let google = GoogleMapsRoute.url(for: [stop], cityName: cityName) {
-        Button("Google", systemImage: "arrow.up.right.square") { openURL(google) }
+      // The place's own page, by name: reviews, photos and hours. Directions
+      // are Apple Maps' job above; a place with no name falls back to them.
+      if let google = GoogleMapsRoute.placeURL(name: stop.name, city: cityName) ?? GoogleMapsRoute.url(for: [stop], cityName: cityName) {
+        Button("Check on Google Maps", systemImage: "arrow.up.right.square") {
+          Analytics.capture(.itineraryGoogleLinkOpened, ["source": "place_detail"])
+          openURL(google)
+        }
       }
     }
     .buttonStyle(MusePillButtonStyle())

@@ -70,6 +70,14 @@ enum AnalyticsEvent: String {
   case flightSearchBuilt = "flight_search_built"
   /// A partner flight link was opened. Properties: source, provider, origin_iata?, destination_iata?.
   case flightLinkClicked = "flight_link_clicked"
+  /// A stop's Google Maps page was opened from an itinerary. Properties: source.
+  case itineraryGoogleLinkOpened = "itinerary_google_link_opened"
+  /// A stop was moved or removed on an itinerary page. Properties: action (move | move_day | remove).
+  case itineraryStopEdited = "itinerary_stop_edited"
+  /// A place was added on an itinerary page. Properties: method (search | link | named | eat_nearby | suggestion), known_place.
+  case itineraryStopAdded = "itinerary_stop_added"
+  /// "Eat nearby" was opened for a stop. Properties: result_count, has_coords.
+  case eatNearbyOpened = "eat_nearby_opened"
 }
 
 @MainActor enum Analytics {
