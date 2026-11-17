@@ -56,65 +56,29 @@ nonisolated enum HotelReport {
     return String(localized: "\(report.checkIn) to \(report.checkOut)")
   }
 
-  /// The table: what the traveller wrote, the server's rows, then the nearest
-  /// stop. A row nobody has anything for is left out; a missing value is a dash.
+  /// The table, exactly as the server laid it out: its rows are complete and
+  /// in display order (what the traveller said, stars, price now, nearest
+  /// stops, facilities…), so nothing is added from the hotels' own fields,
+  /// which repeat them. A row short of a value gets a dash; a row nobody has
+  /// anything for is left out.
   static func rows(_ report: Report) -> [Row] {
     let count = report.hotels.count
-    var rows: [(String, [String])] = []
-    rows.append((String(localized: "You said"), report.hotels.map(\.userNote)))
-    for row in report.rows {
-      rows.append((row.label, (0..<count).map { row.values.indices.contains($0) ? row.values[$0] : "" }))
-    }
-    rows.append((String(localized: "Nearest stop"), report.hotels.map { nearestStop($0).map(TransitFormat.stopLine) ?? "" }))
-    return rows
-      .map { label, values in (label, values.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }) }
+    return report.rows
+      .map { row in
+        (
+          row.label.trimmingCharacters(in: .whitespacesAndNewlines),
+          (0..<count).map { row.values.indices.contains($0) ? row.values[$0].trimmingCharacters(in: .whitespacesAndNewlines) : "" }
+        )
+      }
       .filter { _, values in values.contains { !$0.isEmpty } }
       .enumerated()
       .map { offset, row in Row(id: offset, label: row.0, values: row.1.map { $0.isEmpty ? missing : $0 }) }
   }
 
-  /// The closest stop on foot; a stop with no walking time counts as furthest.
-  static func nearestStop(_ hotel: Hotel) -> Loci_Trip_TransitStop? {
-    hotel.nearbyStops.enumerated().min { a, b in
-      let left = a.element.walkMinutes > 0 ? a.element.walkMinutes : Int32.max
-      let right = b.element.walkMinutes > 0 ? b.element.walkMinutes : Int32.max
-      return left == right ? a.offset < b.offset : left < right
-    }?.element
-  }
-
-  /// "Restaurants: 14 nearby · nearest Bar Bodega, 2 min walk".
-  static func nearbyLine(_ highlight: Loci_Chat_NearbyHighlight) -> String {
-    var line = String(localized: "\(highlight.label): \(highlight.count) nearby")
-    let nearest = highlight.nearestName.trimmingCharacters(in: .whitespacesAndNewlines)
-    if !nearest.isEmpty {
-      line += highlight.walkMinutes > 0
-        ? String(localized: " · nearest \(nearest), \(highlight.walkMinutes) min walk") : String(localized: " · nearest \(nearest)")
-    }
-    return line
-  }
-
-  /// "€128 a night · €385 in all · via LiteAPI", from a rate read when the
-  /// report was made. Nil when there is no amount or no currency to say it in.
-  static func livePrice(_ price: Loci_Chat_LivePrice, locale: Locale = .current) -> String? {
-    let code = price.currency.trimmingCharacters(in: .whitespaces).uppercased()
-    guard code.count == 3 else { return nil }
-    let style = Decimal.FormatStyle.Currency(code: code, locale: locale)
-    // Minor units per major unit differ by currency (100 for EUR, 1 for JPY).
-    let scale = pow(Decimal(10), fractionDigits(code))
-    var parts: [String] = []
-    if price.nightlyMinor > 0 { parts.append(String(localized: "\((Decimal(price.nightlyMinor) / scale).formatted(style)) a night")) }
-    if price.totalMinor > 0 { parts.append(String(localized: "\((Decimal(price.totalMinor) / scale).formatted(style)) in all")) }
-    guard !parts.isEmpty else { return nil }
-    let provider = price.provider.trimmingCharacters(in: .whitespaces)
-    if !provider.isEmpty { parts.append(String(localized: "via \(provider)")) }
-    return parts.joined(separator: " · ")
-  }
-
-  private static func fractionDigits(_ code: String) -> Int {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .currency
-    formatter.currencyCode = code
-    return formatter.maximumFractionDigits
+  /// Where a live rate can be booked: the one thing drawn from `live_price`
+  /// (its amounts are already in the table). Only when it is https.
+  static func bookingURL(_ hotel: Hotel) -> URL? {
+    hotel.hasLivePrice ? TransitFormat.httpsURL(hotel.livePrice.bookingURL) : nil
   }
 
   /// "Title — Publisher"; the link only when it is https.

@@ -39,12 +39,20 @@ enum HotelFixtures {
     report.hotels = [verdi, hotel("Hotel X", note: "349 without breakfast")]
     report.verdict = "Verdi 254 is the better base."
     report.recommendedIndex = 0
-    var row = Loci_Chat_ComparisonRow()
-    row.label = "Breakfast"
-    row.values = ["Included"]
-    report.rows = [row]
+    report.rows = [
+      row("You said", ["385 euros with breakfast", "349 without breakfast"]),
+      row("Breakfast", ["Included"]),
+      row("Nearest stops", ["Fontana · L3 · 6 min walk", "Not known"]),
+    ]
     report.stayProposalID = proposal
     return report
+  }
+
+  static func row(_ label: String, _ values: [String]) -> Loci_Chat_ComparisonRow {
+    var row = Loci_Chat_ComparisonRow()
+    row.label = label
+    row.values = values
+    return row
   }
 
   static func event(_ report: Loci_Chat_HotelComparisonReport, id: String) -> Loci_Chat_StreamEvent {
@@ -146,6 +154,39 @@ struct HotelCompareTests {
     state.apply(Events.error("Something broke", id: "e2"))
     #expect(state.status == .completedWithError("Something broke"))
     #expect(state.hotelReport != nil)
+  }
+
+  @Test func aReportOnlyTurnThatLosesItsStreamIsFinished() {
+    // start, progress, hotel_comparison, then the stream drops before COMPLETE.
+    var state = SearchState()
+    state.apply(Events.start("s1", domain: .accommodation))
+    state.status = .detached
+    let early = state.settleDetachedReport()
+    #expect(!early)  // nothing arrived yet: still worth asking
+    #expect(state.status == .detached)
+
+    state.status = .streaming
+    state.apply(HotelFixtures.event(HotelFixtures.report(), id: "e1"))
+    state.status = .detached
+    let settled = state.settleDetachedReport()
+    #expect(settled)
+    #expect(state.status == .completed)
+    #expect(state.failureMessage == nil)
+    #expect(state.itinerary == nil && state.hotelReport != nil)
+    let again = state.settleDetachedReport()
+    #expect(!again)  // already settled
+  }
+
+  @Test func aFailedComparisonShowsTheServersMessage() {
+    var state = SearchState()
+    state.apply(Events.start("s1", domain: .accommodation))
+    let effect = state.apply(Events.error("We couldn't read those hotel links. Try again in a minute.", id: "e1"))
+    #expect(effect == .failed(message: "We couldn't read those hotel links. Try again in a minute.", retryable: true))
+    #expect(state.status == .failed("We couldn't read those hotel links. Try again in a minute."))
+    #expect(state.failureMessage == "We couldn't read those hotel links. Try again in a minute.")
+    #expect(!state.hasResult)
+    let settled = state.settleDetachedReport()
+    #expect(!settled)
   }
 
   @Test func aReportWithoutItsProposalAsksWhichTrip() {
@@ -258,24 +299,32 @@ struct HotelCompareTests {
     #expect(HotelReport.recommendedIndex(outOfRange) == nil)
   }
 
-  @Test func theTableLeadsWithWhatTheTravellerWrote() {
-    let rows = HotelReport.rows(HotelFixtures.report())
-    #expect(rows.map(\.label) == ["You said", "Breakfast", "Nearest stop"])
+  @Test func theTableIsTheServersRowsAndNothingElse() {
+    // The hotels carry a note, stops, facilities and a rate of their own:
+    // none of them is written out beside the rows that already say it.
+    var report = HotelFixtures.report()
+    report.hotels[0].facilities = ["Lift", "Kitchen"]
+    report.hotels[0].livePrice.nightlyMinor = 12_800
+    report.hotels[0].livePrice.currency = "EUR"
+    let rows = HotelReport.rows(report)
+    #expect(rows.map(\.label) == ["You said", "Breakfast", "Nearest stops"])
     #expect(rows[0].values == ["385 euros with breakfast", "349 without breakfast"])
-    // A row short of a value, and a hotel with no stops, get a dash.
-    #expect(rows[1].values == ["Included", "—"])
-    // The nearest stop is the shortest walk, and an unrouted one says so.
-    #expect(rows[2].values == ["Gran de Gràcia · 22, 24, V17 · 3 min walk (estimate)", "—"])
+    #expect(rows[1].values == ["Included", "—"])  // a row short of a value gets a dash
+    #expect(rows[2].values == ["Fontana · L3 · 6 min walk", "Not known"])
+
+    report.rows = []
+    #expect(HotelReport.rows(report).isEmpty)
+    report.rows = [HotelFixtures.row("Stars", ["", " "])]
+    #expect(HotelReport.rows(report).isEmpty)  // nobody has a value: left out
   }
 
-  @Test func rowsNobodyHasAnythingForAreLeftOut() {
-    var report = HotelFixtures.report()
-    report.rows = []
-    for index in report.hotels.indices {
-      report.hotels[index].userNote = ""
-      report.hotels[index].nearbyStops = []
-    }
-    #expect(HotelReport.rows(report).isEmpty)
+  @Test func onlyAnHttpsBookingLinkOpens() {
+    var hotel = HotelFixtures.hotel("Verdi 254")
+    #expect(HotelReport.bookingURL(hotel) == nil)
+    hotel.livePrice.bookingURL = "https://partner.example/rate/1"
+    #expect(HotelReport.bookingURL(hotel)?.absoluteString == "https://partner.example/rate/1")
+    hotel.livePrice.bookingURL = "http://partner.example/rate/1"
+    #expect(HotelReport.bookingURL(hotel) == nil)
   }
 
   @Test func anUnidentifiedHotelIsShownButOnlyAddedWithAName() {
@@ -306,21 +355,6 @@ struct HotelCompareTests {
     #expect(sources.map { $0.url?.absoluteString } == ["https://www.timeout.com/barcelona", nil, nil])
     #expect(TransitFormat.httpsURL("https://") == nil)
     #expect(TransitFormat.httpsURL("  https://maps.apple.com/?daddr=1,2 ") != nil)
-  }
-
-  @Test func aLivePriceIsSaidInItsOwnCurrency() {
-    var price = Loci_Chat_LivePrice()
-    price.nightlyMinor = 12_800
-    price.totalMinor = 38_500
-    price.currency = "EUR"
-    price.provider = "LiteAPI"
-    let line = HotelReport.livePrice(price, locale: Locale(identifier: "en_GB"))
-    #expect(line == "€128.00 a night · €385.00 in all · via LiteAPI")
-    price.currency = ""
-    #expect(HotelReport.livePrice(price) == nil)
-    var empty = Loci_Chat_LivePrice()
-    empty.currency = "EUR"
-    #expect(HotelReport.livePrice(empty) == nil)
   }
 
   // MARK: - Add to trip

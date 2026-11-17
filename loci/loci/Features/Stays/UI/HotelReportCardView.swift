@@ -12,8 +12,8 @@ nonisolated enum HotelReportAddState: Equatable, Sendable {
 }
 
 /// A hotel comparison report (web: components/chat/HotelComparisonCard.tsx):
-/// the verdict, the hotels side by side, what is good and what to watch out
-/// for, what could not be checked, and one "Add … to trip" per hotel.
+/// the verdict, the server's table of the hotels side by side, each hotel's
+/// neighbourhood with what is good and what to watch out for, what could not be checked, and one "Add … to trip" per hotel.
 ///
 /// Every string in a report is drawn with `Text(verbatim:)`: some of it was
 /// written from web pages, so none of it is read as markdown or made into a
@@ -144,17 +144,15 @@ struct HotelReportCardView: View {
           .font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk)
       }
       if !hotel.neighbourhood.isEmpty { Text(verbatim: hotel.neighbourhood).font(.lociCaption(13)) }
-      if !hotel.facilities.isEmpty {
-        Text(verbatim: hotel.facilities.joined(separator: " · "))
-          .font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk)
-          .accessibilityLabel(Text(verbatim: hotel.facilities.joined(separator: ", ")))
-      }
-      ForEach(Array(hotel.nearby.enumerated()), id: \.offset) { _, highlight in
-        Text(verbatim: HotelReport.nearbyLine(highlight)).font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk)
-      }
       points(hotel.pros, title: "Good", symbol: "plus.circle.fill", tint: .lociSuccess)
       points(hotel.cons, title: "Watch out", symbol: "exclamationmark.triangle.fill", tint: .lociLantern)
-      if hotel.hasLivePrice { livePrice(hotel.livePrice) }
+      // The rate itself is a row of the table; this is only the way to it.
+      if let url = HotelReport.bookingURL(hotel) {
+        Button("See this rate", systemImage: "arrow.up.right") { openURL(url) }
+          .buttonStyle(MusePillButtonStyle())
+          .accessibilityLabel(Text("See this rate for \(Text(verbatim: names[index]))"))
+          .accessibilityHint("Opens the booking site")
+      }
     }
     .padding(.top, 10)
     .overlay(alignment: .top) { Divider().accessibilityHidden(true) }
@@ -172,17 +170,6 @@ struct HotelReportCardView: View {
         // The icon's meaning, said: colour and shape alone do not carry it.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("\(Text(title)): \(Text(verbatim: item))"))
-      }
-    }
-  }
-
-  @ViewBuilder private func livePrice(_ price: Loci_Chat_LivePrice) -> some View {
-    if let line = HotelReport.livePrice(price) {
-      Text("Rate when we looked: \(Text(verbatim: line))").font(.lociCaption(13))
-      if let url = TransitFormat.httpsURL(price.bookingURL) {
-        Button("See this rate", systemImage: "arrow.up.right") { openURL(url) }
-          .buttonStyle(MusePillButtonStyle())
-          .accessibilityHint("Opens the booking site")
       }
     }
   }
