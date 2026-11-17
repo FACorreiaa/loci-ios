@@ -231,6 +231,8 @@ nonisolated extension SearchState {
       return .completed
     case .route, .gastronomy, .actionProposal, .accessibleRoute:
       break  // route, gastronomy, trip actions and walking legs handled above
+    case .hotelComparison:
+      break  // only sent to a client that asks for it; this build does not yet
     }
     return nil
   }
@@ -371,6 +373,7 @@ nonisolated extension Loci_Chat_StreamEvent.OneOf_Payload {
     case .gastronomy: "gastronomy"
     case .actionProposal: "action_proposal"
     case .accessibleRoute: "accessible_route"
+    case .hotelComparison: "hotel_comparison"
     }
   }
 }

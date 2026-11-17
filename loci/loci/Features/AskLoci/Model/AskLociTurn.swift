@@ -68,6 +68,8 @@ nonisolated struct AskLociTurn: Equatable, Sendable, Identifiable {
       status = nil
       reason = finished.reason
       degraded = finished.degraded
+    case .hotelReport:
+      break  // the server only sends one when hotel comparison is switched on
     case nil:
       break
     }
