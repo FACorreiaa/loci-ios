@@ -298,6 +298,16 @@ nonisolated extension SearchState {
     return true
   }
 
+  /// A turn that lost its stream after the hotel report arrived is finished:
+  /// the report is the whole answer (no itinerary or places follow it), and
+  /// the session keeps only the question and the verdict, so asking the
+  /// server would never find a result. True when it settled the turn.
+  mutating func settleDetachedReport() -> Bool {
+    guard isActive, hotelReport != nil else { return false }
+    status = .completed
+    return true
+  }
+
   /// A hotel comparison. A replayed or regenerated report replaces the one before it.
   private mutating func applyHotelComparison(_ payload: Loci_Chat_StreamEvent.OneOf_Payload) -> Bool {
     guard case .hotelComparison(let wrapper) = payload else { return false }
