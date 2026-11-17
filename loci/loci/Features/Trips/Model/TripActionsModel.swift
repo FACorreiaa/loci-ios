@@ -62,6 +62,24 @@ import Observation
     }
   }
 
+  /// Apply from a card shown away from the trip page (a hotel report in the
+  /// main chat), where no loaded trip supplies the version: read it, apply,
+  /// and if the trip moved in between, read and apply once more. True once
+  /// the proposal is applied.
+  func applyReadingVersion(_ proposal: Loci_Chat_ActionProposal, option: Int?, version: () async -> Int64?) async -> Bool {
+    for _ in 0..<2 {
+      guard let current = await version() else {
+        states[proposal.id] = .failed("Couldn't load the trip. Try again.")
+        return false
+      }
+      _ = await apply(proposal, option: option, baseVersion: current)
+      if state(proposal.id) == .applied { return true }
+      guard needsReload else { return false }
+      needsReload = false
+    }
+    return false
+  }
+
   func dismiss(_ proposal: Loci_Chat_ActionProposal) async {
     states[proposal.id] = .dismissed
     try? await service.dismiss(proposalID: proposal.id)  // a courtesy to the server; the card goes either way

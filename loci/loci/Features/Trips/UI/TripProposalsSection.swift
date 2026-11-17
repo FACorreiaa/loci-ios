@@ -87,9 +87,13 @@ struct TripProposalsSection: View {
     return "\(p.hasProposer ? p.proposer.shownName : "Someone") suggests"
   }
 
-  /// A hotel search needs a pick, which happens in the planner's chat.
+  /// A hotel search, or a choice between compared hotels, needs a pick,
+  /// which happens in the chat that proposed it.
   static func needsPick(_ p: Loci_Chat_ActionProposal) -> Bool {
-    if case .searchHotels = p.action.kind { true } else { false }
+    switch p.action.kind {
+    case .searchHotels, .chooseStay: true
+    default: false
+    }
   }
 }
 

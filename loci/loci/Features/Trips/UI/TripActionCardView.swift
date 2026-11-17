@@ -12,7 +12,13 @@ struct TripActionCardView: View {
   let onApply: (_ option: Int?) -> Void
   let onDismiss: () -> Void
 
-  private var isHotels: Bool { if case .searchHotels = proposal.action.kind { true } else { false } }
+  /// A pick-one card: hotels from a search, or the hotels a comparison report looked at.
+  private var isHotels: Bool {
+    switch proposal.action.kind {
+    case .searchHotels, .chooseStay: true
+    default: false
+    }
+  }
   private var isFlight: Bool { if case .searchFlights = proposal.action.kind { true } else { false } }
   private var busy: Bool { state == .applying }
 
