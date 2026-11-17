@@ -254,6 +254,8 @@ struct DaySection: View {
   let showsDayLabel: Bool
   /// This day's walking legs, for a traveller with access needs.
   var route: Loci_Chat_AccessibleRoutePayload?
+  /// How the day begins from the trip's stay, once the trip has one.
+  var dayStart: Loci_Trip_DayStart?
   @Binding var selectedID: String?
   /// The "Not for me" action for a stop, where it can be waved away (a list,
   /// not an itinerary day); nil for a stop that offers none.
@@ -278,6 +280,7 @@ struct DaySection: View {
         .accessibilityAddTraits(.isHeader)
       }
       if let route { RouteDaySummary(route: route) }
+      if let dayStart { DayStartRow(start: dayStart, source: "itinerary") }
       ForEach(group.stops, id: \.stableID) { stop in
         if let leg = route?.leg(arrivingAt: stop) { WalkingLegRow(leg: leg) }
         StopCard(
