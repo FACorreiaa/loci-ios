@@ -439,6 +439,9 @@ import UIKit
     request.suggestOrder = envelope.suggestOrder ?? false
     if resuming, let token = envelope.lastEventId { request.resumeToken = token }
     if let tripId = envelope.tripId, !tripId.isEmpty { request.tripID = tripId }
+    // Sent on every request, resumes included: without it the server answers
+    // pasted hotel links with something an older build can draw.
+    request.capabilities = [.hotelComparison]
     return request
   }
 }

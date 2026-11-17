@@ -50,6 +50,9 @@ nonisolated struct SearchStore: Sendable {
 
   private func resultURL(_ sessionId: String) -> URL { directory.appending(path: "result-\(sessionId).bin") }
 
+  /// A hotel comparison, beside its session's result: AiCityResponse has no field for one.
+  private func reportURL(_ sessionId: String) -> URL { directory.appending(path: "hotel-report-\(sessionId).bin") }
+
   /// A multi-city search's route, beside its first city's result (same session id).
   private func routeURL(_ sessionId: String) -> URL { directory.appending(path: "route-\(sessionId).bin") }
 
@@ -84,6 +87,12 @@ nonisolated struct SearchStore: Sendable {
     snapshot.message = state.text
     try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     try? snapshot.serializedData().write(to: resultURL(sessionId), options: .atomic)
+    // A later turn in the same session that brought no report takes the old one away.
+    if let report = state.hotelReport {
+      try? report.serializedData().write(to: reportURL(sessionId), options: .atomic)
+    } else {
+      try? FileManager.default.removeItem(at: reportURL(sessionId))
+    }
 
     // A multi-city search keeps each city as its own result (each city has
     // its own session) and the route that ties them together.
@@ -100,6 +109,10 @@ nonisolated struct SearchStore: Sendable {
       let snapshot = try? Loci_Chat_StreamEvent(serializedBytes: data)
     else { return nil }
     var state = SearchState.restored(link: link, result: snapshot.complete.result, text: snapshot.message)
+    // The report comes back without its proposal (those expire): Add then asks which trip.
+    if let data = try? Data(contentsOf: reportURL(link.sessionId)) {
+      state.hotelReport = try? Loci_Chat_HotelComparisonReport(serializedBytes: data)
+    }
     if let routeData = try? Data(contentsOf: routeURL(link.sessionId)),
       let route = try? Loci_Chat_RoutePayload(serializedBytes: routeData)
     {

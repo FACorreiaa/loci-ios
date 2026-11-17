@@ -54,6 +54,10 @@ nonisolated struct SearchState: Equatable, Sendable {
   /// Walking legs between a day's stops, keyed by plan day, for a traveller
   /// with access needs (ACCESSIBLE_ROUTE, sent after the itinerary).
   var accessibleRoutes: [Int: Loci_Chat_AccessibleRoutePayload] = [:]
+  /// The answer to "which of these should I book?" for hotel links pasted
+  /// into the chat (HOTEL_COMPARISON). Tokens are never shown, so on such a
+  /// turn this card is the answer.
+  var hotelReport: Loci_Chat_HotelComparisonReport?
 
   /// The newest event id: the `resume_token` for a reattach.
   var lastEventId: String?
@@ -131,7 +135,20 @@ nonisolated struct SearchState: Equatable, Sendable {
     return generalPOIs
   }
 
-  var hasResult: Bool { !places.isEmpty || itinerary != nil || gastronomy != nil }
+  /// Something to draw: places, an itinerary, the local food, or a hotel
+  /// comparison. A turn that brought only a report is a finished answer.
+  var hasResult: Bool { hasPlaceResult || hotelReport != nil }
+
+  /// Places, an itinerary or the local food: what Save, Share and the status
+  /// rail's counts are about. A hotel comparison is none of those.
+  var hasPlaceResult: Bool { !places.isEmpty || itinerary != nil || gastronomy != nil }
+
+  /// The proposal the server sent right after the report, whose options are
+  /// the report's hotels in order. Nil when no trip of the traveller's has the
+  /// city (or the proposal is not on this phone): the card then asks which trip.
+  var stayProposal: Loci_Chat_ActionProposal? {
+    hotelReport.flatMap { HotelReport.stayProposal(for: $0, in: proposals) }
+  }
 
   /// A "food in Madeira" search: the answer is the gastronomy, not places.
   var isGastronomySearch: Bool { domain == "gastronomy" }
@@ -175,7 +192,9 @@ nonisolated extension SearchState {
       lastEventId = event.eventID
     }
 
-    if applyMultiCity(event, payload) || applyGastronomy(payload) || applyTripAction(payload) || applyAccessibleRoute(payload) {
+    if applyMultiCity(event, payload) || applyGastronomy(payload) || applyTripAction(payload) || applyAccessibleRoute(payload)
+      || applyHotelComparison(payload)
+    {
       return nil
     }
 
@@ -229,10 +248,8 @@ nonisolated extension SearchState {
       savedTripID = Self.tripID(from: event) ?? savedTripID
       status = .completed
       return .completed
-    case .route, .gastronomy, .actionProposal, .accessibleRoute:
-      break  // route, gastronomy, trip actions and walking legs handled above
-    case .hotelComparison:
-      break  // only sent to a client that asks for it; this build does not yet
+    case .route, .gastronomy, .actionProposal, .accessibleRoute, .hotelComparison:
+      break  // route, gastronomy, trip actions, walking legs and hotel reports handled above
     }
     return nil
   }
@@ -278,6 +295,13 @@ nonisolated extension SearchState {
   private mutating func applyAccessibleRoute(_ payload: Loci_Chat_StreamEvent.OneOf_Payload) -> Bool {
     guard case .accessibleRoute(let route) = payload else { return false }
     if route.day >= 1 { accessibleRoutes[Int(route.day)] = route }
+    return true
+  }
+
+  /// A hotel comparison. A replayed or regenerated report replaces the one before it.
+  private mutating func applyHotelComparison(_ payload: Loci_Chat_StreamEvent.OneOf_Payload) -> Bool {
+    guard case .hotelComparison(let wrapper) = payload else { return false }
+    if wrapper.hasReport, !wrapper.report.hotels.isEmpty { hotelReport = wrapper.report }
     return true
   }
 
