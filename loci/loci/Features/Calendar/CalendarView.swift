@@ -1,4 +1,5 @@
 import Connect
+import EventKit
 import LociConnectProto
 import SwiftProtobuf
 import SwiftUI
