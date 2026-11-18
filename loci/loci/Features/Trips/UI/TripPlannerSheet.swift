@@ -60,7 +60,8 @@ struct TripPlannerSheet: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 12) {
           Text(intro).font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk)
-          ForEach(actions.cards, id: \.id) { proposal in
+          if let report { hotelReport(report) }
+          ForEach(cards, id: \.id) { proposal in
             TripActionCardView(
               proposal: proposal,
               state: actions.state(proposal.id),
@@ -91,6 +92,43 @@ struct TripPlannerSheet: View {
         Button("Ask the planner instead", role: .destructive) { Task { await send() } }
       }
     }
+  }
+
+  /// A hotel comparison this trip's planner turn brought back.
+  private var report: Loci_Chat_HotelComparisonReport? { isOurs ? controller.state.hotelReport : nil }
+
+  /// The report's own proposal, when it is for this trip: its options are the
+  /// report's Add buttons, so it is not drawn again as a card.
+  private var stayProposal: Loci_Chat_ActionProposal? {
+    guard isOurs, let proposal = controller.state.stayProposal, proposal.tripID == trip.id else { return nil }
+    return proposal
+  }
+
+  private var cards: [Loci_Chat_ActionProposal] {
+    guard let folded = stayProposal else { return actions.cards }
+    return actions.cards.filter { $0.id != folded.id }
+  }
+
+  private func hotelReport(_ report: Loci_Chat_HotelComparisonReport) -> some View {
+    HotelReportCard(
+      report: report,
+      surface: .planner,
+      proposal: stayProposal.map { proposal in
+        HotelReportCard.Proposal(tripID: proposal.tripID, state: actions.state(proposal.id)) { option in
+          Task { await apply(proposal, option) }
+        }
+      },
+      sentToOwner: trip.hasOwner && stayProposal != nil,
+      onOpenTrip: { id in
+        dismiss()
+        // This sheet sits on the trip it was added to, unless another was picked.
+        if id != trip.id { AppRouter.shared.open(.trip(id: id)) }
+      },
+      onPlan: { prompt in
+        dismiss()
+        AppRouter.shared.open(.plan(prompt: prompt))
+      }
+    )
   }
 
   private var composer: some View {

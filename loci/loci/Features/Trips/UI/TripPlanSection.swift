@@ -66,6 +66,7 @@ struct TripPlanSection: View {
           Text("No hotel yet").font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk)
         }
       }
+      if let stay = TripPlan.stay(for: city, in: trip) { stayDetails(stay) }
       if let at = TripPlan.coordinate(of: city, in: trip) {
         HStack {
           Picker("Stars", selection: Binding(get: { stars[city] ?? 0 }, set: { stars[city] = $0 })) {
@@ -92,6 +93,22 @@ struct TripPlanSection: View {
       } else {
         Text("Can't search hotels in \(city): the trip has no map position for it yet.").font(.lociCaption(12)).foregroundStyle(Color.lociMutedInk)
       }
+    }
+  }
+
+  /// Where the stay is and what the traveller said it costs, when known. The
+  /// price is their own words, never a rate Loci looked up.
+  @ViewBuilder private func stayDetails(_ stay: Loci_Trip_TripStay) -> some View {
+    if !stay.address.isEmpty {
+      Label {
+        Text(verbatim: stay.address)
+      } icon: {
+        Image(systemName: "mappin.and.ellipse").accessibilityHidden(true)
+      }
+      .font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk)
+    }
+    if stay.hasPriceNote, !stay.priceNote.isEmpty {
+      Text("You noted: \(Text(verbatim: stay.priceNote))").font(.lociCaption(13)).foregroundStyle(Color.lociMutedInk)
     }
   }
 

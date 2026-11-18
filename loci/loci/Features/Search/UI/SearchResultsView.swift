@@ -167,15 +167,15 @@ struct SearchResultsView: View {
 
   /// Save and Share, which lived in the navigation bar before the Muse header replaced it.
   @ViewBuilder private func actions(_ state: SearchState) -> some View {
-    let canSave = !isLive && state.hasResult
-    if canSave || state.hasResult {
+    let canSave = !isLive && state.hasPlaceResult
+    if canSave || state.hasPlaceResult {
       // Up to four pills: side by side, stacked at accessibility text sizes.
       AdaptiveStack(spacing: 8) {
         if canSave {
           Button(saveStatus ?? "Save", systemImage: saveStatus == nil ? "bookmark" : "bookmark.fill") { Task { await save(state) } }
             .disabled(saveStatus != nil)
         }
-        if state.hasResult, let source = FlightSource(rawValue: state.destination.rawValue),
+        if state.hasPlaceResult, let source = FlightSource(rawValue: state.destination.rawValue),
           let city = state.cityData?.city ?? state.cityName ?? link.cityName, !city.isEmpty
         {
           FindFlightsButton(
@@ -185,7 +185,7 @@ struct SearchResultsView: View {
             longitude: state.cityData?.centerLongitude
           )
         }
-        if state.hasResult {
+        if state.hasPlaceResult {
           ShareLink(item: ShareText.build(title: shareTitle(state), groups: state.dayGroups, description: state.cityData?.description_p)) {
             Label("Share", systemImage: "square.and.arrow.up")
           }

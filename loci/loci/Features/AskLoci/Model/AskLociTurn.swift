@@ -1,9 +1,22 @@
 import Foundation
 import LociConnectProto
 
+/// A hotel comparison in an answer, with the trip proposal that came for it.
+nonisolated struct AskLociHotelReport: Equatable, Sendable {
+  var report: Loci_Chat_HotelComparisonReport
+  /// The proposal `report.stay_proposal_id` names: its options are the
+  /// report's hotels, so it is the card's Add buttons rather than a second card.
+  var proposal: Loci_Chat_ActionProposal?
+  /// The caller is a co-planner: the choice went to the trip's owner.
+  var awaitsOwner = false
+  /// The server's words once a hotel was added.
+  var confirmation: String?
+}
+
 /// Something the assistant put in front of the person to answer.
 nonisolated enum AskLociCard: Equatable, Sendable, Identifiable {
   case trip(Loci_Chat_ActionProposal, awaitsOwner: Bool)
+  case hotelReport(AskLociHotelReport)
   case place(Loci_Assistant_PlaceAction)
   case handoff(id: String, query: String, city: String?)
   /// What a card became once the person answered it.
@@ -12,6 +25,7 @@ nonisolated enum AskLociCard: Equatable, Sendable, Identifiable {
   var id: String {
     switch self {
     case let .trip(proposal, _): proposal.id
+    case let .hotelReport(card): "hotel-report-\(card.report.id)"
     case let .place(place): place.id
     case let .handoff(id, _, _): id
     case let .note(id, _): id
@@ -51,7 +65,8 @@ nonisolated struct AskLociTurn: Equatable, Sendable, Identifiable {
       status = tool.label
     case let .proposal(proposal):
       switch proposal.kind {
-      case let .trip(trip): cards.append(.trip(trip, awaitsOwner: proposal.awaitsOwner))
+      case let .trip(trip):
+        if !fold(trip, awaitsOwner: proposal.awaitsOwner) { cards.append(.trip(trip, awaitsOwner: proposal.awaitsOwner)) }
       case let .place(place): cards.append(.place(place))
       case nil: break
       }
@@ -68,8 +83,49 @@ nonisolated struct AskLociTurn: Equatable, Sendable, Identifiable {
       status = nil
       reason = finished.reason
       degraded = finished.degraded
+    case let .hotelReport(report):
+      addHotelReport(report)
     case nil:
       break
+    }
+  }
+
+  /// A trip proposal that belongs to a report already on the turn goes into
+  /// that report's card. False when it is a card of its own.
+  private mutating func fold(_ proposal: Loci_Chat_ActionProposal, awaitsOwner: Bool) -> Bool {
+    guard !proposal.id.isEmpty else { return false }
+    for index in cards.indices {
+      guard case .hotelReport(var card) = cards[index], card.report.stayProposalID == proposal.id else { continue }
+      card.proposal = proposal
+      card.awaitsOwner = awaitsOwner
+      cards[index] = .hotelReport(card)
+      return true
+    }
+    return false
+  }
+
+  /// The report, taking its proposal with it if that arrived first. A report
+  /// sent again (same id) replaces the one shown.
+  private mutating func addHotelReport(_ report: Loci_Chat_HotelComparisonReport) {
+    guard !report.hotels.isEmpty else { return }
+    var card = AskLociHotelReport(report: report)
+    if !report.stayProposalID.isEmpty,
+      let index = cards.firstIndex(where: { if case .trip(let trip, _) = $0 { trip.id == report.stayProposalID } else { false } }),
+      case let .trip(trip, awaitsOwner) = cards[index]
+    {
+      card.proposal = trip
+      card.awaitsOwner = awaitsOwner
+      cards.remove(at: index)
+    }
+    if let index = cards.firstIndex(where: { $0.id == AskLociCard.hotelReport(card).id }) {
+      if case .hotelReport(let shown) = cards[index], card.proposal == nil {
+        card.proposal = shown.proposal
+        card.awaitsOwner = shown.awaitsOwner
+        card.confirmation = shown.confirmation
+      }
+      cards[index] = .hotelReport(card)
+    } else {
+      cards.append(.hotelReport(card))
     }
   }
 
@@ -89,6 +145,12 @@ nonisolated struct AskLociTurn: Equatable, Sendable, Identifiable {
   /// A card has been answered: it becomes the note, or goes if there is none.
   mutating func settleCard(_ cardID: String, note: String?) {
     cards = cards.compactMap { card in
+      // A report outlives its proposal: confirmed, it says so and stays; turned
+      // down, it goes back to asking which trip.
+      if case .hotelReport(var report) = card, report.proposal?.id == cardID {
+        if let note { report.confirmation = note } else { report.proposal = nil }
+        return .hotelReport(report)
+      }
       guard card.id == cardID else { return card }
       return note.map { .note(id: cardID, text: $0) }
     }

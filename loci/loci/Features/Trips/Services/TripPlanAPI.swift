@@ -26,6 +26,18 @@ nonisolated enum TripPlanAPI {
     }.links
   }
 
+  /// web: lib/api/trips.ts useStayTransport → GetStayTransport{tripId, cityName}.
+  /// Its own call rather than part of GetTrip: the map lookup behind it can
+  /// take seconds. Any member of the trip may read it.
+  static func stayTransport(tripID: String, cityName: String) async throws(TripRPCError) -> Loci_Trip_StayTransport {
+    var request = Loci_Trip_GetStayTransportRequest()
+    request.tripID = tripID
+    request.cityName = cityName
+    return try await TripAPI.call("Could not load how to get around from the stay.", request) {
+      await TripAPI.client.getStayTransport(request: $0, headers: [:])
+    }.transport
+  }
+
   /// Airport autocomplete; empty under two characters.
   static func searchAirports(_ query: String) async throws(TripRPCError) -> [Loci_Trip_FlightPlaceOption] {
     let q = query.trimmingCharacters(in: .whitespaces)

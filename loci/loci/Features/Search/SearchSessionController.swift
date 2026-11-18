@@ -263,6 +263,11 @@ import UIKit
   }
 
   private func pollUntilFinished() async {
+    // A hotel report already here is the answer; GetChatSession has no copy to wait for.
+    if state.settleDetachedReport() {
+      await finish()
+      return
+    }
     guard let envelope, let sessionId = envelope.sessionId else { return }
     var delay: TimeInterval = 2
     while Date().timeIntervalSince(envelope.startedAt) < Self.generationDeadline + 30 {
@@ -366,6 +371,10 @@ import UIKit
     self.envelope = envelope
     if state.sessionId != sessionId { state = Self.placeholder(from: envelope) }
     state.status = .detached
+    if state.settleDetachedReport() {
+      await finish()
+      return true
+    }
     if await checkServer(sessionId: sessionId, since: envelope.startedAt) { return true }
     if Date().timeIntervalSince(envelope.startedAt) > Self.generationDeadline + 60 {
       state.status = .failed("This search didn't finish. Try it again.")
@@ -439,6 +448,9 @@ import UIKit
     request.suggestOrder = envelope.suggestOrder ?? false
     if resuming, let token = envelope.lastEventId { request.resumeToken = token }
     if let tripId = envelope.tripId, !tripId.isEmpty { request.tripID = tripId }
+    // Sent on every request, resumes included: without it the server answers
+    // pasted hotel links with something an older build can draw.
+    request.capabilities = [.hotelComparison]
     return request
   }
 }

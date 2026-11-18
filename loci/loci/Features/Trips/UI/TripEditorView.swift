@@ -33,6 +33,8 @@ struct TripEditorView: View {
   /// The day being walked stop by stop (pushed as WalkDayView).
   @State private var walkingDay: WalkDay?
   @State private var planning = false
+  /// How to get around from each stay; read-only, so every role sees it.
+  @State private var transport = StayTransportModel()
   /// A shared trip's open suggestions; empty on a trip planned alone.
   @State private var proposals: [Loci_Chat_ActionProposal] = []
   /// A shared trip's comments, and the stop the composer is about ("" for the trip).
@@ -133,12 +135,15 @@ struct TripEditorView: View {
             onRemoveFlight: { id in enqueue { await removeFlight(id) } }
           )
             .disabled(!canEdit)
+          StayTransportSections(trip: trip, model: transport)
           ForEach(trip.days, id: \.id) { day in daySection(day, trip: trip) }
           if !trip.legs.isEmpty { legsSection(trip.legs) }
           TripExportSection(trip: trip, isPro: side.isPro)
           // Packing and expenses are the owner's own lists.
           if isOwner { TripChecklistsSection(store: checklist) }
         }
+        // Again whenever a stay, or the stop a day begins at, changes.
+        .task(id: StayTransportModel.key(trip)) { if !isOffline { await transport.load(trip) } }
       } else {
         ProgressView()
       }
@@ -236,6 +241,7 @@ struct TripEditorView: View {
 
   private func daySection(_ day: Loci_Trip_TripDay, trip: Loci_Trip_TripDraft) -> some View {
     Section {
+      if let start = transport.dayStart(for: day) { DayStartRow(start: start, source: "trip") }
       ForEach(day.stops, id: \.id) { stop in
         // Retiming stays the owner's; a co-planner's edits become suggestions.
         StopRow(stop: stop, color: LociTheme.dayColor(Int(day.dayNumber)), isEditing: isEditing && canEdit) { minutes in
@@ -548,7 +554,9 @@ struct TripEditorView: View {
     request.baseVersion = trip.version
     await apply("Could not remove the stop.", request) { await TripAPI.client.removeStop(request: $0, headers: [:]) }
   }
+}
 
+extension TripEditorView {
   // MARK: - Suggestions (planning together)
 
   /// Only a trip planned together has suggestions; a solo trip skips the call.
@@ -596,11 +604,9 @@ struct TripEditorView: View {
     guard let updated = try? await TripProposalsAPI.react(proposalID: proposal.id, value: value) else { return }
     if let index = proposals.firstIndex(where: { $0.id == updated.id }) { proposals[index] = updated }
   }
-}
 
-// MARK: - Comments (planning together)
+  // MARK: - Comments (planning together)
 
-extension TripEditorView {
   /// Applying suggestions: the owner, or a co-planner the owner lets apply.
   private var mayApply: Bool {
     isOwner || trip?.viewerRole == .coPlanner && trip?.coPlannersMayApply == true

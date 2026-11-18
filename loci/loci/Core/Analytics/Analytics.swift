@@ -78,6 +78,17 @@ enum AnalyticsEvent: String {
   case itineraryStopAdded = "itinerary_stop_added"
   /// "Eat nearby" was opened for a stop. Properties: result_count, has_coords.
   case eatNearbyOpened = "eat_nearby_opened"
+  /// A hotel comparison report was drawn. Properties: surface (chat | overlay | planner),
+  /// hotels, identified, has_verdict, has_recommendation, web_search_used, sources, has_trip.
+  case hotelReportShown = "hotel_report_shown"
+  /// "Add … to trip" was tapped on a report. Properties: surface, via (proposal | picker), option, recommended.
+  case hotelReportAddTapped = "hotel_report_add_tapped"
+  /// A compared hotel became a trip's stay. Properties: surface, via, identified, has_coordinates.
+  case staySetFromReport = "stay_set_from_report"
+  /// "Getting around from …" was shown on a trip. Properties: status, stops, routed_stops, day_starts, has_airport.
+  case stayTransportViewed = "stay_transport_viewed"
+  /// A directions link from the stay was opened. Properties: target (day | airport), provider (apple | google), source, suggested_mode?.
+  case stayDirectionsOpened = "stay_directions_opened"
 }
 
 @MainActor enum Analytics {

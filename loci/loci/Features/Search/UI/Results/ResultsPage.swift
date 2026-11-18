@@ -30,6 +30,8 @@ struct ResultsPage: View {
   /// The trip the server saved for this itinerary: once found, the page is a
   /// view of it, and edits made here are edits to it.
   @State private var edit = TripEditSession()
+  /// "From your hotel" for each day, when the trip behind the page has a stay.
+  @State private var transport = StayTransportModel()
   @State private var eatingNear: Loci_Poi_POIDetailedInfo?
   @State private var searchingFor: TripDayRef?
   @State private var pastingFor: TripDayRef?
@@ -167,6 +169,24 @@ struct ResultsPage: View {
     )
   }
 
+  /// The trip day a page day stands for, to find how it begins from the stay.
+  private func dayStart(_ group: DayGroup, in derived: Derived) -> Loci_Trip_DayStart? {
+    guard let ref = derived.backed?.days.first(where: { $0.number == group.number }),
+      let day = edit.trip?.days.first(where: { $0.id == ref.id })
+    else { return nil }
+    return transport.dayStart(for: day)
+  }
+
+  private var transportKey: String {
+    guard followsTrip, let trip = edit.trip, !trip.stays.isEmpty else { return "" }
+    return StayTransportModel.key(trip)
+  }
+
+  private func loadTransport() async {
+    guard !transportKey.isEmpty, !ResultsSideData.isOffline, let trip = edit.trip else { return }
+    await transport.load(trip)
+  }
+
   private var notice: Binding<String?> { Binding(get: { edit.notice }, set: { edit.notice = $0 }) }
 
   private func loadTrip() async {
@@ -215,9 +235,13 @@ struct ResultsPage: View {
       if state.status != .failed(state.failureMessage ?? "") || state.hasResult {
         StatusRail(state: state)
       }
-      if state.hasResult {
+      // Pasted hotel links: the report is the answer, with or without places.
+      if let report = state.hotelReport {
+        ChatHotelReportCard(report: report, proposals: state.proposals).transition(arrival)
+      }
+      if state.hasPlaceResult {
         results(derived).transition(arrival)
-      } else if state.isActive {
+      } else if state.isActive, state.hotelReport == nil {
         SkeletonCards()
       }
     }
@@ -230,6 +254,7 @@ struct ResultsPage: View {
     }
     .sheet(item: $detail) { stop in PlaceDetailSheet(stop: stop, destination: state.destination, cityName: cityName) }
     .task(id: tripKey) { await loadTrip() }
+    .task(id: transportKey) { await loadTransport() }
     .onChange(of: scenePhase) { _, phase in refreshTrip(phase) }
     .errorAlert(notice)
     .sheet(item: $eatingNear) { eatSheet($0, derived) }
@@ -285,6 +310,7 @@ struct ResultsPage: View {
         destination: state.destination,
         showsDayLabel: showsDays,
         route: showsDays ? state.accessibleRoutes[group.number] : nil,
+        dayStart: dayStart(group, in: derived),
         selectedID: $selectedID,
         dismissAction: dayDismiss,
         menu: { menu(for: $0, in: derived) },
@@ -384,6 +410,11 @@ struct StatusRail: View {
 
   private var text: AttributedString {
     let count = state.places.count
+    if let report = state.hotelReport, !state.hasPlaceResult {
+      return state.isActive
+        ? AttributedString(localized: "Finishing up…")
+        : AttributedString(localized: "Comparison ready · ^[\(report.hotels.count) hotel](inflect: true)")
+    }
     if state.isGastronomySearch {
       if let dishes = state.gastronomy?.dishes.count { return AttributedString(localized: "Local food ready · ^[\(dishes) dish](inflect: true)") }
       return AttributedString(localized: state.isActive ? "Tasting the local food…" : "No typical food found")

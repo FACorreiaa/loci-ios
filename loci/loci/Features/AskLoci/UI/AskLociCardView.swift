@@ -19,6 +19,27 @@ struct AskLociCardView: View {
         onApply: { option in Task { await controller.confirm(card: proposal.id, turn: turnID, option: option) } },
         onDismiss: { Task { await controller.dismiss(card: proposal.id, turn: turnID) } }
       )
+    case let .hotelReport(card):
+      HotelReportCard(
+        report: card.report,
+        surface: .overlay,
+        // Someone else's trip: the choice went to its owner, and nothing here confirms it.
+        proposal: card.awaitsOwner ? nil : card.proposal.map { proposal in
+          HotelReportCard.Proposal(tripID: proposal.tripID, state: controller.state(ofCard: proposal.id)) { option in
+            Task { await controller.confirm(card: proposal.id, turn: turnID, option: option) }
+          }
+        },
+        sentToOwner: card.awaitsOwner,
+        confirmation: card.confirmation,
+        onOpenTrip: { id in
+          controller.close()
+          AppRouter.shared.open(.trip(id: id))
+        },
+        onPlan: { prompt in
+          controller.close()
+          AppRouter.shared.open(.plan(prompt: prompt))
+        }
+      )
     case let .place(place):
       AskLociPlaceCard(
         summary: place.summary,

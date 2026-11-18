@@ -21,6 +21,10 @@ final class AskLociController {
   /// Bumped when a card changed something, so a page on show can reload.
   private(set) var changes = 0
 
+  /// A trip was changed from a chat card outside this controller (a hotel
+  /// report's "Add to trip"): pages on show read it again, as for `confirm`.
+  func tripChanged() { changes += 1 }
+
   let dictation: DictationController
 
   @ObservationIgnored private let service: AskLociService
