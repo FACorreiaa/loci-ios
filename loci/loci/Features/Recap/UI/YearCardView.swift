@@ -107,7 +107,7 @@ enum PinProjection {
 }
 
 /// A seal's edge: a circle with `bumps` scallops.
-// Nonisolated: Shape is nonisolated in the iOS 27 SDK, and this target defaults to MainActor.
+/// Nonisolated: `Shape` is nonisolated in the iOS 27 SDK, and this target defaults to MainActor.
 nonisolated private struct Scallop: Shape {
   var bumps = 40
   var depth: CGFloat = 0.03

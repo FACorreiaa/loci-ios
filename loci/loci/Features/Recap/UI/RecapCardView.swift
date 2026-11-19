@@ -323,7 +323,7 @@ private struct RouteCardView: View {
 }
 
 /// The route drawn as a line, projected to fit (equirectangular, cos-lat corrected).
-// Nonisolated: Shape is nonisolated in the iOS 27 SDK, and this target defaults to MainActor.
+/// Nonisolated: `Shape` is nonisolated in the iOS 27 SDK, and this target defaults to MainActor.
 nonisolated private struct RouteSketch: Shape {
   let points: [Loci_Recap_RoutePoint]
   var progress: CGFloat
