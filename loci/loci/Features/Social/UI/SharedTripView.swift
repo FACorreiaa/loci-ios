@@ -31,13 +31,19 @@ struct SharedTripView: View {
         ForEach(trip.days, id: \.id) { day in
           Section {
             ForEach(day.stops, id: \.id) { stop in
-              StopRow(stop: stop, color: LociTheme.dayColor(Int(day.dayNumber)), isEditing: false) { _ in }
+              StopRow(stop: stop, color: LociTheme.dayColor(Int(day.dayNumber)), isEditing: false, dayDate: day.checkDate) { _ in }
             }
           } header: {
-            Text(day.cityName.isEmpty || day.cityName == trip.cityName ? "Day \(day.dayNumber)" : "Day \(day.dayNumber) · \(day.cityName)")
+            HStack {
+              Text(day.cityName.isEmpty || day.cityName == trip.cityName ? "Day \(day.dayNumber)" : "Day \(day.dayNumber) · \(day.cityName)")
+              if let checks = DayCheckTally(stops: day.stops, dayDate: day.checkDate).label {
+                Text(checks).font(.lociCoord(10)).textCase(.uppercase).tracking(1.2).foregroundStyle(Color.lociHolo)
+              }
+            }
           }
           .listRowBackground(Color.lociCard)
         }
+        if trip.hasStopChecks { CheckSourceNote() }
       } else if let failure {
         ContentUnavailableView(failure, systemImage: "lock", description: Text("It may be private now, or the link was turned off."))
           .listRowBackground(Color.clear)
