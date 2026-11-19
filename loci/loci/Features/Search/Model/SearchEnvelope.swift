@@ -141,6 +141,38 @@ nonisolated extension SearchState {
     }
   }
 
+  /// A hotel comparison this phone did not run, rebuilt from its session's
+  /// thread. The question is the newest message with links in it and the
+  /// verdict the first reply to it, so a follow-up asked in the same thread is
+  /// not taken for the verdict. A thread without links falls back to its
+  /// newest reply. Nil when there is no reply. Proactive messages are not
+  /// replies.
+  static func restoredComparison(link: SessionLink, history: [Loci_Chat_ConversationMessage]) -> SearchState? {
+    let isReply: (Loci_Chat_ConversationMessage) -> Bool = {
+      $0.role == .assistant && $0.origin != .proactive && !$0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    let hasLink: (Loci_Chat_ConversationMessage) -> Bool = { $0.role == .user && $0.content.contains("https://") }
+    let replyIndex: Int
+    if let questionIndex = history.lastIndex(where: hasLink),
+      let reply = history[(questionIndex + 1)...].firstIndex(where: isReply)
+    {
+      replyIndex = reply
+    } else if let newest = history.lastIndex(where: isReply) {
+      replyIndex = newest
+    } else {
+      return nil
+    }
+    var state = SearchState()
+    state.sessionId = link.sessionId
+    state.destination = link.destination
+    state.domain = link.domain
+    state.cityName = link.cityName
+    state.query = history[..<replyIndex].last(where: { $0.role == .user })?.content ?? ""
+    state.comparisonVerdict = history[replyIndex].content
+    state.status = .completed
+    return state
+  }
+
   /// A finished search rebuilt from a saved or server-side `AiCityResponse`.
   static func restored(link: SessionLink, result: Loci_Chat_AiCityResponse, text: String = "") -> SearchState {
     var state = SearchState()

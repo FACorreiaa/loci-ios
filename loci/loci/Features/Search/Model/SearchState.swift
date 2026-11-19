@@ -58,6 +58,10 @@ nonisolated struct SearchState: Equatable, Sendable {
   /// into the chat (HOTEL_COMPARISON). Tokens are never shown, so on such a
   /// turn this card is the answer.
   var hotelReport: Loci_Chat_HotelComparisonReport?
+  /// A hotel comparison's verdict, read back from its thread when this phone
+  /// has no copy of the report because the comparison ran on another device.
+  /// The server keeps the question and the verdict, not the card.
+  var comparisonVerdict: String?
 
   /// The newest event id: the `resume_token` for a reattach.
   var lastEventId: String?
@@ -136,8 +140,9 @@ nonisolated struct SearchState: Equatable, Sendable {
   }
 
   /// Something to draw: places, an itinerary, the local food, or a hotel
-  /// comparison. A turn that brought only a report is a finished answer.
-  var hasResult: Bool { hasPlaceResult || hotelReport != nil }
+  /// comparison (its report, or the verdict its thread kept). A turn that
+  /// brought only a report is a finished answer.
+  var hasResult: Bool { hasPlaceResult || hotelReport != nil || comparisonVerdict != nil }
 
   /// Places, an itinerary or the local food: what Save, Share and the status
   /// rail's counts are about. A hotel comparison is none of those.

@@ -36,6 +36,11 @@ public nonisolated struct SessionLink: Sendable, Equatable, Hashable {
     public static let domain = "domain"
   }
 
+  /// The `domain` of a link to a chat thread: the server sends a finished
+  /// hotel comparison there (runs.ResultPath), web's `/chat?sessionId=`. It
+  /// opens on the itinerary page, which reads the thread back.
+  public static let chatDomain = "chat"
+
   public init(destination: SearchDestination, sessionId: String, cityName: String? = nil, domain: String? = nil) {
     self.destination = destination
     self.sessionId = sessionId
@@ -51,7 +56,8 @@ public nonisolated struct SessionLink: Sendable, Equatable, Hashable {
 
   /// `loci://itinerary?sessionId=…` (notifications, OAuth-era deep links) or
   /// `https://lociai.fyi/itinerary?sessionId=…` (a shared web link). Web's
-  /// `/nearme` has no page of its own here; its session opens like an itinerary.
+  /// `/nearme` and `/chat` have no page of their own here; their sessions open
+  /// like an itinerary.
   public init?(url: URL) {
     let destination: SearchDestination?
     switch url.scheme?.lowercased() {
@@ -60,7 +66,7 @@ public nonisolated struct SessionLink: Sendable, Equatable, Hashable {
     case "https":
       guard let host = url.host()?.lowercased(), Self.webHosts.contains(host) else { return nil }
       let route = url.pathComponents.dropFirst().first ?? ""
-      destination = route == "nearme" ? .itinerary : SearchDestination(rawValue: route)
+      destination = route == "nearme" || route == Self.chatDomain ? .itinerary : SearchDestination(rawValue: route)
     default:
       destination = nil
     }
