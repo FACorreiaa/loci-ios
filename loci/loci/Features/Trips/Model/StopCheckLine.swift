@@ -152,3 +152,14 @@ nonisolated extension Loci_Trip_TripDay {
   /// The day's calendar date, when the trip has dates.
   var checkDate: Date? { hasDate ? date.date : nil }
 }
+
+nonisolated extension Loci_Trip_TripDraft {
+  /// Some stop's place does not open at all on the stop's day. That is the
+  /// one clash the server may have a fix for (a move to a day the place is
+  /// open), offered among the trip's suggestions.
+  var hasShutStop: Bool {
+    days.contains { day in
+      day.stops.contains { $0.hasCheck && $0.check.status == .checked && $0.check.hours == .shutThatDay }
+    }
+  }
+}
