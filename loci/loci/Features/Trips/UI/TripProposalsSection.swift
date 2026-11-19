@@ -9,6 +9,9 @@ import SwiftUI
 struct TripProposalsSection: View {
   let proposals: [Loci_Chat_ActionProposal]
   let isOwner: Bool
+  /// Thumbs up and down are how a trip's members weigh in. On a trip nobody
+  /// else is on there is nobody to weigh in with, and they are left out.
+  var showsReactions = true
   /// The owner, or a co-planner the owner lets apply.
   let mayApply: Bool
   let currentUserID: String?
@@ -42,8 +45,10 @@ struct TripProposalsSection: View {
         Text(error).font(.lociCaption(13)).foregroundStyle(Color.lociDestructive)
       }
       HStack(spacing: 8) {
-        reaction(p, value: 1, count: p.upVotes, symbol: "hand.thumbsup", busy: busy)
-        reaction(p, value: -1, count: p.downVotes, symbol: "hand.thumbsdown", busy: busy)
+        if showsReactions {
+          reaction(p, value: 1, count: p.upVotes, symbol: "hand.thumbsup", busy: busy)
+          reaction(p, value: -1, count: p.downVotes, symbol: "hand.thumbsdown", busy: busy)
+        }
         Spacer()
         if mayApply, !Self.needsPick(p) {
           Button(busy ? "Applying…" : "Apply") { run(p) { await onApply(p) } }
@@ -51,7 +56,7 @@ struct TripProposalsSection: View {
             .disabled(busy || !canApply)
         }
         if isOwner || mine {
-          Button(isOwner && !mine ? "Not now" : "Take back") { run(p) { await onDismiss(p) } }
+          Button(Self.dismissLabel(p, isOwner: isOwner, mine: mine)) { run(p) { await onDismiss(p) } }
             .controlSize(.small).disabled(busy)
         }
       }
@@ -80,6 +85,13 @@ struct TripProposalsSection: View {
       errors[p.id] = await action()
       busyID = nil
     }
+  }
+
+  /// "Take back" is for a suggestion somebody made by hand. A card from the
+  /// planner is nobody's to take back, the owner's own included: the owner
+  /// turns it down.
+  static func dismissLabel(_ p: Loci_Chat_ActionProposal, isOwner: Bool, mine: Bool) -> String {
+    isOwner && (!mine || p.source != .editor) ? "Not now" : "Take back"
   }
 
   static func byline(_ p: Loci_Chat_ActionProposal) -> String {

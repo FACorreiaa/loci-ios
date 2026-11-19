@@ -37,6 +37,7 @@ struct TripEditorView: View {
   @State private var transport = StayTransportModel()
   /// A shared trip's open suggestions; empty on a trip planned alone.
   @State private var proposals: [Loci_Chat_ActionProposal] = []
+  @State private var lookedAgainForFix = false
   /// A shared trip's comments, and the stop the composer is about ("" for the trip).
   @State private var comments: [Loci_Trip_TripComment] = []
   @State private var commentsHasMore = false
@@ -217,6 +218,7 @@ struct TripEditorView: View {
       TripProposalsSection(
         proposals: proposals,
         isOwner: isOwner,
+        showsReactions: isShared(trip),
         mayApply: mayApply,
         currentUserID: AuthSessionManager.shared.currentUserID,
         canApply: isConfirmed,
@@ -563,10 +565,26 @@ struct TripEditorView: View {
 extension TripEditorView {
   // MARK: - Suggestions (planning together)
 
-  /// Only a trip planned together has suggestions; a solo trip skips the call.
+  /// A trip planned together has suggestions. So does the owner's own trip
+  /// when a stop's place is shut all day: the server may be offering to move
+  /// it to a day the place is open. Any other solo trip skips the call.
   private func loadProposals() async {
-    guard !isOffline, let trip, isShared(trip) else { return }
+    guard !isOffline, let trip else { return }
+    let mayHaveFix = isOwner && trip.hasShutStop
+    guard isShared(trip) || mayHaveFix else { return }
     if let list = try? await TripProposalsAPI.list(tripID: trip.id) { proposals = list }
+    // The server works a fix out behind the read that shows the shut stop,
+    // so this first look can come back before it is stored. Look once more,
+    // once per time the trip is opened.
+    // It runs on its own so the rest of the page's loading does not wait.
+    guard mayHaveFix, proposals.isEmpty, !lookedAgainForFix else { return }
+    lookedAgainForFix = true
+    let tripID = trip.id
+    Task {
+      try? await Task.sleep(for: .seconds(4))
+      guard self.trip?.id == tripID, proposals.isEmpty else { return }
+      if let list = try? await TripProposalsAPI.list(tripID: tripID) { proposals = list }
+    }
   }
 
   private func suggest(_ change: SuggestedChange) async {

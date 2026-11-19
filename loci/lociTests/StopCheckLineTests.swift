@@ -109,4 +109,29 @@ struct StopCheckLineTests {
     #expect(DayCheckTally(stops: [stop(nil)]).label == nil)
     #expect(DayCheckTally(stops: [stop(check(.open))]).label == "1 of 1 checked")
   }
+
+  @Test func aTripHasAShutStopOnlyWhenAPlaceWasFoundAndIsShutAllDay() {
+    func trip(_ stops: [Loci_Trip_TripStop]) -> Loci_Trip_TripDraft {
+      var day = Loci_Trip_TripDay()
+      day.stops = stops
+      var trip = Loci_Trip_TripDraft()
+      trip.days = [Loci_Trip_TripDay(), day]
+      return trip
+    }
+    #expect(trip([stop(check(.open)), stop(check(.shutThatDay))]).hasShutStop)
+    #expect(!trip([stop(check(.opensLater)), stop(check(status: .notFound)), stop(nil)]).hasShutStop)
+    #expect(!Loci_Trip_TripDraft().hasShutStop)
+  }
+
+  @Test func aPlannersCardIsTurnedDownNotTakenBack() {
+    var fromPlanner = Loci_Chat_ActionProposal()
+    fromPlanner.source = .chat
+    var byHand = Loci_Chat_ActionProposal()
+    byHand.source = .editor
+    // The owner's own trip: the planner's card carries the owner as proposer.
+    #expect(TripProposalsSection.dismissLabel(fromPlanner, isOwner: true, mine: true) == "Not now")
+    #expect(TripProposalsSection.dismissLabel(byHand, isOwner: true, mine: true) == "Take back")
+    #expect(TripProposalsSection.dismissLabel(byHand, isOwner: true, mine: false) == "Not now")
+    #expect(TripProposalsSection.dismissLabel(byHand, isOwner: false, mine: true) == "Take back")
+  }
 }
