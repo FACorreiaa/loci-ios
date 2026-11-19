@@ -5,6 +5,8 @@ struct StopRow: View {
   let stop: Loci_Trip_TripStop
   let color: Color
   let isEditing: Bool
+  /// The day's date, so a stamp can name the weekday a place is shut on.
+  var dayDate: Date?
   let onDuration: (Int) -> Void
 
   @ScaledMetric(relativeTo: .caption) private var numberWidth = 20
@@ -20,6 +22,7 @@ struct StopRow: View {
       Text("\(stop.orderIndex + 1)").lociCoordStyle(11).frame(minWidth: numberWidth)
       VStack(alignment: .leading, spacing: 3) {
         Text(stop.name).font(.lociHeadline(16)).foregroundStyle(Color.lociInk)
+        if stop.hasCheck, let line = StopCheckLine(stop.check, dayDate: dayDate) { CheckStamp(line: line) }
         if !stop.notes.isEmpty { Text(stop.notes).font(.lociCaption()).foregroundStyle(Color.lociMutedInk).lineLimit(2) }
         if isEditing {
           Stepper("\(duration) min", value: $duration, in: 15...480, step: 15).font(.lociCaption())

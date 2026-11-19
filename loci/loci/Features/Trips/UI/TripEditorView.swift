@@ -137,6 +137,7 @@ struct TripEditorView: View {
             .disabled(!canEdit)
           StayTransportSections(trip: trip, model: transport)
           ForEach(trip.days, id: \.id) { day in daySection(day, trip: trip) }
+          if trip.hasStopChecks { CheckSourceNote() }
           if !trip.legs.isEmpty { legsSection(trip.legs) }
           TripExportSection(trip: trip, isPro: side.isPro)
           // Packing and expenses are the owner's own lists.
@@ -244,7 +245,7 @@ struct TripEditorView: View {
       if let start = transport.dayStart(for: day) { DayStartRow(start: start, source: "trip") }
       ForEach(day.stops, id: \.id) { stop in
         // Retiming stays the owner's; a co-planner's edits become suggestions.
-        StopRow(stop: stop, color: LociTheme.dayColor(Int(day.dayNumber)), isEditing: isEditing && canEdit) { minutes in
+        StopRow(stop: stop, color: LociTheme.dayColor(Int(day.dayNumber)), isEditing: isEditing && canEdit, dayDate: day.checkDate) { minutes in
           enqueue { await setDuration(stop, minutes: minutes) }
         }
         .moveDisabled(!canChange)
@@ -292,6 +293,9 @@ struct TripEditorView: View {
           Text("Day \(day.dayNumber)")
         } else {
           Text("Day \(day.dayNumber) · \(day.cityName)")
+        }
+        if let checks = DayCheckTally(stops: day.stops, dayDate: day.checkDate).label {
+          Text(checks).font(.lociCoord(10)).textCase(.uppercase).tracking(1.2).foregroundStyle(Color.lociHolo)
         }
         let walkDay = WalkDay.from(trip: trip, day: day)
         Button("Walk", systemImage: "figure.walk") { walkingDay = walkDay }
