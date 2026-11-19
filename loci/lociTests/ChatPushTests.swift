@@ -137,6 +137,22 @@ struct ChatPushTests {
     #expect(PushRoute.tap(userInfo: Self.searchFinished()) == .open(link))
   }
 
+  /// A finished hotel comparison, as push.BuildPayload sends it since api #178:
+  /// the run's page is the chat thread, which opens on the itinerary page.
+  @Test func tappingAComparisonPushOpensItsThread() {
+    let payload: [AnyHashable: Any] = [
+      "aps": ["alert": ["title": "Your Lisbon hotel comparison is ready", "body": "Tap to open it."], "thread-id": "search"] as [String: Any],
+      "sessionId": "c1",
+      "cityName": "Lisbon",
+      "domain": "chat",
+      "status": "done",
+      "url": "/chat?sessionId=c1&cityName=Lisbon&domain=chat",
+    ]
+    #expect(ChatPush(userInfo: payload) == nil)
+    let link = SessionLink(destination: .itinerary, sessionId: "c1", cityName: "Lisbon", domain: SessionLink.chatDomain)
+    #expect(PushRoute.tap(userInfo: payload) == .open(link))
+  }
+
   /// Friend pushes carry no session, only the web address of the page to open.
   @Test func tappingAFriendPushOpensItsPage() {
     let request: [AnyHashable: Any] = ["sessionId": "", "url": "https://lociai.fyi/friends", "origin": "friend_request"]

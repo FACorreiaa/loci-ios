@@ -389,16 +389,21 @@ import UIKit
 
   /// The state to show for a session link: the live search, this phone's saved
   /// copy, or the server's (every domain since proto v5.22 stores the lists).
+  /// A hotel comparison stores no result, only its thread: a link to one
+  /// (`domain=chat`) that this phone did not run shows the verdict from there.
   func state(for link: SessionLink) async -> SearchState? {
     if state.sessionId == link.sessionId { return state }
     if let saved = store.loadResult(for: link) { return saved }
     var request = Loci_Chat_GetChatSessionRequest()
     request.sessionID = link.sessionId
-    guard let session = try? await rpc("", request, { await self.chat.getChatSession(request: $0, headers: [:]) }).session,
-      session.hasCurrentItinerary
+    guard let session = try? await rpc("", request, { await self.chat.getChatSession(request: $0, headers: [:]) }).session
     else { return nil }
-    let restored = SearchState.restored(link: link, result: session.currentItinerary)
-    return restored.hasResult ? restored : nil
+    if session.hasCurrentItinerary {
+      let restored = SearchState.restored(link: link, result: session.currentItinerary)
+      if restored.hasResult { return restored }
+    }
+    guard link.domain == SessionLink.chatDomain else { return nil }
+    return SearchState.restoredComparison(link: link, history: session.conversationHistory)
   }
 
   // MARK: - Helpers

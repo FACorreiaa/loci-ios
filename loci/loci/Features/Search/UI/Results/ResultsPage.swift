@@ -238,6 +238,8 @@ struct ResultsPage: View {
       // Pasted hotel links: the report is the answer, with or without places.
       if let report = state.hotelReport {
         ChatHotelReportCard(report: report, proposals: state.proposals).transition(arrival)
+      } else if let verdict = state.comparisonVerdict {
+        ComparisonVerdict(text: verdict).transition(arrival)
       }
       if state.hasPlaceResult {
         results(derived).transition(arrival)
@@ -415,6 +417,9 @@ struct StatusRail: View {
         ? AttributedString(localized: "Finishing up…")
         : AttributedString(localized: "Comparison ready · ^[\(report.hotels.count) hotel](inflect: true)")
     }
+    if state.comparisonVerdict != nil, !state.hasPlaceResult {
+      return AttributedString(localized: "Comparison verdict")
+    }
     if state.isGastronomySearch {
       if let dishes = state.gastronomy?.dishes.count { return AttributedString(localized: "Local food ready · ^[\(dishes) dish](inflect: true)") }
       return AttributedString(localized: state.isActive ? "Tasting the local food…" : "No typical food found")
@@ -458,5 +463,21 @@ struct FailureRail: View {
     }
     .padding(10)
     .background(Color.lociDestructive.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+  }
+}
+
+/// A hotel comparison that ran on another device: the verdict its thread
+/// kept. The card, with its rows and Add buttons, stays where it ran.
+struct ComparisonVerdict: View {
+  let text: String
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Text(text).font(.lociBody(15)).foregroundStyle(Color.lociInk)
+      Text("The full comparison is on the device that ran it.")
+        .font(.lociCaption())
+        .foregroundStyle(Color.lociMutedInk)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
   }
 }

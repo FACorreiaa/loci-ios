@@ -483,3 +483,55 @@ private actor VersionCounter {
     return value
   }
 }
+
+/// A comparison opened on a phone that did not run it: rebuilt from the thread.
+struct ComparisonThreadRestoreTests {
+  static func message(_ role: Loci_Chat_MessageRole, _ content: String, origin: Loci_Chat_MessageOrigin = .unspecified)
+    -> Loci_Chat_ConversationMessage
+  {
+    var message = Loci_Chat_ConversationMessage()
+    message.role = role
+    message.content = content
+    message.origin = origin
+    return message
+  }
+
+  static let link = SessionLink(destination: .itinerary, sessionId: "c1", cityName: "Porto", domain: SessionLink.chatDomain)
+
+  @Test func theVerdictIsTheNewestReplyAndTheQuestionTheOneBeforeIt() throws {
+    let history = [
+      Self.message(.user, "Which should I book? https://www.booking.com/hotel/pt/a.html https://www.booking.com/hotel/pt/b.html"),
+      Self.message(.assistant, "Book the second one."),
+      Self.message(.assistant, "Rain tomorrow from 14:00.", origin: .proactive),
+    ]
+    let state = try #require(SearchState.restoredComparison(link: Self.link, history: history))
+    #expect(state.comparisonVerdict == "Book the second one.")
+    #expect(state.query.hasPrefix("Which should I book?"))
+    #expect(state.sessionId == "c1")
+    #expect(state.cityName == "Porto")
+    #expect(state.status == .completed)
+    #expect(state.hasResult)
+    #expect(!state.hasPlaceResult, "Save and Share are about places; a verdict has none")
+    #expect(!state.isActive)
+  }
+
+  @Test func aFollowUpInTheThreadIsNotTheVerdict() throws {
+    let history = [
+      Self.message(.user, "Which? https://www.booking.com/hotel/pt/a.html https://www.booking.com/hotel/pt/b.html"),
+      Self.message(.assistant, "Book the second one."),
+      Self.message(.user, "And where should we eat nearby?"),
+      Self.message(.assistant, "Try the tascas on Rua da Rosa."),
+    ]
+    let state = try #require(SearchState.restoredComparison(link: Self.link, history: history))
+    #expect(state.comparisonVerdict == "Book the second one.")
+    #expect(state.query.hasPrefix("Which?"))
+  }
+
+  @Test func aThreadWithNoReplyHasNothingToShow() {
+    #expect(SearchState.restoredComparison(link: Self.link, history: []) == nil)
+    #expect(SearchState.restoredComparison(link: Self.link, history: [Self.message(.user, "Which?")]) == nil)
+    #expect(SearchState.restoredComparison(link: Self.link, history: [Self.message(.user, "Which?"), Self.message(.assistant, "  ")]) == nil)
+    let onlyProactive = [Self.message(.user, "Which?"), Self.message(.assistant, "Rain.", origin: .proactive)]
+    #expect(SearchState.restoredComparison(link: Self.link, history: onlyProactive) == nil)
+  }
+}
